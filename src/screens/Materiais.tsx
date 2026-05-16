@@ -154,7 +154,9 @@ export default function Materiais() {
           <div className="bg-surface w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h2 className="text-xl font-serif">{t('materiais.cadastrar').replace('+ ', '')}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-text-main transition-colors">
+              <button onClick={() => setIsModalOpen(false)}
+                aria-label="Fechar"
+                className="text-gray-400 hover:text-text-main transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -171,46 +173,55 @@ export default function Materiais() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.nome')}</label>
-                  <input type="text" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="mat-nome" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.nome')}</label>
+                  <input id="mat-nome" type="text" aria-label={t('materiais.nome')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.marca')}</label>
-                  <input type="text" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="mat-marca" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.marca')}</label>
+                  <input id="mat-marca" type="text" aria-label={t('materiais.marca')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.categoria')}</label>
-                  <select className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                  <label htmlFor="mat-categoria" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.categoria')}</label>
+                  <select id="mat-categoria" aria-label={t('materiais.categoria')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                     {FILTERS.slice(1).map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.quantidade')}</label>
-                  <input type="number" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="mat-quantidade" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.quantidade')}</label>
+                  <input id="mat-quantidade" type="number" aria-label={t('materiais.quantidade')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.unidade')}</label>
-                  <input type="text" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="mat-unidade" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.unidade')}</label>
+                  <input id="mat-unidade" type="text" aria-label={t('materiais.unidade')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-bold text-text-muted mb-1">Especificações</label>
-                  <input type="text" placeholder="Ex: Opaco, Secagem rápida, Série 1" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="mat-especificacoes" className="block text-sm font-bold text-text-muted mb-1">Especificações</label>
+                  <input id="mat-especificacoes" type="text" aria-label="Especificações" placeholder="Ex: Opaco, Secagem rápida, Série 1"
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.status')}</label>
-                  <select className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                  <label htmlFor="mat-status" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.status')}</label>
+                  <select id="mat-status" aria-label={t('materiais.status')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                     <option>Em Estoque</option>
                     <option>Acabando</option>
                     <option>Esgotado</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.data_aquisicao')}</label>
-                  <input type="date" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="mat-data" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.data_aquisicao')}</label>
+                  <input id="mat-data" type="date" aria-label={t('materiais.data_aquisicao')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais.notas')}</label>
-                  <textarea className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg h-20 resize-none"></textarea>
+                  <label htmlFor="mat-notas" className="block text-sm font-bold text-text-muted mb-1">{t('materiais.notas')}</label>
+                  <textarea id="mat-notas" aria-label={t('materiais.notas')}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg h-20 resize-none"></textarea>
                 </div>
               </div>
             </div>

@@ -207,7 +207,7 @@ ${PROFILE_JSON_SCHEMA}`;
         {/* PDF Panel */}
         {tab === 'pdf' && (
           <div>
-            <input ref={pdfRef} type="file" accept=".pdf" className="hidden" onChange={importFromPdf} />
+            <input ref={pdfRef} type="file" accept=".pdf" aria-label="Selecionar PDF do currículo" className="hidden" onChange={importFromPdf} />
             <button onClick={() => pdfRef.current?.click()} disabled={loading}
               className="w-full border-2 border-dashed border-accent/30 rounded-2xl py-10 flex flex-col items-center gap-2 hover:bg-accent/5 transition-colors disabled:opacity-60">
               <FileUp size={36} className="text-accent" />
@@ -279,14 +279,17 @@ function AddList({ title, fields, items, onChange, t }: {
       {items.map(item => (
         <div key={item.id} className="bg-bg rounded-xl p-4 relative">
           <button onClick={() => remove(item.id)}
+            aria-label="Remover item"
             className="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition-colors">
             <X size={16} />
           </button>
           <div className="grid grid-cols-2 gap-3 pr-6">
             {fields.map(f => (
               <div key={f.key} className={f.key === fields[0].key ? 'col-span-2' : ''}>
-                <label className="block text-xs text-text-muted mb-1">{f.label}</label>
+                <label htmlFor={`${item.id}-${f.key}`} className="block text-xs text-text-muted mb-1">{f.label}</label>
                 <input
+                  id={`${item.id}-${f.key}`}
+                  aria-label={f.label}
                   type={f.type || 'text'}
                   value={item[f.key] || ''}
                   onChange={e => update(item.id, f.key, e.target.value)}

@@ -167,19 +167,23 @@ export default function Configuracoes() {
                 }`}>
                   {config.notebooklmActive ? t('configuracoes.conectado') : t('configuracoes.desconectado')}
                 </span>
-                <button onClick={() => set('notebooklmActive', !config.notebooklmActive)}
-                  className="relative w-11 h-6 rounded-full transition-colors"
-                  style={{ backgroundColor: config.notebooklmActive ? '#6B5CE7' : '#D1D5DB' }}>
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    config.notebooklmActive ? 'translate-x-5' : ''
-                  }`} />
-                </button>
+              <button onClick={() => set('notebooklmActive', !config.notebooklmActive)}
+                aria-label={config.notebooklmActive ? 'Desativar NotebookLM' : 'Ativar NotebookLM'}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  config.notebooklmActive ? 'bg-accent' : 'bg-gray-300'
+                }`}>
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  config.notebooklmActive ? 'translate-x-5' : ''
+                }`} />
+              </button>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-text-muted mb-1">{t('configuracoes.id_notebook')}</label>
-              <input type="text" value={config.notebooklmId}
+              <label htmlFor="notebooklm-id" className="block text-xs font-bold text-text-muted mb-1">{t('configuracoes.id_notebook')}</label>
+              <input id="notebooklm-id" type="text" value={config.notebooklmId}
                 onChange={e => set('notebooklmId', e.target.value)}
+                placeholder="Notebook ID"
+                aria-label={t('configuracoes.id_notebook')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-white font-mono" />
             </div>
           </div>
@@ -194,8 +198,9 @@ export default function Configuracoes() {
         <div className="p-7 space-y-5">
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.idioma')}</label>
-              <select value={config.language} onChange={e => set('language', e.target.value)}
+              <label htmlFor="sel-idioma" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.idioma')}</label>
+              <select id="sel-idioma" value={config.language} onChange={e => set('language', e.target.value)}
+                aria-label={t('configuracoes.idioma')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="pt-BR">Português (BR)</option>
                 <option value="en">English</option>
@@ -204,8 +209,9 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.moeda')}</label>
-              <select value={config.currency} onChange={e => set('currency', e.target.value)}
+              <label htmlFor="sel-moeda" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.moeda')}</label>
+              <select id="sel-moeda" value={config.currency} onChange={e => set('currency', e.target.value)}
+                aria-label={t('configuracoes.moeda')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="BRL">BRL (R$)</option>
                 <option value="USD">USD ($)</option>
@@ -213,16 +219,18 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.unidades')}</label>
-              <select value={config.units} onChange={e => set('units', e.target.value)}
+              <label htmlFor="sel-unidades" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.unidades')}</label>
+              <select id="sel-unidades" value={config.units} onChange={e => set('units', e.target.value)}
+                aria-label={t('configuracoes.unidades')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="cm">Centímetros</option>
                 <option value="in">Polegadas</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.formato_data')}</label>
-              <select value={config.dateFormat} onChange={e => set('dateFormat', e.target.value)}
+              <label htmlFor="sel-data" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.formato_data')}</label>
+              <select id="sel-data" value={config.dateFormat} onChange={e => set('dateFormat', e.target.value)}
+                aria-label={t('configuracoes.formato_data')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="DD/MM/AAAA">DD/MM/AAAA</option>
                 <option value="MM/DD/YYYY">MM/DD/YYYY</option>
@@ -244,8 +252,9 @@ export default function Configuracoes() {
         <div className="p-7 space-y-5">
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.qualidade_pdf')}</label>
-              <select value={config.pdfQuality} onChange={e => set('pdfQuality', e.target.value)}
+              <label htmlFor="sel-pdf-quality" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.qualidade_pdf')}</label>
+              <select id="sel-pdf-quality" value={config.pdfQuality} onChange={e => set('pdfQuality', e.target.value)}
+                aria-label={t('configuracoes.qualidade_pdf')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="300">Alta (300 DPI)</option>
                 <option value="150">Média (150 DPI)</option>
@@ -253,8 +262,9 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.formato_pdf')}</label>
-              <select value={config.pdfFormat} onChange={e => set('pdfFormat', e.target.value)}
+              <label htmlFor="sel-pdf-format" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.formato_pdf')}</label>
+              <select id="sel-pdf-format" value={config.pdfFormat} onChange={e => set('pdfFormat', e.target.value)}
+                aria-label={t('configuracoes.formato_pdf')}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="A4">A4</option>
                 <option value="A3">A3</option>
@@ -268,8 +278,10 @@ export default function Configuracoes() {
               <p className="text-xs text-text-muted">{t('configuracoes.marca_dagua_sub')}</p>
             </div>
             <button onClick={() => set('watermark', !config.watermark)}
-              className="relative w-11 h-6 rounded-full transition-colors"
-              style={{ backgroundColor: config.watermark ? '#6B5CE7' : '#D1D5DB' }}>
+              aria-label={config.watermark ? 'Desativar marca d\'água' : 'Ativar marca d\'água'}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                config.watermark ? 'bg-accent' : 'bg-gray-300'
+              }`}>
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                 config.watermark ? 'translate-x-5' : ''
               }`} />
@@ -277,9 +289,11 @@ export default function Configuracoes() {
           </div>
           {config.watermark && (
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.texto_marca_dagua')}</label>
-              <input type="text" value={config.watermarkText}
+              <label htmlFor="watermark-text" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.texto_marca_dagua')}</label>
+              <input id="watermark-text" type="text" value={config.watermarkText}
                 onChange={e => set('watermarkText', e.target.value)}
+                aria-label={t('configuracoes.texto_marca_dagua')}
+                placeholder="© Nany Arruda"
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
             </div>
           )}
@@ -297,8 +311,9 @@ export default function Configuracoes() {
         </div>
         <div className="p-7 space-y-4">
           <div>
-            <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.email_conta')}</label>
-            <input type="email" value="contato@nanyarruda.com" readOnly
+            <label htmlFor="input-email-conta" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.email_conta')}</label>
+            <input id="input-email-conta" type="email" value="contato@nanyarruda.com" readOnly
+              aria-label={t('configuracoes.email_conta')}
               className="w-full border border-gray-100 rounded-lg px-4 py-2 text-sm bg-bg text-text-muted cursor-not-allowed" />
           </div>
           <div className="flex gap-3 flex-wrap">

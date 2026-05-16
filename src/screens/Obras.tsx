@@ -44,7 +44,7 @@ export default function Obras() {
         ))}
       </div>
 
-      <button className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-accent text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform z-50">
+      <button aria-label="Nova obra" className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-accent text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform z-50">
         <Plus size={24} />
       </button>
     </div>

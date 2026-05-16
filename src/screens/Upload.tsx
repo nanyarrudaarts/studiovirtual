@@ -159,7 +159,8 @@ export default function Upload() {
         {step === 1 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="border-2 border-dashed border-accent/30 rounded-2xl bg-bg p-6 md:p-10 flex flex-col items-center justify-center relative hover:bg-accent/5 transition-colors group min-h-[200px]">
-              <input 
+              <input
+                aria-label="Selecionar imagem da obra"
                 type="file" 
                 accept="image/jpeg, image/png, image/tiff"
                 onChange={handleFileChange}

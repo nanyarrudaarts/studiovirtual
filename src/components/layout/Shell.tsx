@@ -89,14 +89,14 @@ export function Shell() {
       <aside 
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`fixed md:static inset-y-0 left-0 w-[280px] md:w-[220px] flex flex-col shadow-xl md:shadow-sm z-50 shrink-0 transition-transform duration-300 ${
+        className={`shell-sidebar fixed md:static inset-y-0 left-0 w-[280px] md:w-[220px] flex flex-col shadow-xl md:shadow-sm z-50 shrink-0 transition-transform duration-300 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`} 
-        style={{ backgroundColor: 'var(--surface)' }}
       >
         <div className="p-6 flex items-center justify-between">
           <h1 className="font-serif italic text-2xl tracking-wide">studio virtual</h1>
           <button 
+            aria-label="Fechar menu"
             className="md:hidden w-11 h-11 flex items-center justify-center -mr-2"
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -143,11 +143,11 @@ export function Shell() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Topbar */}
-        <header className="h-16 md:h-16 border-b flex items-center justify-between px-4 md:px-8 shrink-0 z-10 transition-colors duration-300"
-          style={{ backgroundColor: 'var(--surface)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }}>
+        <header className="h-16 md:h-16 border-b flex items-center justify-between px-4 md:px-8 shrink-0 z-10 transition-colors duration-300 shell-topbar">
           
           <div className="flex items-center gap-4">
             <button 
+              aria-label="Abrir menu"
               className="md:hidden w-11 h-11 flex items-center justify-center -ml-2"
               onClick={() => setMobileMenuOpen(true)}
             >
@@ -162,19 +162,20 @@ export function Shell() {
               <div ref={langRef} className="relative">
                 <button
                   onClick={() => setShowLangDropdown(d => !d)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)' }}
+                  aria-label="Selecionar idioma"
+                  className="shell-lang-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                 >
                   <Globe size={16} />
                   <span className="uppercase">{currentLang.split('-')[0]}</span>
                 </button>
                 {showLangDropdown && (
-                  <div className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg border overflow-hidden z-50"
-                    style={{ backgroundColor: 'var(--surface)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
+                  <div className={`absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg border overflow-hidden z-50 shell-dropdown ${isDark ? 'shell-dropdown-dark' : 'shell-dropdown-light'}`}>
                     {LANGUAGES.map(l => (
                       <button key={l.value} onClick={() => handleLangChange(l.value)}
-                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left transition-colors hover:bg-accent/10"
-                        style={{ color: currentLang === l.value ? 'var(--accent)' : 'var(--text-main)', fontWeight: currentLang === l.value ? '700' : '400' }}>
+                        aria-label={`Idioma: ${l.label}`}
+                        className={`flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left transition-colors hover:bg-accent/10 ${
+                          currentLang === l.value ? 'text-accent font-bold' : 'text-text-main font-normal'
+                        }`}>
                         {currentLang === l.value && <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />}
                         {l.label}
                       </button>
@@ -185,9 +186,9 @@ export function Shell() {
 
               <button
                 onClick={toggleTheme}
-                className="w-9 h-9 flex items-center justify-center rounded-xl transition-all hover:scale-110"
-                style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)' }}
+                className="w-9 h-9 flex items-center justify-center rounded-xl transition-all hover:scale-110 shell-lang-btn"
                 title={isDark ? 'Modo claro' : 'Modo escuro'}
+                aria-label={isDark ? 'Modo claro' : 'Modo escuro'}
               >
                 {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
               </button>
@@ -197,35 +198,38 @@ export function Shell() {
             <div ref={avatarRef} className="relative ml-2 md:ml-0">
               <button
                 onClick={() => setShowAvatarDropdown(d => !d)}
+                aria-label="Menu do usuário"
                 className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-accent text-white flex items-center justify-center text-sm font-bold active:scale-95 hover:bg-accent/90 transition-all shadow-sm"
               >
                 NA
               </button>
               {showAvatarDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-56 md:w-44 rounded-xl shadow-lg border overflow-hidden z-50"
-                  style={{ backgroundColor: 'var(--surface)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
-                  <div className="px-4 py-3 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}>
-                    <p className="text-sm md:text-xs font-bold" style={{ color: 'var(--text-muted)' }}>Nany Arruda</p>
-                    <p className="text-sm md:text-xs truncate" style={{ color: 'var(--text-muted)' }}>contato@nanyarruda.com</p>
+                <div className={`absolute right-0 top-full mt-2 w-56 md:w-44 rounded-xl shadow-lg border overflow-hidden z-50 shell-dropdown ${isDark ? 'shell-dropdown-dark' : 'shell-dropdown-light'}`}>
+                  <div className="px-4 py-3 border-b shell-border">
+                    <p className="text-sm md:text-xs font-bold text-text-muted">Nany Arruda</p>
+                    <p className="text-sm md:text-xs truncate text-text-muted">contato@nanyarruda.com</p>
                   </div>
                   
                   {/* Mobile Language and Theme inside avatar dropdown */}
-                  <div className="md:hidden border-b py-2" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}>
+                  <div className="md:hidden border-b shell-border py-2">
                     <div className="px-4 py-2">
-                      <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t('configuracoes.idioma')}</p>
+                      <p className="text-xs font-bold uppercase mb-2 text-text-muted">{t('configuracoes.idioma')}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {LANGUAGES.map(l => (
                           <button key={l.value} onClick={() => handleLangChange(l.value)}
-                            className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors`}
-                            style={{ backgroundColor: currentLang === l.value ? 'var(--accent)' : 'var(--bg)', color: currentLang === l.value ? '#fff' : 'var(--text-main)' }}>
+                            aria-label={`Idioma: ${l.label}`}
+                            className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors ${
+                              currentLang === l.value
+                                ? 'bg-accent text-white'
+                                : 'bg-bg text-text-main'
+                            }`}>
                             {l.label.split(' ')[0]}
                           </button>
                         ))}
                       </div>
                     </div>
                     <button onClick={() => { toggleTheme(); setShowAvatarDropdown(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors"
-                      style={{ color: 'var(--text-main)' }}>
+                      className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors text-text-main">
                       {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
                       {isDark ? 'Modo claro' : 'Modo escuro'}
                     </button>
@@ -233,17 +237,15 @@ export function Shell() {
 
                   <div className="py-1">
                     <button onClick={() => { navigate('/perfil'); setShowAvatarDropdown(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm active:bg-accent/10 hover:bg-accent/10 transition-colors"
-                      style={{ color: 'var(--text-main)' }}>
+                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm active:bg-accent/10 hover:bg-accent/10 transition-colors text-text-main">
                       <UserCircle size={18} className="md:w-[16px] md:h-[16px]" /> {t('nav.perfil')}
                     </button>
                     <button onClick={() => { navigate('/configuracoes'); setShowAvatarDropdown(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm active:bg-accent/10 hover:bg-accent/10 transition-colors"
-                      style={{ color: 'var(--text-main)' }}>
+                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm active:bg-accent/10 hover:bg-accent/10 transition-colors text-text-main">
                       <Settings size={18} className="md:w-[16px] md:h-[16px]" /> {t('nav.configuracoes')}
                     </button>
                   </div>
-                  <div className="border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}>
+                  <div className="border-t shell-border">
                     <button onClick={handleLogout}
                       className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm text-rose-500 active:bg-rose-50/20 hover:bg-rose-50/10 transition-colors">
                       <LogOut size={18} className="md:w-[16px] md:h-[16px]" /> {t('nav.sair')}
