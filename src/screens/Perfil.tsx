@@ -1,6 +1,243 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Link2, FileUp, Check } from 'lucide-react';
 import { supabase } from '../services/supabase';
+
+function getGeminiKey() {
+  try { return JSON.parse(localStorage.getItem('sv_config') || '{}').geminiKey || ''; } catch { return ''; }
+}
+
+async function callGemini(key: string, contents: object[]) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) }
+  );
+  if (!res.ok) throw new Error('Gemini error');
+  const json = await res.json();
+  return json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+function extractJson(text: string) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try { return JSON.parse(match[0]); } catch { return null; }
+}
+
+const PROFILE_JSON_SCHEMA = `{
+  "nome": "string",
+  "nomeArtistico": "string",
+  "nacionalidade": "string",
+  "cidade": "string",
+  "bioShort": "string (máx 120 palavras)",
+  "bioLong": "string (3-4 parágrafos)",
+  "website": "string",
+  "instagrams": ["string"],
+  "formacao": [{"curso":"","instituicao":"","anoInicio":"","anoFim":""}],
+  "exposIndividuais": [{"titulo":"","local":"","cidade":"","pais":"","ano":""}],
+  "exposColetivas": [{"titulo":"","local":"","cidade":"","pais":"","ano":""}],
+  "premios": [{"nome":"","instituicao":"","ano":""}],
+  "residencias": [{"nome":"","local":"","ano":""}],
+  "publicacoes": [{"titulo":"","editora":"","ano":"","link":""}]
+}`;
+
+type ImportedData = Record<string, unknown>;
+
+/* ---- Diff Preview ---- */
+function DiffPreview({ current, imported, onApply }: {
+  current: Record<string, unknown>;
+  imported: ImportedData;
+  onApply: (selected: ImportedData) => void;
+}) {
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+
+  const keys = Object.keys(imported).filter(k => imported[k] !== undefined && imported[k] !== null && imported[k] !== '');
+
+  const toggle = (k: string) => setChecked(c => ({ ...c, [k]: !c[k] }));
+
+  const apply = () => {
+    const selected: ImportedData = {};
+    keys.filter(k => checked[k]).forEach(k => { selected[k] = imported[k]; });
+    onApply(selected);
+  };
+
+  const fmt = (v: unknown) => {
+    if (Array.isArray(v)) return `[${v.length} itens]`;
+    return String(v || '—');
+  };
+
+  return (
+    <div className="border border-gray-100 rounded-xl overflow-hidden">
+      <div className="grid grid-cols-2 text-xs font-bold bg-gray-50 text-gray-500 px-4 py-2.5 border-b border-gray-100">
+        <span>Dados atuais</span>
+        <span className="text-emerald-600">Dados importados</span>
+      </div>
+      <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+        {keys.map(k => {
+          const isNew = !current[k] || current[k] === '';
+          const isConflict = current[k] && current[k] !== imported[k];
+          return (
+            <label key={k} className="grid grid-cols-[auto_1fr_1fr] items-center gap-4 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors">
+              <input type="checkbox" checked={!!checked[k]} onChange={() => toggle(k)}
+                className="accent-accent w-4 h-4" />
+              <span className="text-xs text-gray-400 truncate">{fmt(current[k])}</span>
+              <span className={`text-xs font-medium truncate ${isNew ? 'text-emerald-600' : isConflict ? 'text-amber-600' : 'text-gray-600'}`}>
+                {fmt(imported[k])}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+        <span className="text-xs text-gray-500">{keys.filter(k => checked[k]).length} de {keys.length} campos selecionados</span>
+        <button onClick={apply}
+          className="flex items-center gap-2 px-5 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors">
+          <Check size={14} /> Aplicar selecionados
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Smart Import ---- */
+function SmartImport({ currentData, onImport }: {
+  currentData: Record<string, unknown>;
+  onImport: (data: ImportedData) => void;
+}) {
+  const [tab, setTab] = useState<'url' | 'pdf'>('url');
+  const [url, setUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState('');
+  const [importedData, setImportedData] = useState<ImportedData | null>(null);
+  const [error, setError] = useState('');
+  const pdfRef = useRef<HTMLInputElement>(null);
+
+  const importFromUrl = async () => {
+    const key = getGeminiKey();
+    if (!key) { setError('Configure a chave Gemini em Configurações primeiro.'); return; }
+    if (!url) { setError('Informe uma URL válida.'); return; }
+    setError(''); setLoading(true); setImportedData(null);
+
+    setLoadingStep('Acessando página...');
+    await new Promise(r => setTimeout(r, 600));
+    setLoadingStep('Lendo informações...');
+
+    const prompt = `Acesse e leia o conteúdo desta página: ${url}
+Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
+${PROFILE_JSON_SCHEMA}`;
+
+    try {
+      const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
+      setLoadingStep('Preenchendo perfil...');
+      await new Promise(r => setTimeout(r, 400));
+      const data = extractJson(text);
+      if (data) { setImportedData(data); }
+      else setError('A IA não retornou dados válidos. Tente novamente.');
+    } catch { setError('Erro ao conectar com a Gemini API. Verifique sua chave.'); }
+    setLoading(false); setLoadingStep('');
+  };
+
+  const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const key = getGeminiKey();
+    if (!key) { setError('Configure a chave Gemini em Configurações primeiro.'); return; }
+    setError(''); setLoading(true); setImportedData(null);
+
+    setLoadingStep('Lendo currículo...');
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      setLoadingStep('Identificando informações...');
+      try {
+        const text = await callGemini(key, [{
+          parts: [
+            { inline_data: { mime_type: 'application/pdf', data: base64 } },
+            { text: `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}` }
+          ]
+        }]);
+        setLoadingStep('Preenchendo perfil...');
+        await new Promise(r => setTimeout(r, 400));
+        const data = extractJson(text);
+        if (data) setImportedData(data);
+        else setError('Não foi possível extrair dados do PDF.');
+      } catch { setError('Erro ao processar PDF com a Gemini.'); }
+      setLoading(false); setLoadingStep('');
+    };
+  };
+
+  return (
+    <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
+      <div className="px-7 py-5 border-b border-gray-100">
+        <h2 className="text-lg font-serif mb-0.5">Importar informações automaticamente</h2>
+        <p className="text-sm text-text-muted">Cole um link ou suba um PDF — a IA preenche tudo automaticamente</p>
+      </div>
+      <div className="p-7 space-y-5">
+        {/* Tabs */}
+        <div className="flex gap-2">
+          {(['url', 'pdf'] as const).map(t => (
+            <button key={t} onClick={() => { setTab(t); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === t ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              {t === 'url' ? <><Link2 size={15}/> Importar via link</> : <><FileUp size={15}/> Importar PDF</>}
+            </button>
+          ))}
+        </div>
+
+        {/* URL Panel */}
+        {tab === 'url' && (
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <input type="url" value={url} onChange={e => setUrl(e.target.value)}
+                placeholder="https://nanyarruda.com/artista"
+                onKeyDown={e => e.key === 'Enter' && importFromUrl()}
+                className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg" />
+              <button onClick={importFromUrl} disabled={loading}
+                className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap">
+                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Importar do link'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PDF Panel */}
+        {tab === 'pdf' && (
+          <div>
+            <input ref={pdfRef} type="file" accept=".pdf" className="hidden" onChange={importFromPdf} />
+            <button onClick={() => pdfRef.current?.click()} disabled={loading}
+              className="w-full border-2 border-dashed border-accent/30 rounded-2xl py-10 flex flex-col items-center gap-2 hover:bg-accent/5 transition-colors disabled:opacity-60">
+              <FileUp size={36} className="text-accent" />
+              <span className="font-bold text-sm">Arraste seu currículo em PDF aqui</span>
+              <span className="text-xs text-text-muted">Apenas PDF · Máx. 10MB</span>
+            </button>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center gap-3 py-3 text-accent">
+            <Loader2 size={18} className="animate-spin" />
+            <span className="text-sm font-medium">{loadingStep}</span>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 text-rose-600 text-sm px-4 py-3 rounded-xl">{error}</div>
+        )}
+
+        {/* Diff Preview */}
+        {importedData && !loading && (
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-emerald-600">✓ Dados extraídos com sucesso! Selecione o que importar:</p>
+            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); }} />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
+
 
 interface ListItem {
   id: string;
@@ -166,12 +403,29 @@ export default function Perfil() {
 
   const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
+  const handleImport = (data: ImportedData) => {
+    const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'bioShort', 'bioLong', 'website'] as const;
+    strKeys.forEach(k => { if (data[k]) setForm(f => ({ ...f, [k]: String(data[k]) })); });
+    if (Array.isArray(data.instagrams)) setInstagrams(data.instagrams as string[]);
+    const toList = (arr: unknown[]) => arr.map(i => ({ id: uid(), ...(i as object) }));
+    if (Array.isArray(data.formacao)) setFormacao(toList(data.formacao));
+    if (Array.isArray(data.premios)) setPremios(toList(data.premios));
+    if (Array.isArray(data.residencias)) setResidencias(toList(data.residencias));
+    if (Array.isArray(data.exposIndividuais)) setExposIndividuais(toList(data.exposIndividuais));
+    if (Array.isArray(data.exposColetivas)) setExposColetivas(toList(data.exposColetivas));
+    if (Array.isArray(data.publicacoes)) setPublicacoes(toList(data.publicacoes));
+  };
+
+  const currentFormAsRecord: Record<string, unknown> = { ...form, instagrams, formacao, premios, residencias, exposIndividuais, exposColetivas, publicacoes };
+
   return (
     <div className="max-w-[900px] mx-auto pb-28 space-y-8">
       <div>
         <h1 className="text-3xl font-serif mb-1">Perfil da Artista</h1>
         <p className="text-text-muted">Seus dados são usados nos dossiês e portfólios exportados.</p>
       </div>
+
+      <SmartImport currentData={currentFormAsRecord} onImport={handleImport} />
 
       {/* Identity + Digital Presence */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">

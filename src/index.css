@@ -25,12 +25,24 @@
     --text-muted: #6B6762;
   }
 
+  /* Dark mode overrides on html.dark */
+  html.dark {
+    --bg: #1A1816;
+    --surface: #2A2826;
+    --text-main: #F5F3EE;
+    --text-muted: #B0ADA8;
+  }
+
   body {
-    @apply bg-[var(--bg)] text-[var(--text-main)] font-sans antialiased;
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+    font-family: var(--font-serif);
   }
 }
 
@@ -42,4 +54,11 @@
     transform: translateY(-6px) rotate(-0.5deg);
     box-shadow: var(--shadow-float);
   }
+
+  /* Semantic color utilities using CSS vars */
+  .bg-bg    { background-color: var(--bg); }
+  .bg-surface { background-color: var(--surface); }
+  .text-text-main { color: var(--text-main); }
+  .text-text-muted { color: var(--text-muted); }
+  .border-surface { border-color: var(--surface); }
 }
