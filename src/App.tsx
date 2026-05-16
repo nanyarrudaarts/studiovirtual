@@ -10,8 +10,8 @@ import Perfil from './screens/Perfil';
 import { supabase } from './services/supabase';
 
 // Placeholder Screens
-const Obras = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Obras</h1><p>Galeria de obras (em breve)</p></div>;
-const Dossie = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Dossiê</h1><p>Montagem de dossiê (em breve)</p></div>;
+import Obras from './screens/Obras';
+import Dossie from './screens/Dossie';
 const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Análise</h1><p>Relatório de saúde e análise curatorial (em breve)</p></div>;
 const Importar = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Importar</h1><p>Importação de acervo (em breve)</p></div>;
 const Certificados = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Certificados</h1><p>Gestão de certificados (em breve)</p></div>;

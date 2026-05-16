@@ -660,9 +660,9 @@ export default function Perfil() {
       </section>
 
       {/* Fixed Save Button */}
-      <div className="fixed bottom-0 left-[220px] right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
+      <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
         <button onClick={handleSave}
-          className="flex items-center gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
+          className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
           {saving ? <><Loader2 size={18} className="animate-spin" /> {t('salvando')}...</> : t('salvar_perfil')}
         </button>
       </div>

@@ -12,10 +12,12 @@ import {
   ChevronLeft,
   X
 } from 'lucide-react';
+import { useI18n } from '../i18n/I18nProvider';
 
 type Step = 1 | 2 | 3 | 4;
 
 export default function Upload() {
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>(1);
   const [, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -131,13 +133,13 @@ export default function Upload() {
   return (
     <div className="max-w-[1000px] mx-auto pb-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-serif mb-2">Novo Upload de Obra</h1>
-        <p className="text-text-muted">Digitalize seu acervo com IA curatorial embutida.</p>
+        <h1 className="text-3xl font-serif mb-2">{t('novo_upload_title')}</h1>
+        <p className="text-text-muted">{t('upload_subtitle')}</p>
       </div>
 
       {/* Progress Steps */}
       <div className="flex gap-4 mb-8">
-        {['Entrada de Arquivo', 'Classificação', 'Exposição', 'Ficha Técnica'].map((label, idx) => {
+        {[t('passo_entrada'), t('passo_class'), t('passo_exp'), t('passo_ficha')].map((label, idx) => {
           const s = (idx + 1) as Step;
           const isActive = step === s;
           const isPast = step > s;
@@ -156,7 +158,7 @@ export default function Upload() {
         {/* STEP 1: Entrada de arquivo */}
         {step === 1 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="border-2 border-dashed border-accent/30 rounded-2xl bg-bg p-10 flex flex-col items-center justify-center relative hover:bg-accent/5 transition-colors group">
+            <div className="border-2 border-dashed border-accent/30 rounded-2xl bg-bg p-6 md:p-10 flex flex-col items-center justify-center relative hover:bg-accent/5 transition-colors group min-h-[200px]">
               <input 
                 type="file" 
                 accept="image/jpeg, image/png, image/tiff"
@@ -166,8 +168,8 @@ export default function Upload() {
               {!preview ? (
                 <>
                   <UploadCloud size={48} className="text-accent mb-4 group-hover:-translate-y-2 transition-transform" />
-                  <h3 className="text-lg font-serif mb-1">Arraste a foto da obra ou clique aqui</h3>
-                  <p className="text-sm text-text-muted">JPG, PNG, TIFF (Máx. 50MB)</p>
+                  <h3 className="text-lg font-serif mb-1">{t('arraste_arquivo')}</h3>
+                  <p className="text-sm text-text-muted">{t('formatos')}</p>
                 </>
               ) : (
                 <div className="flex flex-col items-center w-full z-10 pointer-events-none">
@@ -179,12 +181,12 @@ export default function Upload() {
                       </span>
                       {dpiOk === true && (
                         <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md shadow-sm flex items-center gap-1">
-                          <CheckCircle2 size={16} /> 300 DPI Verificado
+                          <CheckCircle2 size={16} /> {t('dpi_ok')}
                         </span>
                       )}
                       {dpiOk === false && (
                         <span className="text-sm font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-md shadow-sm flex items-center gap-1">
-                          <AlertTriangle size={16} /> Baixa Resolução
+                          <AlertTriangle size={16} /> {t('dpi_baixo')}
                         </span>
                       )}
                     </div>
@@ -193,21 +195,21 @@ export default function Upload() {
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button 
                 onClick={handleVoiceDescription}
                 className={`flex items-center justify-center gap-2 py-4 rounded-xl border transition-colors ${recording ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-surface border-gray-200 hover:border-accent/50'}`}
               >
                 <Mic size={20} className={recording ? "animate-pulse" : ""} />
-                <span className="font-medium text-sm">{recording ? 'Gravando...' : 'Descrição por Voz'}</span>
+                <span className="font-medium text-sm">{recording ? t('gravando') : t('desc_voz')}</span>
               </button>
               <button className="flex items-center justify-center gap-2 py-4 rounded-xl border border-gray-200 bg-surface hover:border-accent/50 transition-colors">
                 <FileText size={20} />
-                <span className="font-medium text-sm">Subir PDF</span>
+                <span className="font-medium text-sm">{t('subir_pdf')}</span>
               </button>
               <button className="flex items-center justify-center gap-2 py-4 rounded-xl border border-gray-200 bg-surface hover:border-accent/50 transition-colors">
                 <LinkIcon size={20} />
-                <span className="font-medium text-sm">Link / Instagram</span>
+                <span className="font-medium text-sm">{t('link_insta')}</span>
               </button>
             </div>
 
@@ -222,9 +224,9 @@ export default function Upload() {
         {/* STEP 2: Classificação */}
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-serif mb-6">Como deseja classificar esta obra?</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {['Obra Singular', 'Coleção', 'Série'].map(tipo => (
+            <h2 className="text-2xl font-serif mb-6">{t('classificar_obra')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[t('obra_singular'), t('colecao'), t('serie')].map(tipo => (
                 <button 
                   key={tipo}
                   onClick={() => setFormData({...formData, classificacao: tipo})}
@@ -243,7 +245,7 @@ export default function Upload() {
         {/* STEP 3: Exposição */}
         {step === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-serif mb-6">Esta obra está ou esteve em exposição?</h2>
+            <h2 className="text-2xl font-serif mb-6">{t('em_exposicao_q')}</h2>
             
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="relative">
@@ -256,24 +258,24 @@ export default function Upload() {
                 <div className={`block w-14 h-8 rounded-full transition-colors ${formData.emExposicao ? 'bg-accent' : 'bg-gray-300'}`}></div>
                 <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${formData.emExposicao ? 'translate-x-6' : ''}`}></div>
               </div>
-              <span className="font-medium">Sim, adicionar histórico de exposição</span>
+              <span className="font-medium">{t('sim_hist_exp')}</span>
             </label>
 
             {formData.emExposicao && (
               <div className="bg-bg p-6 rounded-xl border border-gray-100 space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-2">Busca Inteligente (IA)</label>
+                  <label className="block text-sm font-bold text-text-muted mb-2">{t('busca_ia')}</label>
                   <div className="flex gap-2">
-                    <input type="text" placeholder="Pesquisar por curador, galeria, edital..." className="flex-1 rounded-lg border-gray-200 px-4 py-2 text-sm outline-none focus:border-accent" />
-                    <button className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium">Buscar IA</button>
+                    <input type="text" placeholder={t('pesq_curador')} className="flex-1 rounded-lg border-gray-200 px-4 py-2 text-sm outline-none focus:border-accent" />
+                    <button className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium">{t('btn_buscar_ia')}</button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">A busca IA pesquisará referências @rk e bancos de dados.</p>
+                  <p className="text-xs text-gray-400 mt-2">{t('busca_ia_desc')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-2">Registro Manual</label>
+                  <label className="block text-sm font-bold text-text-muted mb-2">{t('reg_manual')}</label>
                   <input 
                     type="text" 
-                    placeholder="Nome da exposição, data e local" 
+                    placeholder={t('nome_exp')} 
                     value={formData.exposicaoManual}
                     onChange={(e) => setFormData({...formData, exposicaoManual: e.target.value})}
                     className="w-full rounded-lg border-gray-200 border px-4 py-2 text-sm outline-none focus:border-accent" 
@@ -287,57 +289,57 @@ export default function Upload() {
         {/* STEP 4: Ficha Técnica */}
         {step === 4 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Título da Obra</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('titulo_obra')}</label>
                   <input type="text" value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">Ano</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('ano')}</label>
                     <input type="text" value={formData.ano} onChange={e => setFormData({...formData, ano: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">Status</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('status')}</label>
                     <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
-                      <option>Disponível</option>
-                      <option>Vendida</option>
-                      <option>Reservada</option>
-                      <option>Coleção Privada</option>
+                      <option>{t('status_disp')}</option>
+                      <option>{t('status_vendida')}</option>
+                      <option>{t('status_reservada')}</option>
+                      <option>{t('status_col_privada')}</option>
                     </select>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">Técnica</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('tecnica')}</label>
                     <select value={formData.tecnica} onChange={e => setFormData({...formData, tecnica: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option value="">Selecione...</option>
-                      <option>Óleo sobre tela</option>
-                      <option>Acrílica</option>
-                      <option>Aquarela</option>
-                      <option>Mista</option>
+                      <option>{t('tec_oleo')}</option>
+                      <option>{t('tec_acrilica')}</option>
+                      <option>{t('tec_aquarela')}</option>
+                      <option>{t('tec_mista')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">Suporte</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('suporte')}</label>
                     <select value={formData.suporte} onChange={e => setFormData({...formData, suporte: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option value="">Selecione...</option>
-                      <option>Tela</option>
-                      <option>Papel Algodão</option>
-                      <option>Madeira</option>
+                      <option>{t('sup_tela')}</option>
+                      <option>{t('sup_papel_alg')}</option>
+                      <option>{t('sup_madeira')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Dimensões</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('dimensoes')}</label>
                   <div className="flex gap-2">
-                    <input type="text" placeholder="Largura" value={formData.dimensaoW} onChange={e => setFormData({...formData, dimensaoW: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    <input type="text" placeholder={t('dimensao_w')} value={formData.dimensaoW} onChange={e => setFormData({...formData, dimensaoW: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                     <span className="flex items-center justify-center text-gray-400">x</span>
-                    <input type="text" placeholder="Altura" value={formData.dimensaoH} onChange={e => setFormData({...formData, dimensaoH: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    <input type="text" placeholder={t('dimensao_h')} value={formData.dimensaoH} onChange={e => setFormData({...formData, dimensaoH: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                     <select value={formData.dimensaoUnidade} onChange={e => setFormData({...formData, dimensaoUnidade: e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option>cm</option>
                       <option>in</option>
@@ -347,23 +349,23 @@ export default function Upload() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Valor Estimado (R$)</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('valor_estimado')}</label>
                   <input type="text" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} placeholder="0,00" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Materiais Utilizados</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('materiais_utilizados')}</label>
                   <div className="flex gap-2 mb-2">
                     <input 
                       type="text" 
                       value={materialInput}
                       onChange={e => setMaterialInput(e.target.value)}
                       onKeyDown={handleAddMaterial}
-                      placeholder="Ex: Pigmento natural (Enter)" 
+                      placeholder={t('ex_pigmento')} 
                       className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" 
                     />
                     <button className="bg-bg border border-gray-200 text-text-main px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:border-accent transition-colors">
-                      <Camera size={16} /> <span className="hidden lg:inline">Leitura Câmera</span>
+                      <Camera size={16} /> <span className="hidden lg:inline">{t('leitura_camera')}</span>
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -379,25 +381,25 @@ export default function Upload() {
               {/* Right Column */}
               <div className="space-y-4 flex flex-col">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Tags / Estilo</label>
-                  <input type="text" value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder="abstrato, geométrico..." className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('tags_estilo')}</label>
+                  <input type="text" value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} placeholder={t('tags_placeholder')} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Nota Curatorial (Privada)</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nota_curatorial_privada')}</label>
                   <textarea 
                     value={formData.notaCuratorial} 
                     onChange={e => setFormData({...formData, notaCuratorial: e.target.value})}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg h-24 resize-none" 
-                    placeholder="Sua intenção e pensamentos sobre esta obra..."
+                    placeholder={t('nota_curatorial_placeholder')}
                   />
                 </div>
                 
                 {/* AI Curatorial Box */}
                 <div className="flex-1 border border-accent/20 bg-accent/5 rounded-xl p-5 flex flex-col">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-serif text-accent flex items-center gap-2"><Sparkles size={18} /> Texto Curatorial IA</h3>
+                    <h3 className="font-serif text-accent flex items-center gap-2"><Sparkles size={18} /> {t('texto_curatorial_ia')}</h3>
                     <button onClick={handleGenerateAI} className="text-xs font-bold bg-accent text-white px-3 py-1.5 rounded-full hover:bg-accent/90 transition-colors">
-                      Gerar Texto
+                      {t('gerar_texto')}
                     </button>
                   </div>
                   {formData.aiCuratorialText ? (
@@ -406,7 +408,7 @@ export default function Upload() {
                     </p>
                   ) : (
                     <div className="flex-1 flex items-center justify-center text-text-muted text-sm text-center">
-                      Clique em "Gerar Texto" para a IA analisar sua nota curatorial e os dados da obra.
+                      {t('clique_gerar_texto')}
                     </div>
                   )}
                 </div>
@@ -418,29 +420,30 @@ export default function Upload() {
       </div>
 
       {/* Footer Navigation */}
-      <div className="flex justify-between items-center mt-6">
+      <div className="fixed md:static bottom-0 left-0 right-0 p-4 md:p-0 bg-surface md:bg-transparent border-t border-gray-100 md:border-t-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:shadow-none z-50 flex justify-between items-center md:mt-6 mt-0">
         <button 
           onClick={() => setStep(step - 1 as Step)}
           disabled={step === 1}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-colors ${step === 1 ? 'opacity-0 cursor-default' : 'bg-surface border border-gray-200 hover:bg-gray-50'}`}
+          className={`flex items-center justify-center md:justify-start gap-2 px-4 md:px-6 py-3 rounded-xl font-medium transition-colors ${step === 1 ? 'opacity-0 cursor-default' : 'bg-surface border border-gray-200 hover:bg-gray-50'}`}
         >
-          <ChevronLeft size={20} /> Voltar
+          <ChevronLeft size={20} /> <span className="hidden md:inline">{t('btn_voltar')}</span>
         </button>
 
         {step < 4 ? (
           <button 
             onClick={() => setStep(step + 1 as Step)}
-            className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all"
+            className="flex flex-1 md:flex-none items-center justify-center md:justify-start gap-2 px-8 py-3 ml-4 md:ml-0 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all"
           >
-            Avançar <ChevronRight size={20} />
+            {t('btn_avancar')} <ChevronRight size={20} />
           </button>
         ) : (
-          <div className="flex gap-4">
-            <button className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium bg-surface border border-gray-200 hover:border-accent transition-colors">
-              Nova Foto
+          <div className="flex flex-1 md:flex-none gap-2 md:gap-4 ml-4 md:ml-0">
+            <button className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-medium bg-surface border border-gray-200 hover:border-accent transition-colors">
+              <span className="hidden md:inline">{t('btn_nova_foto')}</span>
+              <span className="md:hidden">Nova</span>
             </button>
-            <button className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all shadow-float">
-              Salvar no Banco
+            <button className="flex flex-1 md:flex-none items-center justify-center gap-2 px-4 md:px-8 py-3 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all shadow-float">
+              {t('btn_salvar_banco')}
             </button>
           </div>
         )}

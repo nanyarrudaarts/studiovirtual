@@ -62,3 +62,30 @@
   .text-text-muted { color: var(--text-muted); }
   .border-surface { border-color: var(--surface); }
 }
+
+/* Global Mobile Rules */
+@media (max-width: 768px) {
+  :root {
+    --text-xs: 0.875rem;
+    --text-xs--line-height: 1.25rem;
+    --text-sm: 1rem;
+    --text-sm--line-height: 1.5rem;
+    --text-base: 1.125rem;
+    --text-base--line-height: 1.75rem;
+    --text-lg: 1.25rem;
+    --text-lg--line-height: 1.75rem;
+  }
+  button, a[href], input[type="checkbox"], input[type="radio"], select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}

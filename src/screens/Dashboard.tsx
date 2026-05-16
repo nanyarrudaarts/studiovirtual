@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
+import { format } from 'date-fns';
 import type { Obra } from '../types';
 import { UploadCloud, FileText, Activity, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR, enUS, es, de } from 'date-fns/locale';
+import { useI18n } from '../i18n/I18nProvider';
 
 export default function Dashboard() {
+  const { t, lang } = useI18n();
   const [obras, setObras] = useState<Obra[]>([]);
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
+
+  const getLocale = () => {
+    if (lang.startsWith('en')) return enUS;
+    if (lang.startsWith('es')) return es;
+    if (lang.startsWith('de')) return de;
+    return ptBR;
+  };
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -49,83 +58,83 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
+  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
 
   return (
-    <div className="flex gap-8 max-w-[1400px] mx-auto">
-      <div className="flex-1 space-y-10">
+    <div className="flex flex-col md:flex-row gap-8 max-w-[1400px] mx-auto">
+      <div className="flex-1 space-y-8 md:space-y-10 min-w-0">
         {/* Header */}
         <header>
           <p className="text-text-muted capitalize mb-1">{dataAtual}</p>
-          <h1 className="text-4xl font-serif text-text-main">
-            Bem-vinda de volta, Nany.
+          <h1 className="text-3xl md:text-4xl font-serif text-text-main">
+            {t('bem_vinda')}
           </h1>
         </header>
 
         {/* Metric Cards */}
-        <section className="grid grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <div className="bg-surface rounded-xl p-6 shadow-sm border border-gray-100 hover-float">
-            <h3 className="text-text-muted font-medium text-sm mb-4">Total de Obras</h3>
+            <h3 className="text-text-muted font-medium text-sm mb-4">{t('total_obras')}</h3>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-serif">{metricas.totalObras}</span>
-              <span className="text-accent text-sm font-medium mb-1">+2 este mês</span>
+              <span className="text-accent text-sm font-medium mb-1">{t('mais_dois_mes')}</span>
             </div>
           </div>
           <div className="bg-surface rounded-xl p-6 shadow-sm border border-gray-100 hover-float">
-            <h3 className="text-text-muted font-medium text-sm mb-4">Health Score Acervo</h3>
+            <h3 className="text-text-muted font-medium text-sm mb-4">{t('saude_portfolio')}</h3>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-serif">{metricas.healthScore}%</span>
               <span className="text-emerald-500 text-sm font-medium mb-1 flex items-center gap-1">
-                <CheckCircle2 size={14} /> Excelente
+                <CheckCircle2 size={14} /> {t('excelente')}
               </span>
             </div>
           </div>
           <div className="bg-surface rounded-xl p-6 shadow-sm border border-gray-100 hover-float">
-            <h3 className="text-text-muted font-medium text-sm mb-4">Alertas de Materiais</h3>
+            <h3 className="text-text-muted font-medium text-sm mb-4">{t('alertas_materiais')}</h3>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-serif">{metricas.alertasMateriais}</span>
               <span className="text-accent2 text-sm font-medium mb-1 flex items-center gap-1">
-                <AlertCircle size={14} /> Reposição
+                <AlertCircle size={14} /> {t('reposicao')}
               </span>
             </div>
           </div>
         </section>
 
         {/* Action Cards */}
-        <section className="grid grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <button className="bg-accent text-white rounded-xl p-6 shadow-sm hover-float flex flex-col items-center justify-center gap-3 transition-colors hover:bg-accent/90">
             <UploadCloud size={32} />
-            <span className="font-serif text-lg">Novo Upload</span>
+            <span className="font-serif text-lg">{t('novo_upload')}</span>
           </button>
           <button className="bg-surface text-text-main border border-gray-100 rounded-xl p-6 shadow-sm hover-float flex flex-col items-center justify-center gap-3 transition-colors hover:border-accent/30">
             <FileText size={32} className="text-accent" />
-            <span className="font-serif text-lg">Criar Dossiê</span>
+            <span className="font-serif text-lg">{t('criar_dossie')}</span>
           </button>
           <button className="bg-surface text-text-main border border-gray-100 rounded-xl p-6 shadow-sm hover-float flex flex-col items-center justify-center gap-3 transition-colors hover:border-accent/30">
             <Activity size={32} className="text-accent" />
-            <span className="font-serif text-lg">Análise Curatorial</span>
+            <span className="font-serif text-lg">{t('analise_curatorial')}</span>
           </button>
         </section>
 
         {/* Obras Recentes */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-serif">Obras Recentes</h2>
+            <h2 className="text-2xl font-serif">{t('obras_recentes')}</h2>
             <button className="text-accent font-medium text-sm flex items-center gap-1 hover:underline">
-              Ver Galeria Completa <ChevronRight size={16} />
+              {t('ver_galeria')} <ChevronRight size={16} />
             </button>
           </div>
           
-          <div className="flex overflow-x-auto gap-6 pb-6 -mx-2 px-2 snap-x">
+          <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 -mx-4 md:-mx-2 px-4 md:px-2 snap-x scrollbar-hide">
             {loading ? (
               // Skeletons
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="min-w-[280px] h-[360px] bg-gray-200 rounded-xl animate-pulse shrink-0" />
+                <div key={i} className="min-w-[260px] md:min-w-[280px] h-[360px] bg-gray-200 rounded-xl animate-pulse shrink-0 snap-start" />
               ))
             ) : obras.length > 0 ? (
               obras.map((obra) => (
-                <div key={obra.id} className="min-w-[280px] w-[280px] shrink-0 snap-start group cursor-pointer hover-float">
-                  <div className="relative h-[320px] rounded-xl overflow-hidden mb-3 bg-gray-100">
+                <div key={obra.id} className="min-w-[260px] md:min-w-[280px] w-[260px] md:w-[280px] shrink-0 snap-start group cursor-pointer hover-float">
+                  <div className="relative h-[300px] md:h-[320px] rounded-xl overflow-hidden mb-3 bg-gray-100">
                     {obra.imagens?.[0]?.url ? (
                       <img 
                         src={obra.imagens[0].url} 
@@ -134,7 +143,7 @@ export default function Dashboard() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        Sem Imagem
+                        {t('sem_imagem')}
                       </div>
                     )}
                     {/* 300 DPI Badge */}
@@ -149,8 +158,8 @@ export default function Dashboard() {
             ) : (
               // Mock Obras para preview visual
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="min-w-[280px] w-[280px] shrink-0 snap-start group cursor-pointer hover-float">
-                  <div className="relative h-[320px] rounded-xl overflow-hidden mb-3 bg-gray-200">
+                <div key={i} className="min-w-[260px] md:min-w-[280px] w-[260px] md:w-[280px] shrink-0 snap-start group cursor-pointer hover-float">
+                  <div className="relative h-[300px] md:h-[320px] rounded-xl overflow-hidden mb-3 bg-gray-200">
                     <img 
                       src={`https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&h=800&fit=crop&auto=format&q=80`} 
                       alt="Mock" 
@@ -170,32 +179,24 @@ export default function Dashboard() {
       </div>
 
       {/* Right Panel: Nota da Curadoria AI */}
-      <aside className="w-[340px] shrink-0">
+      <aside className="w-full md:w-[340px] shrink-0">
         <div className="bg-surface border border-accent/20 rounded-xl p-6 shadow-float sticky top-8">
           <div className="flex items-center gap-3 mb-6 text-accent">
             <Sparkles size={24} />
-            <h2 className="text-xl font-serif text-text-main">Nota da Curadoria AI</h2>
+            <h2 className="text-xl font-serif text-text-main">{t('nota_curadoria')}</h2>
           </div>
           
           <div className="inline-block bg-accent/10 text-accent font-semibold text-xs px-3 py-1.5 rounded-full mb-4">
-            Abstracionismo Lírico Contemporâneo
+            {t('insight_tag')}
           </div>
           
           <div className="space-y-4 text-text-main text-sm leading-relaxed">
-            <p>
-              As obras recentes demonstram um aprofundamento na exploração da luz 
-              sobre texturas densas. O uso de paletas mais terrosas cruzadas com 
-              o "Accent Rose" evidencia uma maturação na forma como Nany aborda 
-              a tensão entre o orgânico e o construído.
-            </p>
-            <p className="text-text-muted italic">
-              Insight gerado analisando as últimas 4 obras carregadas, comparadas 
-              ao manifesto curatorial de 2025.
-            </p>
+            <p>{t('insight_p1')}</p>
+            <p className="text-text-muted italic">{t('insight_p2')}</p>
           </div>
           
           <button className="mt-8 w-full py-3 bg-bg text-text-main hover:bg-gray-100 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
-            Expandir Insights <ChevronRight size={16} />
+            {t('expandir_insights')} <ChevronRight size={16} />
           </button>
         </div>
       </aside>
