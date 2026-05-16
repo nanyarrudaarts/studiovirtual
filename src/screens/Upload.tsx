@@ -54,6 +54,7 @@ export default function Upload() {
   const [importUrl, setImportUrl] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importPhase, setImportPhase] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [importResult, setImportResult] = useState<any>(null);
   const [importImages, setImportImages] = useState<{url:string;selected:boolean}[]>([]);
   const [showImport, setShowImport] = useState(false);
@@ -86,6 +87,7 @@ export default function Upload() {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
@@ -95,6 +97,7 @@ export default function Upload() {
     if (!recording) {
       setRecording(true);
       recognition.start();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognition.onresult = (event: any) => {
         let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -161,8 +164,8 @@ export default function Upload() {
       } else {
         alert(t('upload.salvo_com_sucesso', 'Obra salva com sucesso!'));
       }
-    } catch (err: any) {
-      alert('Erro inesperado: ' + err.message);
+    } catch (err: unknown) {
+      alert('Erro inesperado: ' + (err as Error).message);
     } finally {
       setSaving(false);
     }

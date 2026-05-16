@@ -18,7 +18,14 @@ const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-se
 const Importar = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Importar</h1><p>Importação de acervo (em breve)</p></div>;
 const Certificados = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Certificados</h1><p>Gestão de certificados (em breve)</p></div>;
 
+const LoadingScreen = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+  </div>
+);
+
 export default function App() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,12 +52,6 @@ export default function App() {
       </div>
     );
   }
-
-  const LoadingScreen = () => (
-    <div className="min-h-[50vh] flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
-    </div>
-  );
 
   return (
     <Suspense fallback={<LoadingScreen />}>

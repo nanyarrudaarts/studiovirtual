@@ -199,9 +199,6 @@ export function Shell() {
             })}
           </div>
           <div className="my-4 mx-2 border-b border-[#B0ADA8]/20"></div>
-          <div className="font-sans text-[11px] text-[#B0ADA8] pl-[12px] mb-3">
-            Nany Arruda | 1988
-          </div>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-3 h-[52px] md:h-[40px] px-3 w-full rounded-lg text-rose-500 hover:bg-rose-50 transition-colors"

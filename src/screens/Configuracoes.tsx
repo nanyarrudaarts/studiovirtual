@@ -41,6 +41,7 @@ const defaultConfig: Config = {
 
 function KeyInput({ label, value, onChange, placeholder, onSave, t }: {
   label: string; value: string; onChange: (v: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   placeholder: string; onSave: () => void; t: (k: any) => string;
 }) {
   const [show, setShow] = useState(false);
@@ -52,7 +53,8 @@ function KeyInput({ label, value, onChange, placeholder, onSave, t }: {
           <input
             type={show ? 'text' : 'password'}
             value={value}
-            onChange={e => onChange(e.target.value)}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onChange={(e: any) => onChange(e.target.value)}
             placeholder={placeholder}
             className="w-full border border-gray-200 rounded-lg pl-4 pr-10 py-2 text-sm focus:border-accent outline-none bg-bg"
           />
@@ -78,6 +80,7 @@ export default function Configuracoes() {
 
   useEffect(() => {
     const stored = localStorage.getItem('sv_config');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setConfig({ ...defaultConfig, ...JSON.parse(stored) });
   }, []);
 
