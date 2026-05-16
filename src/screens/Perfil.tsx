@@ -458,29 +458,30 @@ export default function Perfil() {
                     )}
                   </div>
                   <button onClick={() => fileRef.current?.click()}
+                    aria-label="Alterar foto de perfil"
                     className="absolute bottom-1 right-1 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center shadow hover:bg-accent/90 transition-colors">
                     {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                   </button>
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  <input ref={fileRef} type="file" accept="image/*" aria-label="Selecionar foto de perfil" className="hidden" onChange={handlePhotoUpload} />
                 </div>
                 <p className="text-xs text-text-muted">{t('perfil.clique_alterar_foto')}</p>
               </div>
 
               <div className="w-full space-y-3">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
-                  <input value={form.nome} onChange={e => set('nome', e.target.value)}
+                  <label htmlFor="perfil-nome" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
+                  <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} onChange={e => set('nome', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_artistico')}</label>
-                  <input value={form.nomeArtistico} onChange={e => set('nomeArtistico', e.target.value)}
+                  <label htmlFor="perfil-nomeArtistico" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_artistico')}</label>
+                  <input id="perfil-nomeArtistico" aria-label={t('perfil.nome_artistico')} value={form.nomeArtistico} onChange={e => set('nomeArtistico', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nacionalidade')}</label>
-                    <input value={form.nacionalidade} onChange={e => set('nacionalidade', e.target.value)}
+                    <label htmlFor="perfil-nacionalidade" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nacionalidade')}</label>
+                    <input id="perfil-nacionalidade" aria-label={t('perfil.nacionalidade')} value={form.nacionalidade} onChange={e => set('nacionalidade', e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                   <div>
@@ -491,8 +492,8 @@ export default function Perfil() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
-                  <input type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
+                  <label htmlFor="perfil-nascimento" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
+                  <input id="perfil-nascimento" aria-label={t('perfil.nascimento')} type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
               </div>
@@ -501,8 +502,8 @@ export default function Perfil() {
             {/* Right — Digital Presence */}
             <div className="md:w-1/2 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
-                <input value={form.website} onChange={e => set('website', e.target.value)}
+                <label htmlFor="perfil-website" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
+                <input id="perfil-website" aria-label={t('perfil.website')} value={form.website} onChange={e => set('website', e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
               </div>
 
@@ -517,10 +518,11 @@ export default function Perfil() {
                 <div className="space-y-2">
                   {instagrams.map((ig, i) => (
                     <div key={i} className="flex gap-2">
-                      <input value={ig} onChange={e => {
+                      <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} onChange={e => {
                         const n = [...instagrams]; n[i] = e.target.value; setInstagrams(n);
                       }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                       <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
+                        aria-label="Remover Instagram"
                         className="text-gray-400 hover:text-red-500 px-2">
                         <X size={16} />
                       </button>
@@ -540,13 +542,14 @@ export default function Perfil() {
                 <div className="space-y-2">
                   {socialLinks.map(link => (
                     <div key={link.id} className="flex gap-2">
-                      <input placeholder="LinkedIn" value={link.label}
+                      <input aria-label="Nome do link (ex: LinkedIn)" placeholder="LinkedIn" value={link.label}
                         onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, label: e.target.value} : l))}
                         className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      <input placeholder="https://..." value={link.url}
+                      <input aria-label="URL do link" placeholder="https://..." value={link.url}
                         onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
                         className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
                       <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
+                        aria-label="Remover link"
                         className="text-gray-400 hover:text-red-500 px-2">
                         <X size={16} />
                       </button>

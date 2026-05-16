@@ -294,17 +294,17 @@ export default function Upload() {
               {/* Left Column */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('upload.titulo')}</label>
-                  <input type="text" value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                  <label htmlFor="up-titulo" className="block text-sm font-bold text-text-muted mb-1">{t('upload.titulo')}</label>
+                  <input id="up-titulo" aria-label={t('upload.titulo')} type="text" value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('upload.ano')}</label>
-                    <input type="text" value={formData.ano} onChange={e => setFormData({...formData, ano: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    <label htmlFor="up-ano" className="block text-sm font-bold text-text-muted mb-1">{t('upload.ano')}</label>
+                    <input id="up-ano" aria-label={t('upload.ano')} type="text" value={formData.ano} onChange={e => setFormData({...formData, ano: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('status')}</label>
-                    <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                    <label htmlFor="up-status" className="block text-sm font-bold text-text-muted mb-1">{t('status')}</label>
+                    <select id="up-status" aria-label={t('status')} value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option>{t('upload.status_disp')}</option>
                       <option>{t('upload.status_vendida')}</option>
                       <option>{t('upload.status_reservada')}</option>
@@ -315,8 +315,8 @@ export default function Upload() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('upload.tecnica')}</label>
-                    <select value={formData.tecnica} onChange={e => setFormData({...formData, tecnica: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                    <label htmlFor="up-tecnica" className="block text-sm font-bold text-text-muted mb-1">{t('upload.tecnica')}</label>
+                    <select id="up-tecnica" aria-label={t('upload.tecnica')} value={formData.tecnica} onChange={e => setFormData({...formData, tecnica: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option value="">Selecione...</option>
                       <option>{t('upload.tec_oleo')}</option>
                       <option>{t('upload.tec_acrilica')}</option>
@@ -325,8 +325,8 @@ export default function Upload() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('upload.suporte')}</label>
-                    <select value={formData.suporte} onChange={e => setFormData({...formData, suporte: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                    <label htmlFor="up-suporte" className="block text-sm font-bold text-text-muted mb-1">{t('upload.suporte')}</label>
+                    <select id="up-suporte" aria-label={t('upload.suporte')} value={formData.suporte} onChange={e => setFormData({...formData, suporte: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option value="">Selecione...</option>
                       <option>{t('upload.sup_tela')}</option>
                       <option>{t('upload.sup_papel_alg')}</option>
@@ -336,12 +336,12 @@ export default function Upload() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('upload.dimensoes')}</label>
+                  <label htmlFor="up-dim-w" className="block text-sm font-bold text-text-muted mb-1">{t('upload.dimensoes')}</label>
                   <div className="flex gap-2">
-                    <input type="text" placeholder={t('upload.dimensao_w')} value={formData.dimensaoW} onChange={e => setFormData({...formData, dimensaoW: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    <input id="up-dim-w" aria-label={t('upload.dimensao_w')} type="text" placeholder={t('upload.dimensao_w')} value={formData.dimensaoW} onChange={e => setFormData({...formData, dimensaoW: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                     <span className="flex items-center justify-center text-gray-400">x</span>
-                    <input type="text" placeholder={t('upload.dimensao_h')} value={formData.dimensaoH} onChange={e => setFormData({...formData, dimensaoH: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                    <select value={formData.dimensaoUnidade} onChange={e => setFormData({...formData, dimensaoUnidade: e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg">
+                    <input aria-label={t('upload.dimensao_h')} type="text" placeholder={t('upload.dimensao_h')} value={formData.dimensaoH} onChange={e => setFormData({...formData, dimensaoH: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    <select aria-label="Unidade de medida" value={formData.dimensaoUnidade} onChange={e => setFormData({...formData, dimensaoUnidade: e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg">
                       <option>cm</option>
                       <option>in</option>
                       <option>px</option>

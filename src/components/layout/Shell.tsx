@@ -76,7 +76,7 @@ export function Shell() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: 'var(--bg)', color: 'var(--text-main)' }}>
+    <div className="flex h-screen w-full overflow-hidden bg-bg text-text-main">
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
         <div 
