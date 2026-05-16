@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Sparkles, Loader2, Camera, Link2, FileUp, Check } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { useI18n } from '../i18n/I18nProvider';
 
 function getGeminiKey() {
-  try { return JSON.parse(localStorage.getItem('sv_config') || '{}').geminiKey || ''; } catch { return ''; }
+  const apiKey = localStorage.getItem('gemini_api_key') || '';
+  console.log('API Key length:', apiKey?.length);
+  console.log('Provider:', 'gemini');
+  return apiKey;
 }
 
 async function callGemini(key: string, contents: object[]) {
@@ -42,10 +46,11 @@ const PROFILE_JSON_SCHEMA = `{
 type ImportedData = Record<string, unknown>;
 
 /* ---- Diff Preview ---- */
-function DiffPreview({ current, imported, onApply }: {
+function DiffPreview({ current, imported, onApply, t }: {
   current: Record<string, unknown>;
   imported: ImportedData;
   onApply: (selected: ImportedData) => void;
+  t: (k: any) => string;
 }) {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
@@ -67,8 +72,8 @@ function DiffPreview({ current, imported, onApply }: {
   return (
     <div className="border border-gray-100 rounded-xl overflow-hidden">
       <div className="grid grid-cols-2 text-xs font-bold bg-gray-50 text-gray-500 px-4 py-2.5 border-b border-gray-100">
-        <span>Dados atuais</span>
-        <span className="text-emerald-600">Dados importados</span>
+        <span>{t('dados_atuais')}</span>
+        <span className="text-emerald-600">{t('dados_importados')}</span>
       </div>
       <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
         {keys.map(k => {
@@ -87,10 +92,10 @@ function DiffPreview({ current, imported, onApply }: {
         })}
       </div>
       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-        <span className="text-xs text-gray-500">{keys.filter(k => checked[k]).length} de {keys.length} campos selecionados</span>
+        <span className="text-xs text-gray-500">{keys.filter(k => checked[k]).length} de {keys.length} {t('campos_selecionados')}</span>
         <button onClick={apply}
           className="flex items-center gap-2 px-5 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors">
-          <Check size={14} /> Aplicar selecionados
+          <Check size={14} /> {t('aplicar_selecionados')}
         </button>
       </div>
     </div>
@@ -98,9 +103,10 @@ function DiffPreview({ current, imported, onApply }: {
 }
 
 /* ---- Smart Import ---- */
-function SmartImport({ currentData, onImport }: {
+function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
   onImport: (data: ImportedData) => void;
+  t: (k: any) => string;
 }) {
   const [tab, setTab] = useState<'url' | 'pdf'>('url');
   const [url, setUrl] = useState('');
@@ -112,13 +118,13 @@ function SmartImport({ currentData, onImport }: {
 
   const importFromUrl = async () => {
     const key = getGeminiKey();
-    if (!key) { setError('Configure a chave Gemini em Configurações primeiro.'); return; }
-    if (!url) { setError('Informe uma URL válida.'); return; }
+    if (!key || key.length < 10) { setError(t('configure_gemini')); return; }
+    if (!url) { setError(t('informe_url')); return; }
     setError(''); setLoading(true); setImportedData(null);
 
-    setLoadingStep('Acessando página...');
+    setLoadingStep(t('acessando_pagina'));
     await new Promise(r => setTimeout(r, 600));
-    setLoadingStep('Lendo informações...');
+    setLoadingStep(t('lendo_informacoes'));
 
     const prompt = `Acesse e leia o conteúdo desta página: ${url}
 Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
@@ -126,12 +132,12 @@ ${PROFILE_JSON_SCHEMA}`;
 
     try {
       const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
-      setLoadingStep('Preenchendo perfil...');
+      setLoadingStep(t('preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
       if (data) { setImportedData(data); }
-      else setError('A IA não retornou dados válidos. Tente novamente.');
-    } catch { setError('Erro ao conectar com a Gemini API. Verifique sua chave.'); }
+      else setError(t('ia_erro'));
+    } catch { setError(t('erro_gemini')); }
     setLoading(false); setLoadingStep('');
   };
 
@@ -139,15 +145,15 @@ ${PROFILE_JSON_SCHEMA}`;
     const file = e.target.files?.[0];
     if (!file) return;
     const key = getGeminiKey();
-    if (!key) { setError('Configure a chave Gemini em Configurações primeiro.'); return; }
+    if (!key || key.length < 10) { setError(t('configure_gemini')); return; }
     setError(''); setLoading(true); setImportedData(null);
 
-    setLoadingStep('Lendo currículo...');
+    setLoadingStep(t('lendo_curriculo'));
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
       const base64 = (reader.result as string).split(',')[1];
-      setLoadingStep('Identificando informações...');
+      setLoadingStep(t('identificando_informacoes'));
       try {
         const text = await callGemini(key, [{
           parts: [
@@ -155,12 +161,12 @@ ${PROFILE_JSON_SCHEMA}`;
             { text: `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}` }
           ]
         }]);
-        setLoadingStep('Preenchendo perfil...');
+        setLoadingStep(t('preenchendo_perfil'));
         await new Promise(r => setTimeout(r, 400));
         const data = extractJson(text);
         if (data) setImportedData(data);
-        else setError('Não foi possível extrair dados do PDF.');
-      } catch { setError('Erro ao processar PDF com a Gemini.'); }
+        else setError(t('erro_pdf'));
+      } catch { setError(t('erro_processar_pdf')); }
       setLoading(false); setLoadingStep('');
     };
   };
@@ -168,16 +174,16 @@ ${PROFILE_JSON_SCHEMA}`;
   return (
     <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
       <div className="px-7 py-5 border-b border-gray-100">
-        <h2 className="text-lg font-serif mb-0.5">Importar informações automaticamente</h2>
-        <p className="text-sm text-text-muted">Cole um link ou suba um PDF — a IA preenche tudo automaticamente</p>
+        <h2 className="text-lg font-serif mb-0.5">{t('importar_auto')}</h2>
+        <p className="text-sm text-text-muted">{t('importar_auto_sub')}</p>
       </div>
       <div className="p-7 space-y-5">
         {/* Tabs */}
         <div className="flex gap-2">
-          {(['url', 'pdf'] as const).map(t => (
-            <button key={t} onClick={() => { setTab(t); setImportedData(null); setError(''); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === t ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-              {t === 'url' ? <><Link2 size={15}/> Importar via link</> : <><FileUp size={15}/> Importar PDF</>}
+          {(['url', 'pdf'] as const).map(type => (
+            <button key={type} onClick={() => { setTab(type); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === type ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              {type === 'url' ? <><Link2 size={15}/> {t('importar_link')}</> : <><FileUp size={15}/> {t('importar_pdf')}</>}
             </button>
           ))}
         </div>
@@ -192,7 +198,7 @@ ${PROFILE_JSON_SCHEMA}`;
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg" />
               <button onClick={importFromUrl} disabled={loading}
                 className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap">
-                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Importar do link'}
+                {loading ? <Loader2 size={16} className="animate-spin" /> : t('importar_link')}
               </button>
             </div>
           </div>
@@ -205,8 +211,8 @@ ${PROFILE_JSON_SCHEMA}`;
             <button onClick={() => pdfRef.current?.click()} disabled={loading}
               className="w-full border-2 border-dashed border-accent/30 rounded-2xl py-10 flex flex-col items-center gap-2 hover:bg-accent/5 transition-colors disabled:opacity-60">
               <FileUp size={36} className="text-accent" />
-              <span className="font-bold text-sm">Arraste seu currículo em PDF aqui</span>
-              <span className="text-xs text-text-muted">Apenas PDF · Máx. 10MB</span>
+              <span className="font-bold text-sm">{t('arraste_curriculo')}</span>
+              <span className="text-xs text-text-muted">{t('pdf_max')}</span>
             </button>
           </div>
         )}
@@ -227,8 +233,8 @@ ${PROFILE_JSON_SCHEMA}`;
         {/* Diff Preview */}
         {importedData && !loading && (
           <div className="space-y-3">
-            <p className="text-sm font-bold text-emerald-600">✓ Dados extraídos com sucesso! Selecione o que importar:</p>
-            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); }} />
+            <p className="text-sm font-bold text-emerald-600">✓ {t('dados_extraidos')}</p>
+            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); }} t={t} />
           </div>
         )}
       </div>
@@ -246,11 +252,12 @@ interface ListItem {
 
 const uid = () => Math.random().toString(36).slice(2);
 
-function AddList({ title, fields, items, onChange }: {
+function AddList({ title, fields, items, onChange, t }: {
   title: string;
   fields: { key: string; label: string; type?: string }[];
   items: ListItem[];
   onChange: (items: ListItem[]) => void;
+  t: (k: any) => string;
 }) {
   const add = () => {
     const empty: ListItem = { id: uid() };
@@ -266,7 +273,7 @@ function AddList({ title, fields, items, onChange }: {
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-text-muted">{title}</h4>
         <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
-          <Plus size={14} /> Adicionar
+          <Plus size={14} /> {t('adicionar')}
         </button>
       </div>
       {items.map(item => (
@@ -295,6 +302,7 @@ function AddList({ title, fields, items, onChange }: {
 }
 
 export default function Perfil() {
+  const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -355,9 +363,9 @@ export default function Perfil() {
 
   const handleGenerateBio = async () => {
     setGeneratingBio(true);
-    const key = localStorage.getItem('sv_config') ? JSON.parse(localStorage.getItem('sv_config')!).geminiKey : '';
-    if (!key) {
-      alert('Configure a chave Gemini em Configurações primeiro.');
+    const key = getGeminiKey();
+    if (!key || key.length < 10) {
+      alert(t('configure_gemini'));
       setGeneratingBio(false);
       return;
     }
@@ -421,16 +429,16 @@ export default function Perfil() {
   return (
     <div className="max-w-[900px] mx-auto pb-28 space-y-8">
       <div>
-        <h1 className="text-3xl font-serif mb-1">Perfil da Artista</h1>
-        <p className="text-text-muted">Seus dados são usados nos dossiês e portfólios exportados.</p>
+        <h1 className="text-3xl font-serif mb-1">{t('perfil_artista')}</h1>
+        <p className="text-text-muted">{t('perfil_sub')}</p>
       </div>
 
-      <SmartImport currentData={currentFormAsRecord} onImport={handleImport} />
+      <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
 
       {/* Identity + Digital Presence */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">Identidade</h2>
+          <h2 className="text-lg font-serif">{t('identidade')}</h2>
         </div>
         <div className="p-7">
           <div className="flex flex-col md:flex-row gap-8">
@@ -452,35 +460,35 @@ export default function Perfil() {
                   </button>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </div>
-                <p className="text-xs text-text-muted">Clique para alterar a foto</p>
+                <p className="text-xs text-text-muted">{t('clique_alterar_foto')}</p>
               </div>
 
               <div className="w-full space-y-3">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Nome completo</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nome_completo')}</label>
                   <input value={form.nome} onChange={e => set('nome', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Nome artístico</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nome_artistico')}</label>
                   <input value={form.nomeArtistico} onChange={e => set('nomeArtistico', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">Nacionalidade</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('nacionalidade')}</label>
                     <input value={form.nacionalidade} onChange={e => set('nacionalidade', e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">Cidade / Estado</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('cidade_estado')}</label>
                     <input value={form.cidade} onChange={e => set('cidade', e.target.value)}
                       placeholder="Rio de Janeiro, RJ"
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">Nascimento</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nascimento')}</label>
                   <input type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
@@ -490,17 +498,17 @@ export default function Perfil() {
             {/* Right — Digital Presence */}
             <div className="md:w-1/2 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-text-muted mb-1">Website</label>
+                <label className="block text-sm font-bold text-text-muted mb-1">{t('website')}</label>
                 <input value={form.website} onChange={e => set('website', e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-bold text-text-muted">Instagram</label>
+                  <label className="text-sm font-bold text-text-muted">{t('instagram')}</label>
                   <button onClick={() => setInstagrams(ig => [...ig, ''])}
                     className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                    <Plus size={12} /> Adicionar
+                    <Plus size={12} /> {t('adicionar')}
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -520,10 +528,10 @@ export default function Perfil() {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-bold text-text-muted">Outros links</label>
+                  <label className="text-sm font-bold text-text-muted">{t('outros_links')}</label>
                   <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
                     className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                    <Plus size={12} /> Adicionar campo
+                    <Plus size={12} /> {t('adicionar_campo')}
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -551,32 +559,32 @@ export default function Perfil() {
       {/* Bio */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-serif">Biografia</h2>
+          <h2 className="text-lg font-serif">{t('biografia')}</h2>
           <button onClick={handleGenerateBio}
             className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-sm font-bold rounded-lg hover:bg-accent/20 transition-colors">
             {generatingBio ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            Gerar bio com IA
+            {t('gerar_bio')}
           </button>
         </div>
         <div className="p-7 space-y-5">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-bold text-text-muted">Bio Curta</label>
+              <label className="text-sm font-bold text-text-muted">{t('bio_curta')}</label>
               <span className={`text-xs ${wordCount(form.bioShort) > 120 ? 'text-red-500' : 'text-gray-400'}`}>
-                {wordCount(form.bioShort)}/120 palavras
+                {wordCount(form.bioShort)}/120 {t('palavras')}
               </span>
             </div>
             <textarea value={form.bioShort} onChange={e => set('bioShort', e.target.value)}
-              placeholder="Usada na capa do dossiê..."
+              placeholder={t('usada_capa')}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-28 resize-none" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-bold text-text-muted">Bio Longa</label>
-              <span className="text-xs text-gray-400">{wordCount(form.bioLong)} palavras</span>
+              <label className="text-sm font-bold text-text-muted">{t('bio_longa')}</label>
+              <span className="text-xs text-gray-400">{wordCount(form.bioLong)} {t('palavras')}</span>
             </div>
             <textarea value={form.bioLong} onChange={e => set('bioLong', e.target.value)}
-              placeholder="Usada no portfólio PDF completo..."
+              placeholder={t('usada_portfolio')}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none" />
           </div>
         </div>
@@ -585,27 +593,27 @@ export default function Perfil() {
       {/* Formação e Trajetória */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">Formação e Trajetória</h2>
+          <h2 className="text-lg font-serif">{t('formacao_trajetoria')}</h2>
         </div>
         <div className="p-7 space-y-7">
-          <AddList title="Educação" items={formacao} onChange={setFormacao} fields={[
-            { key: 'curso', label: 'Curso' },
-            { key: 'instituicao', label: 'Instituição' },
-            { key: 'anoInicio', label: 'Ano início' },
-            { key: 'anoFim', label: 'Ano fim' },
+          <AddList title={t('educacao')} items={formacao} onChange={setFormacao} t={t} fields={[
+            { key: 'curso', label: t('curso') },
+            { key: 'instituicao', label: t('instituicao') },
+            { key: 'anoInicio', label: t('ano_inicio') },
+            { key: 'anoFim', label: t('ano_fim') },
           ]} />
           <div className="border-t border-gray-100 pt-6">
-            <AddList title="Prêmios e Distinções" items={premios} onChange={setPremios} fields={[
-              { key: 'nome', label: 'Nome do prêmio' },
-              { key: 'instituicao', label: 'Instituição' },
-              { key: 'ano', label: 'Ano' },
+            <AddList title={t('premios_distincoes')} items={premios} onChange={setPremios} t={t} fields={[
+              { key: 'nome', label: t('nome_premio') },
+              { key: 'instituicao', label: t('instituicao') },
+              { key: 'ano', label: t('ano') },
             ]} />
           </div>
           <div className="border-t border-gray-100 pt-6">
-            <AddList title="Residências Artísticas" items={residencias} onChange={setResidencias} fields={[
-              { key: 'nome', label: 'Nome' },
-              { key: 'local', label: 'Local' },
-              { key: 'ano', label: 'Ano' },
+            <AddList title={t('residencias_artisticas')} items={residencias} onChange={setResidencias} t={t} fields={[
+              { key: 'nome', label: t('nome') },
+              { key: 'local', label: t('local') },
+              { key: 'ano', label: t('ano') },
             ]} />
           </div>
         </div>
@@ -614,23 +622,23 @@ export default function Perfil() {
       {/* Exposições */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">Exposições</h2>
+          <h2 className="text-lg font-serif">{t('exposicoes')}</h2>
         </div>
         <div className="p-7 space-y-7">
-          <AddList title="Individuais" items={exposIndividuais} onChange={setExposIndividuais} fields={[
-            { key: 'titulo', label: 'Título' },
-            { key: 'local', label: 'Galeria / Museu' },
-            { key: 'cidade', label: 'Cidade' },
-            { key: 'pais', label: 'País' },
-            { key: 'ano', label: 'Ano' },
+          <AddList title={t('individuais')} items={exposIndividuais} onChange={setExposIndividuais} t={t} fields={[
+            { key: 'titulo', label: t('titulo') },
+            { key: 'local', label: t('galeria_museu') },
+            { key: 'cidade', label: t('cidade') },
+            { key: 'pais', label: t('pais') },
+            { key: 'ano', label: t('ano') },
           ]} />
           <div className="border-t border-gray-100 pt-6">
-            <AddList title="Coletivas" items={exposColetivas} onChange={setExposColetivas} fields={[
-              { key: 'titulo', label: 'Título' },
-              { key: 'local', label: 'Galeria / Museu' },
-              { key: 'cidade', label: 'Cidade' },
-              { key: 'pais', label: 'País' },
-              { key: 'ano', label: 'Ano' },
+            <AddList title={t('coletivas')} items={exposColetivas} onChange={setExposColetivas} t={t} fields={[
+              { key: 'titulo', label: t('titulo') },
+              { key: 'local', label: t('galeria_museu') },
+              { key: 'cidade', label: t('cidade') },
+              { key: 'pais', label: t('pais') },
+              { key: 'ano', label: t('ano') },
             ]} />
           </div>
         </div>
@@ -639,14 +647,14 @@ export default function Perfil() {
       {/* Publicações */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">Publicações</h2>
+          <h2 className="text-lg font-serif">{t('publicacoes')}</h2>
         </div>
         <div className="p-7">
-          <AddList title="Publicações" items={publicacoes} onChange={setPublicacoes} fields={[
-            { key: 'titulo', label: 'Título' },
-            { key: 'editora', label: 'Editora / Veículo' },
-            { key: 'ano', label: 'Ano' },
-            { key: 'link', label: 'Link (opcional)' },
+          <AddList title={t('publicacoes')} items={publicacoes} onChange={setPublicacoes} t={t} fields={[
+            { key: 'titulo', label: t('titulo') },
+            { key: 'editora', label: t('editora_veiculo') },
+            { key: 'ano', label: t('ano') },
+            { key: 'link', label: t('link_opcional') },
           ]} />
         </div>
       </section>
@@ -655,7 +663,7 @@ export default function Perfil() {
       <div className="fixed bottom-0 left-[220px] right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
         <button onClick={handleSave}
           className="flex items-center gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
-          {saving ? <><Loader2 size={18} className="animate-spin" /> Salvando...</> : 'Salvar perfil'}
+          {saving ? <><Loader2 size={18} className="animate-spin" /> {t('salvando')}...</> : t('salvar_perfil')}
         </button>
       </div>
     </div>
