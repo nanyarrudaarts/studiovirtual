@@ -87,6 +87,9 @@ export default function Configuracoes() {
     if (keys.includes('geminiKey')) {
       localStorage.setItem('gemini_api_key', updated.geminiKey);
     }
+    if (keys.includes('openaiKey')) {
+      localStorage.setItem('openai_api_key', updated.openaiKey);
+    }
     const newSaved: Record<string, boolean> = {};
     keys.forEach(k => { newSaved[k] = true; });
     setSaved(s => ({ ...s, ...newSaved }));
