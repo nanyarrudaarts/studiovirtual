@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Shell } from './components/layout/Shell';
 import Dashboard from './screens/Dashboard';
 import Upload from './screens/Upload';
@@ -45,23 +46,26 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
+    <>
+      <Routes>
+        <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
 
-      <Route path="/" element={session ? <Shell /> : <Navigate to="/login" replace />}>
-        <Route index element={<Dashboard />} />
-        <Route path="upload" element={<Upload />} />
-        <Route path="obras" element={<Obras />} />
-        <Route path="dossie" element={<Dossie />} />
-        <Route path="analise" element={<Analise />} />
-        <Route path="importar" element={<Importar />} />
-        <Route path="certificados" element={<Certificados />} />
-        <Route path="materiais" element={<Materiais />} />
-        <Route path="configuracoes" element={<Configuracoes />} />
-        <Route path="perfil" element={<Perfil />} />
-      </Route>
+        <Route path="/" element={session ? <Shell /> : <Navigate to="/login" replace />}>
+          <Route index element={<Dashboard />} />
+          <Route path="upload" element={<Upload />} />
+          <Route path="obras" element={<Obras />} />
+          <Route path="dossie" element={<Dossie />} />
+          <Route path="analise" element={<Analise />} />
+          <Route path="importar" element={<Importar />} />
+          <Route path="certificados" element={<Certificados />} />
+          <Route path="materiais" element={<Materiais />} />
+          <Route path="configuracoes" element={<Configuracoes />} />
+          <Route path="perfil" element={<Perfil />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <SpeedInsights />
+    </>
   );
 }
