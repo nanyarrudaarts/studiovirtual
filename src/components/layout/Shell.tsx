@@ -10,6 +10,7 @@ import {
   Award, 
   Box,
   Settings,
+  UserCircle,
   LogOut
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
@@ -22,7 +23,9 @@ const navItems = [
   { path: '/analise', label: 'Análise', icon: Activity },
   { path: '/importar', label: 'Importar', icon: DownloadCloud },
   { path: '/certificados', label: 'Certificados', icon: Award },
+  { path: '/configuracoes', label: 'Configurações', icon: Settings },
   { path: '/materiais', label: 'Materiais', icon: Box },
+  { path: '/perfil', label: 'Perfil', icon: UserCircle },
 ];
 
 export function Shell() {
@@ -43,13 +46,14 @@ export function Shell() {
           </h1>
         </div>
         
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-4 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.path === '/'}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
                     isActive 
@@ -65,11 +69,7 @@ export function Shell() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 space-y-1">
-          <button className="flex items-center gap-3 px-3 py-2 text-text-muted hover:text-text-main transition-colors w-full rounded-xl hover:bg-bg">
-            <Settings size={18} />
-            <span className="font-medium text-sm">Configurações</span>
-          </button>
+        <div className="p-4 border-t border-gray-100">
           <button 
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 transition-colors w-full rounded-xl"
@@ -84,10 +84,7 @@ export function Shell() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Topbar */}
         <header className="h-16 bg-surface/50 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 shrink-0 z-10">
-          <div className="flex items-center gap-4">
-            {/* Topbar left area if needed */}
-          </div>
-          
+          <div />
           <div className="flex items-center gap-4">
             <select 
               value={aiProvider}
@@ -96,7 +93,7 @@ export function Shell() {
             >
               <option value="gemini">Gemini (Google)</option>
               <option value="chatgpt">ChatGPT (OpenAI)</option>
-              <option value="notebooklm">NotebookLM</option>
+              <option value="anthropic">Claude (Anthropic)</option>
             </select>
             
             <input 

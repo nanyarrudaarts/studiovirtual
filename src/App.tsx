@@ -5,6 +5,8 @@ import Dashboard from './screens/Dashboard';
 import Upload from './screens/Upload';
 import Materiais from './screens/Materiais';
 import Login from './screens/Login';
+import Configuracoes from './screens/Configuracoes';
+import Perfil from './screens/Perfil';
 import { supabase } from './services/supabase';
 
 // Placeholder Screens
@@ -24,9 +26,7 @@ export default function App() {
       setLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
@@ -34,13 +34,20 @@ export default function App() {
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen bg-bg flex items-center justify-center text-text-muted">Carregando...</div>;
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <h1 className="font-serif italic text-2xl text-text-main">studio virtual</h1>
+          <p className="text-text-muted text-sm">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <Routes>
       <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
-      
+
       <Route path="/" element={session ? <Shell /> : <Navigate to="/login" replace />}>
         <Route index element={<Dashboard />} />
         <Route path="upload" element={<Upload />} />
@@ -50,8 +57,10 @@ export default function App() {
         <Route path="importar" element={<Importar />} />
         <Route path="certificados" element={<Certificados />} />
         <Route path="materiais" element={<Materiais />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
+        <Route path="perfil" element={<Perfil />} />
       </Route>
-      
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
