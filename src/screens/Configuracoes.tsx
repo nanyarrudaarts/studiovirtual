@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
-import { useI18n } from '../i18n/I18nProvider';
+import { useTranslation } from 'react-i18next';
 
 
 type AIProvider = 'gemini' | 'openai' | 'anthropic';
@@ -63,7 +63,7 @@ function KeyInput({ label, value, onChange, placeholder, onSave, t }: {
         </div>
         <button onClick={onSave}
           className="px-4 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap">
-          {t('salvar_chave')}
+          {t('configuracoes.salvar_chave')}
         </button>
       </div>
     </div>
@@ -71,7 +71,7 @@ function KeyInput({ label, value, onChange, placeholder, onSave, t }: {
 }
 
 export default function Configuracoes() {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const [config, setConfig] = useState<Config>(defaultConfig);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [showDangerModal, setShowDangerModal] = useState(false);
@@ -108,14 +108,14 @@ export default function Configuracoes() {
   return (
     <div className="max-w-[800px] mx-auto pb-16 space-y-8">
       <div>
-        <h1 className="text-3xl font-serif mb-1">{t('configuracoes')}</h1>
-        <p className="text-text-muted">{t('config_subtitle')}</p>
+        <h1 className="text-3xl font-serif mb-1">{t('nav.configuracoes')}</h1>
+        <p className="text-text-muted">{t('configuracoes.subtitle')}</p>
       </div>
 
       {/* SECTION 1 — AI */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('provedores_ia')}</h2>
+          <h2 className="text-lg font-serif">{t('configuracoes.provedores_ia')}</h2>
         </div>
         <div className="p-7 space-y-7">
           {/* Provider Selector */}
@@ -129,7 +129,7 @@ export default function Configuracoes() {
                 }`}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-sm">{p.label}</span>
-                  {p.id === 'gemini' && <span className="text-xs text-emerald-600 font-bold">✓ {t('gratuito')}</span>}
+                  {p.id === 'gemini' && <span className="text-xs text-emerald-600 font-bold">✓ {t('configuracoes.gratuito')}</span>}
                   {config.aiProvider === p.id && p.id !== 'gemini' && (
                     <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center">
                       <Check size={10} className="text-white" />
@@ -158,14 +158,14 @@ export default function Configuracoes() {
           <div className="bg-bg rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-sm">{t('integracao_notebooklm')}</h3>
-                <p className="text-xs text-text-muted mt-0.5">{t('notebooklm_sub')}</p>
+                <h3 className="font-bold text-sm">{t('configuracoes.integracao_notebooklm')}</h3>
+                <p className="text-xs text-text-muted mt-0.5">{t('configuracoes.notebooklm_sub')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
                   config.notebooklmActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {config.notebooklmActive ? t('conectado') : t('desconectado')}
+                  {config.notebooklmActive ? t('configuracoes.conectado') : t('configuracoes.desconectado')}
                 </span>
                 <button onClick={() => set('notebooklmActive', !config.notebooklmActive)}
                   className="relative w-11 h-6 rounded-full transition-colors"
@@ -177,7 +177,7 @@ export default function Configuracoes() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-text-muted mb-1">{t('id_notebook')}</label>
+              <label className="block text-xs font-bold text-text-muted mb-1">{t('configuracoes.id_notebook')}</label>
               <input type="text" value={config.notebooklmId}
                 onChange={e => set('notebooklmId', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-white font-mono" />
@@ -189,12 +189,12 @@ export default function Configuracoes() {
       {/* SECTION 2 — Preferências */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('preferencias')}</h2>
+          <h2 className="text-lg font-serif">{t('configuracoes.preferencias')}</h2>
         </div>
         <div className="p-7 space-y-5">
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('idioma')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.idioma')}</label>
               <select value={config.language} onChange={e => set('language', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="pt-BR">Português (BR)</option>
@@ -204,7 +204,7 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('moeda')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.moeda')}</label>
               <select value={config.currency} onChange={e => set('currency', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="BRL">BRL (R$)</option>
@@ -213,7 +213,7 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('unidades')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.unidades')}</label>
               <select value={config.units} onChange={e => set('units', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="cm">Centímetros</option>
@@ -221,7 +221,7 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('formato_data')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.formato_data')}</label>
               <select value={config.dateFormat} onChange={e => set('dateFormat', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="DD/MM/AAAA">DD/MM/AAAA</option>
@@ -231,7 +231,7 @@ export default function Configuracoes() {
           </div>
           <button onClick={() => save(['language', 'currency', 'units', 'dateFormat'])}
             className="flex items-center gap-2 px-6 py-2.5 bg-accent text-white font-bold rounded-lg hover:bg-accent/90 transition-colors text-sm">
-            {saved['language'] ? <><Check size={16} /> {t('salvo')}</> : t('salvar_preferencias')}
+            {saved['language'] ? <><Check size={16} /> {t('configuracoes.salvo')}</> : t('configuracoes.salvar_preferencias')}
           </button>
         </div>
       </section>
@@ -239,12 +239,12 @@ export default function Configuracoes() {
       {/* SECTION 3 — Exportação */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('config_exportacao')}</h2>
+          <h2 className="text-lg font-serif">{t('configuracoes.exportacao')}</h2>
         </div>
         <div className="p-7 space-y-5">
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('qualidade_pdf')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.qualidade_pdf')}</label>
               <select value={config.pdfQuality} onChange={e => set('pdfQuality', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="300">Alta (300 DPI)</option>
@@ -253,7 +253,7 @@ export default function Configuracoes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('formato_pdf')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.formato_pdf')}</label>
               <select value={config.pdfFormat} onChange={e => set('pdfFormat', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
                 <option value="A4">A4</option>
@@ -264,8 +264,8 @@ export default function Configuracoes() {
           </div>
           <div className="flex items-center justify-between py-3 border-t border-gray-100">
             <div>
-              <p className="font-medium text-sm">{t('incluir_marca_dagua')}</p>
-              <p className="text-xs text-text-muted">{t('marca_dagua_sub')}</p>
+              <p className="font-medium text-sm">{t('configuracoes.incluir_marca_dagua')}</p>
+              <p className="text-xs text-text-muted">{t('configuracoes.marca_dagua_sub')}</p>
             </div>
             <button onClick={() => set('watermark', !config.watermark)}
               className="relative w-11 h-6 rounded-full transition-colors"
@@ -277,7 +277,7 @@ export default function Configuracoes() {
           </div>
           {config.watermark && (
             <div>
-              <label className="block text-sm font-bold text-text-muted mb-1">{t('texto_marca_dagua')}</label>
+              <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.texto_marca_dagua')}</label>
               <input type="text" value={config.watermarkText}
                 onChange={e => set('watermarkText', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
@@ -285,7 +285,7 @@ export default function Configuracoes() {
           )}
           <button onClick={() => save(['pdfQuality', 'pdfFormat', 'watermark', 'watermarkText'])}
             className="flex items-center gap-2 px-6 py-2.5 bg-accent text-white font-bold rounded-lg hover:bg-accent/90 transition-colors text-sm">
-            {saved['pdfQuality'] ? <><Check size={16} /> {t('salvo')}</> : t('salvar_configuracoes')}
+            {saved['pdfQuality'] ? <><Check size={16} /> {t('configuracoes.salvo')}</> : t('configuracoes.salvar_config')}
           </button>
         </div>
       </section>
@@ -293,20 +293,20 @@ export default function Configuracoes() {
       {/* SECTION 4 — Conta */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('conta_seguranca')}</h2>
+          <h2 className="text-lg font-serif">{t('configuracoes.conta')}</h2>
         </div>
         <div className="p-7 space-y-4">
           <div>
-            <label className="block text-sm font-bold text-text-muted mb-1">{t('email_conta')}</label>
+            <label className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.email_conta')}</label>
             <input type="email" value="contato@nanyarruda.com" readOnly
               className="w-full border border-gray-100 rounded-lg px-4 py-2 text-sm bg-bg text-text-muted cursor-not-allowed" />
           </div>
           <div className="flex gap-3 flex-wrap">
             <button className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-accent transition-colors">
-              {t('alterar_senha')}
+              {t('configuracoes.alterar_senha')}
             </button>
             <button className="px-5 py-2 border border-rose-200 text-rose-600 rounded-lg text-sm font-medium hover:bg-rose-50 transition-colors">
-              {t('sair_dispositivos')}
+              {t('configuracoes.sair_dispositivos')}
             </button>
           </div>
 
@@ -314,13 +314,13 @@ export default function Configuracoes() {
             <div className="flex items-start gap-3 mb-4">
               <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-bold text-red-700 text-sm">{t('zona_perigo')}</h3>
-                <p className="text-xs text-red-500 mt-0.5">{t('zona_perigo_sub')}</p>
+                <h3 className="font-bold text-red-700 text-sm">{t('configuracoes.zona_perigo')}</h3>
+                <p className="text-xs text-red-500 mt-0.5">{t('configuracoes.zona_perigo_sub')}</p>
               </div>
             </div>
             <button onClick={() => setShowDangerModal(true)}
               className="px-5 py-2 border border-red-400 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors">
-              {t('apagar_dados')}
+              {t('configuracoes.apagar_dados')}
             </button>
           </div>
         </div>
@@ -335,17 +335,17 @@ export default function Configuracoes() {
                 <AlertTriangle size={20} className="text-red-600" />
               </div>
               <div>
-                <h3 className="font-serif text-xl text-red-700">{t('apagar_dados_titulo')}</h3>
-                <p className="text-sm text-text-muted mt-1">{t('apagar_dados_sub')}</p>
+                <h3 className="font-serif text-xl text-red-700">{t('configuracoes.apagar_dados')}</h3>
+                <p className="text-sm text-text-muted mt-1">{t('configuracoes.zona_perigo_sub')}</p>
               </div>
             </div>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setShowDangerModal(false)}
                 className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
-                {t('cancelar')}
+                {t('common.cancelar')}
               </button>
               <button className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">
-                {t('sim_apagar')}
+                {t('configuracoes.sim_apagar')}
               </button>
             </div>
           </div>

@@ -4,18 +4,19 @@ import { format } from 'date-fns';
 import type { Obra } from '../types';
 import { UploadCloud, FileText, Activity, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { ptBR, enUS, es, de } from 'date-fns/locale';
-import { useI18n } from '../i18n/I18nProvider';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
-  const { t, lang } = useI18n();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const [obras, setObras] = useState<Obra[]>([]);
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
   const getLocale = () => {
-    if (lang.startsWith('en')) return enUS;
-    if (lang.startsWith('es')) return es;
-    if (lang.startsWith('de')) return de;
+    if (lang === 'en') return enUS;
+    if (lang === 'es') return es;
+    if (lang === 'de') return de;
     return ptBR;
   };
 
@@ -67,34 +68,34 @@ export default function Dashboard() {
         <header>
           <p className="text-text-muted capitalize mb-1">{dataAtual}</p>
           <h1 className="text-3xl md:text-4xl font-serif text-text-main">
-            {t('bem_vinda')}
+            {t('dashboard.welcome')}
           </h1>
         </header>
 
         {/* Metric Cards */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <div className="bg-surface rounded-xl p-6 shadow-sm border border-gray-100 hover-float">
-            <h3 className="text-text-muted font-medium text-sm mb-4">{t('total_obras')}</h3>
+            <h3 className="text-text-muted font-medium text-sm mb-4">{t('dashboard.total_obras')}</h3>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-serif">{metricas.totalObras}</span>
-              <span className="text-accent text-sm font-medium mb-1">{t('mais_dois_mes')}</span>
+              <span className="text-accent text-sm font-medium mb-1">{t('dashboard.mais_dois_mes')}</span>
             </div>
           </div>
           <div className="bg-surface rounded-xl p-6 shadow-sm border border-gray-100 hover-float">
-            <h3 className="text-text-muted font-medium text-sm mb-4">{t('saude_portfolio')}</h3>
+            <h3 className="text-text-muted font-medium text-sm mb-4">{t('dashboard.health_score')}</h3>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-serif">{metricas.healthScore}%</span>
               <span className="text-emerald-500 text-sm font-medium mb-1 flex items-center gap-1">
-                <CheckCircle2 size={14} /> {t('excelente')}
+                <CheckCircle2 size={14} /> {t('dashboard.excelente')}
               </span>
             </div>
           </div>
           <div className="bg-surface rounded-xl p-6 shadow-sm border border-gray-100 hover-float">
-            <h3 className="text-text-muted font-medium text-sm mb-4">{t('alertas_materiais')}</h3>
+            <h3 className="text-text-muted font-medium text-sm mb-4">{t('dashboard.alertas')}</h3>
             <div className="flex items-end gap-3">
               <span className="text-4xl font-serif">{metricas.alertasMateriais}</span>
               <span className="text-accent2 text-sm font-medium mb-1 flex items-center gap-1">
-                <AlertCircle size={14} /> {t('reposicao')}
+                <AlertCircle size={14} /> {t('dashboard.reposicao')}
               </span>
             </div>
           </div>
@@ -104,24 +105,24 @@ export default function Dashboard() {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <button className="bg-accent text-white rounded-xl p-6 shadow-sm hover-float flex flex-col items-center justify-center gap-3 transition-colors hover:bg-accent/90">
             <UploadCloud size={32} />
-            <span className="font-serif text-lg">{t('novo_upload')}</span>
+            <span className="font-serif text-lg">{t('dashboard.novo_upload')}</span>
           </button>
           <button className="bg-surface text-text-main border border-gray-100 rounded-xl p-6 shadow-sm hover-float flex flex-col items-center justify-center gap-3 transition-colors hover:border-accent/30">
             <FileText size={32} className="text-accent" />
-            <span className="font-serif text-lg">{t('criar_dossie')}</span>
+            <span className="font-serif text-lg">{t('dashboard.criar_dossie')}</span>
           </button>
           <button className="bg-surface text-text-main border border-gray-100 rounded-xl p-6 shadow-sm hover-float flex flex-col items-center justify-center gap-3 transition-colors hover:border-accent/30">
             <Activity size={32} className="text-accent" />
-            <span className="font-serif text-lg">{t('analise_curatorial')}</span>
+            <span className="font-serif text-lg">{t('dashboard.analise_curatorial')}</span>
           </button>
         </section>
 
         {/* Obras Recentes */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-serif">{t('obras_recentes')}</h2>
+            <h2 className="text-2xl font-serif">{t('dashboard.obras_recentes')}</h2>
             <button className="text-accent font-medium text-sm flex items-center gap-1 hover:underline">
-              {t('ver_galeria')} <ChevronRight size={16} />
+              {t('dashboard.ver_galeria')} <ChevronRight size={16} />
             </button>
           </div>
           
@@ -143,7 +144,7 @@ export default function Dashboard() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        {t('sem_imagem')}
+                        {t('dashboard.sem_imagem')}
                       </div>
                     )}
                     {/* 300 DPI Badge */}
@@ -183,20 +184,20 @@ export default function Dashboard() {
         <div className="bg-surface border border-accent/20 rounded-xl p-6 shadow-float sticky top-8">
           <div className="flex items-center gap-3 mb-6 text-accent">
             <Sparkles size={24} />
-            <h2 className="text-xl font-serif text-text-main">{t('nota_curadoria')}</h2>
+            <h2 className="text-xl font-serif text-text-main">{t('dashboard.nota_curadoria')}</h2>
           </div>
           
           <div className="inline-block bg-accent/10 text-accent font-semibold text-xs px-3 py-1.5 rounded-full mb-4">
-            {t('insight_tag')}
+            {t('dashboard.insight_tag')}
           </div>
           
           <div className="space-y-4 text-text-main text-sm leading-relaxed">
-            <p>{t('insight_p1')}</p>
-            <p className="text-text-muted italic">{t('insight_p2')}</p>
+            <p>{t('dashboard.insight_p1')}</p>
+            <p className="text-text-muted italic">{t('dashboard.insight_p2')}</p>
           </div>
           
           <button className="mt-8 w-full py-3 bg-bg text-text-main hover:bg-gray-100 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
-            {t('expandir_insights')} <ChevronRight size={16} />
+            {t('dashboard.expandir_insights')} <ChevronRight size={16} />
           </button>
         </div>
       </aside>

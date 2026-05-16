@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Sparkles, Loader2, Camera, Link2, FileUp, Check } from 'lucide-react';
 import { supabase } from '../services/supabase';
-import { useI18n } from '../i18n/I18nProvider';
+import { useTranslation } from 'react-i18next';
 
 function getGeminiKey() {
   const apiKey = localStorage.getItem('gemini_api_key') || '';
@@ -72,8 +72,8 @@ function DiffPreview({ current, imported, onApply, t }: {
   return (
     <div className="border border-gray-100 rounded-xl overflow-hidden">
       <div className="grid grid-cols-2 text-xs font-bold bg-gray-50 text-gray-500 px-4 py-2.5 border-b border-gray-100">
-        <span>{t('dados_atuais')}</span>
-        <span className="text-emerald-600">{t('dados_importados')}</span>
+        <span>{t('perfil.dados_atuais')}</span>
+        <span className="text-emerald-600">{t('perfil.dados_importados')}</span>
       </div>
       <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
         {keys.map(k => {
@@ -95,7 +95,7 @@ function DiffPreview({ current, imported, onApply, t }: {
         <span className="text-xs text-gray-500">{keys.filter(k => checked[k]).length} de {keys.length} {t('campos_selecionados')}</span>
         <button onClick={apply}
           className="flex items-center gap-2 px-5 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors">
-          <Check size={14} /> {t('aplicar_selecionados')}
+          <Check size={14} /> {t('perfil.aplicar_selecionados')}
         </button>
       </div>
     </div>
@@ -118,7 +118,7 @@ function SmartImport({ currentData, onImport, t }: {
 
   const importFromUrl = async () => {
     const key = getGeminiKey();
-    if (!key || key.length < 10) { setError(t('configure_gemini')); return; }
+    if (!key || key.length < 10) { setError(t('perfil.configure_gemini')); return; }
     if (!url) { setError(t('informe_url')); return; }
     setError(''); setLoading(true); setImportedData(null);
 
@@ -132,7 +132,7 @@ ${PROFILE_JSON_SCHEMA}`;
 
     try {
       const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
-      setLoadingStep(t('preenchendo_perfil'));
+      setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
       if (data) { setImportedData(data); }
@@ -145,7 +145,7 @@ ${PROFILE_JSON_SCHEMA}`;
     const file = e.target.files?.[0];
     if (!file) return;
     const key = getGeminiKey();
-    if (!key || key.length < 10) { setError(t('configure_gemini')); return; }
+    if (!key || key.length < 10) { setError(t('perfil.configure_gemini')); return; }
     setError(''); setLoading(true); setImportedData(null);
 
     setLoadingStep(t('lendo_curriculo'));
@@ -153,7 +153,7 @@ ${PROFILE_JSON_SCHEMA}`;
     reader.readAsDataURL(file);
     reader.onload = async () => {
       const base64 = (reader.result as string).split(',')[1];
-      setLoadingStep(t('identificando_informacoes'));
+      setLoadingStep(t('perfil.identificando_informacoes'));
       try {
         const text = await callGemini(key, [{
           parts: [
@@ -161,11 +161,11 @@ ${PROFILE_JSON_SCHEMA}`;
             { text: `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}` }
           ]
         }]);
-        setLoadingStep(t('preenchendo_perfil'));
+        setLoadingStep(t('perfil.preenchendo_perfil'));
         await new Promise(r => setTimeout(r, 400));
         const data = extractJson(text);
         if (data) setImportedData(data);
-        else setError(t('erro_pdf'));
+        else setError(t('perfil.erro_pdf'));
       } catch { setError(t('erro_processar_pdf')); }
       setLoading(false); setLoadingStep('');
     };
@@ -174,8 +174,8 @@ ${PROFILE_JSON_SCHEMA}`;
   return (
     <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
       <div className="px-7 py-5 border-b border-gray-100">
-        <h2 className="text-lg font-serif mb-0.5">{t('importar_auto')}</h2>
-        <p className="text-sm text-text-muted">{t('importar_auto_sub')}</p>
+        <h2 className="text-lg font-serif mb-0.5">{t('perfil.importar_title')}</h2>
+        <p className="text-sm text-text-muted">{t('perfil.importar_subtitle')}</p>
       </div>
       <div className="p-7 space-y-5">
         {/* Tabs */}
@@ -183,7 +183,7 @@ ${PROFILE_JSON_SCHEMA}`;
           {(['url', 'pdf'] as const).map(type => (
             <button key={type} onClick={() => { setTab(type); setImportedData(null); setError(''); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === type ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-              {type === 'url' ? <><Link2 size={15}/> {t('importar_link')}</> : <><FileUp size={15}/> {t('importar_pdf')}</>}
+              {type === 'url' ? <><Link2 size={15}/> {t('perfil.importar_link')}</> : <><FileUp size={15}/> {t('perfil.importar_pdf')}</>}
             </button>
           ))}
         </div>
@@ -198,7 +198,7 @@ ${PROFILE_JSON_SCHEMA}`;
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg" />
               <button onClick={importFromUrl} disabled={loading}
                 className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap">
-                {loading ? <Loader2 size={16} className="animate-spin" /> : t('importar_link')}
+                {loading ? <Loader2 size={16} className="animate-spin" /> : t('perfil.importar_link')}
               </button>
             </div>
           </div>
@@ -273,7 +273,7 @@ function AddList({ title, fields, items, onChange, t }: {
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-text-muted">{title}</h4>
         <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
-          <Plus size={14} /> {t('adicionar')}
+          <Plus size={14} /> {t('perfil.adicionar')}
         </button>
       </div>
       {items.map(item => (
@@ -302,7 +302,7 @@ function AddList({ title, fields, items, onChange, t }: {
 }
 
 export default function Perfil() {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -365,7 +365,7 @@ export default function Perfil() {
     setGeneratingBio(true);
     const key = getGeminiKey();
     if (!key || key.length < 10) {
-      alert(t('configure_gemini'));
+      alert(t('perfil.configure_gemini'));
       setGeneratingBio(false);
       return;
     }
@@ -429,8 +429,8 @@ export default function Perfil() {
   return (
     <div className="max-w-[900px] mx-auto pb-28 space-y-8">
       <div>
-        <h1 className="text-3xl font-serif mb-1">{t('perfil_artista')}</h1>
-        <p className="text-text-muted">{t('perfil_sub')}</p>
+        <h1 className="text-3xl font-serif mb-1">{t('perfil.title')}</h1>
+        <p className="text-text-muted">{t('perfil.subtitle')}</p>
       </div>
 
       <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
@@ -438,7 +438,7 @@ export default function Perfil() {
       {/* Identity + Digital Presence */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('identidade')}</h2>
+          <h2 className="text-lg font-serif">{t('perfil.identidade')}</h2>
         </div>
         <div className="p-7">
           <div className="flex flex-col md:flex-row gap-8">
@@ -460,35 +460,35 @@ export default function Perfil() {
                   </button>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </div>
-                <p className="text-xs text-text-muted">{t('clique_alterar_foto')}</p>
+                <p className="text-xs text-text-muted">{t('perfil.clique_alterar_foto')}</p>
               </div>
 
               <div className="w-full space-y-3">
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nome_completo')}</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
                   <input value={form.nome} onChange={e => set('nome', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nome_artistico')}</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_artistico')}</label>
                   <input value={form.nomeArtistico} onChange={e => set('nomeArtistico', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('nacionalidade')}</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nacionalidade')}</label>
                     <input value={form.nacionalidade} onChange={e => set('nacionalidade', e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('cidade_estado')}</label>
+                    <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.cidade_estado')}</label>
                     <input value={form.cidade} onChange={e => set('cidade', e.target.value)}
                       placeholder="Rio de Janeiro, RJ"
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-text-muted mb-1">{t('nascimento')}</label>
+                  <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
                   <input type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                 </div>
@@ -498,17 +498,17 @@ export default function Perfil() {
             {/* Right — Digital Presence */}
             <div className="md:w-1/2 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-text-muted mb-1">{t('website')}</label>
+                <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
                 <input value={form.website} onChange={e => set('website', e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-bold text-text-muted">{t('instagram')}</label>
+                  <label className="text-sm font-bold text-text-muted">{t('perfil.instagram')}</label>
                   <button onClick={() => setInstagrams(ig => [...ig, ''])}
                     className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                    <Plus size={12} /> {t('adicionar')}
+                    <Plus size={12} /> {t('perfil.adicionar')}
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -528,10 +528,10 @@ export default function Perfil() {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-bold text-text-muted">{t('outros_links')}</label>
+                  <label className="text-sm font-bold text-text-muted">{t('perfil.outros_links')}</label>
                   <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
                     className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                    <Plus size={12} /> {t('adicionar_campo')}
+                    <Plus size={12} /> {t('perfil.adicionar_campo')}
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -559,32 +559,32 @@ export default function Perfil() {
       {/* Bio */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-serif">{t('biografia')}</h2>
+          <h2 className="text-lg font-serif">{t('perfil.biografia')}</h2>
           <button onClick={handleGenerateBio}
             className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-sm font-bold rounded-lg hover:bg-accent/20 transition-colors">
             {generatingBio ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {t('gerar_bio')}
+            {t('perfil.gerar_bio')}
           </button>
         </div>
         <div className="p-7 space-y-5">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-bold text-text-muted">{t('bio_curta')}</label>
+              <label className="text-sm font-bold text-text-muted">{t('perfil.bio_curta')}</label>
               <span className={`text-xs ${wordCount(form.bioShort) > 120 ? 'text-red-500' : 'text-gray-400'}`}>
-                {wordCount(form.bioShort)}/120 {t('palavras')}
+                {wordCount(form.bioShort)}/120 {t('perfil.palavras')}
               </span>
             </div>
             <textarea value={form.bioShort} onChange={e => set('bioShort', e.target.value)}
-              placeholder={t('usada_capa')}
+              placeholder={t('perfil.usada_capa')}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-28 resize-none" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-bold text-text-muted">{t('bio_longa')}</label>
-              <span className="text-xs text-gray-400">{wordCount(form.bioLong)} {t('palavras')}</span>
+              <label className="text-sm font-bold text-text-muted">{t('perfil.bio_longa')}</label>
+              <span className="text-xs text-gray-400">{wordCount(form.bioLong)} {t('perfil.palavras')}</span>
             </div>
             <textarea value={form.bioLong} onChange={e => set('bioLong', e.target.value)}
-              placeholder={t('usada_portfolio')}
+              placeholder={t('perfil.usada_portfolio')}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none" />
           </div>
         </div>
@@ -593,26 +593,26 @@ export default function Perfil() {
       {/* Formação e Trajetória */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('formacao_trajetoria')}</h2>
+          <h2 className="text-lg font-serif">{t('perfil.formacao_traj')}</h2>
         </div>
         <div className="p-7 space-y-7">
-          <AddList title={t('educacao')} items={formacao} onChange={setFormacao} t={t} fields={[
-            { key: 'curso', label: t('curso') },
-            { key: 'instituicao', label: t('instituicao') },
-            { key: 'anoInicio', label: t('ano_inicio') },
-            { key: 'anoFim', label: t('ano_fim') },
+          <AddList title={t('perfil.educacao')} items={formacao} onChange={setFormacao} t={t} fields={[
+            { key: 'curso', label: t('perfil.curso') },
+            { key: 'instituicao', label: t('perfil.instituicao') },
+            { key: 'anoInicio', label: t('perfil.ano_inicio') },
+            { key: 'anoFim', label: t('perfil.ano_fim') },
           ]} />
           <div className="border-t border-gray-100 pt-6">
-            <AddList title={t('premios_distincoes')} items={premios} onChange={setPremios} t={t} fields={[
-              { key: 'nome', label: t('nome_premio') },
-              { key: 'instituicao', label: t('instituicao') },
+            <AddList title={t('perfil.premios_distincoes')} items={premios} onChange={setPremios} t={t} fields={[
+              { key: 'nome', label: t('perfil.nome_premio') },
+              { key: 'instituicao', label: t('perfil.instituicao') },
               { key: 'ano', label: t('ano') },
             ]} />
           </div>
           <div className="border-t border-gray-100 pt-6">
-            <AddList title={t('residencias_artisticas')} items={residencias} onChange={setResidencias} t={t} fields={[
+            <AddList title={t('perfil.residencias_artisticas')} items={residencias} onChange={setResidencias} t={t} fields={[
               { key: 'nome', label: t('nome') },
-              { key: 'local', label: t('local') },
+              { key: 'local', label: t('perfil.local') },
               { key: 'ano', label: t('ano') },
             ]} />
           </div>
@@ -625,19 +625,19 @@ export default function Perfil() {
           <h2 className="text-lg font-serif">{t('exposicoes')}</h2>
         </div>
         <div className="p-7 space-y-7">
-          <AddList title={t('individuais')} items={exposIndividuais} onChange={setExposIndividuais} t={t} fields={[
+          <AddList title={t('perfil.individuais')} items={exposIndividuais} onChange={setExposIndividuais} t={t} fields={[
             { key: 'titulo', label: t('titulo') },
-            { key: 'local', label: t('galeria_museu') },
-            { key: 'cidade', label: t('cidade') },
-            { key: 'pais', label: t('pais') },
+            { key: 'local', label: t('perfil.galeria_museu') },
+            { key: 'cidade', label: t('perfil.cidade') },
+            { key: 'pais', label: t('perfil.pais') },
             { key: 'ano', label: t('ano') },
           ]} />
           <div className="border-t border-gray-100 pt-6">
-            <AddList title={t('coletivas')} items={exposColetivas} onChange={setExposColetivas} t={t} fields={[
+            <AddList title={t('perfil.coletivas')} items={exposColetivas} onChange={setExposColetivas} t={t} fields={[
               { key: 'titulo', label: t('titulo') },
-              { key: 'local', label: t('galeria_museu') },
-              { key: 'cidade', label: t('cidade') },
-              { key: 'pais', label: t('pais') },
+              { key: 'local', label: t('perfil.galeria_museu') },
+              { key: 'cidade', label: t('perfil.cidade') },
+              { key: 'pais', label: t('perfil.pais') },
               { key: 'ano', label: t('ano') },
             ]} />
           </div>
@@ -647,14 +647,14 @@ export default function Perfil() {
       {/* Publicações */}
       <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
         <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('publicacoes')}</h2>
+          <h2 className="text-lg font-serif">{t('perfil.publicacoes')}</h2>
         </div>
         <div className="p-7">
-          <AddList title={t('publicacoes')} items={publicacoes} onChange={setPublicacoes} t={t} fields={[
+          <AddList title={t('perfil.publicacoes')} items={publicacoes} onChange={setPublicacoes} t={t} fields={[
             { key: 'titulo', label: t('titulo') },
-            { key: 'editora', label: t('editora_veiculo') },
+            { key: 'editora', label: t('perfil.editora_veiculo') },
             { key: 'ano', label: t('ano') },
-            { key: 'link', label: t('link_opcional') },
+            { key: 'link', label: t('perfil.link_opcional') },
           ]} />
         </div>
       </section>
@@ -663,7 +663,7 @@ export default function Perfil() {
       <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
         <button onClick={handleSave}
           className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
-          {saving ? <><Loader2 size={18} className="animate-spin" /> {t('salvando')}...</> : t('salvar_perfil')}
+          {saving ? <><Loader2 size={18} className="animate-spin" /> {t('perfil.salvando')}...</> : t('perfil.salvar_perfil')}
         </button>
       </div>
     </div>

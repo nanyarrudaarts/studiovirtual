@@ -5,26 +5,26 @@ import {
   DownloadCloud, Award, Box, Settings, UserCircle, LogOut,
   Sun, Moon, Globe, Menu, X
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n/index';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../hooks/useTheme';
-import { useI18n } from '../../i18n/I18nProvider';
-import { type TranslationKey } from '../../i18n/translations';
 
-const navItems: { path: string; labelKey: TranslationKey; icon: any }[] = [
-  { path: '/', labelKey: 'dashboard', icon: LayoutDashboard },
-  { path: '/upload', labelKey: 'upload', icon: UploadCloud },
-  { path: '/obras', labelKey: 'obras', icon: ImageIcon },
-  { path: '/dossie', labelKey: 'dossie', icon: FileText },
-  { path: '/analise', labelKey: 'analise', icon: Activity },
-  { path: '/importar', labelKey: 'importar', icon: DownloadCloud },
-  { path: '/certificados', labelKey: 'certificados', icon: Award },
-  { path: '/configuracoes', labelKey: 'configuracoes', icon: Settings },
-  { path: '/materiais', labelKey: 'materiais', icon: Box },
-  { path: '/perfil', labelKey: 'perfil', icon: UserCircle },
+const navItems = [
+  { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { path: '/upload', labelKey: 'nav.upload', icon: UploadCloud },
+  { path: '/obras', labelKey: 'nav.obras', icon: ImageIcon },
+  { path: '/dossie', labelKey: 'nav.dossie', icon: FileText },
+  { path: '/analise', labelKey: 'nav.analise', icon: Activity },
+  { path: '/importar', labelKey: 'nav.importar', icon: DownloadCloud },
+  { path: '/certificados', labelKey: 'nav.certificados', icon: Award },
+  { path: '/configuracoes', labelKey: 'nav.configuracoes', icon: Settings },
+  { path: '/materiais', labelKey: 'nav.materiais', icon: Box },
+  { path: '/perfil', labelKey: 'nav.perfil', icon: UserCircle },
 ];
 
 const LANGUAGES = [
-  { value: 'pt-BR', label: 'Português (BR)' },
+  { value: 'pt', label: 'Português (BR)' },
   { value: 'en', label: 'English' },
   { value: 'es', label: 'Español' },
   { value: 'de', label: 'Deutsch' },
@@ -32,8 +32,9 @@ const LANGUAGES = [
 
 export function Shell() {
   const { isDark, toggle: toggleTheme } = useTheme();
-  const { lang, t, setLang } = useI18n();
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const currentLang = i18n.language || 'pt';
 
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
@@ -53,6 +54,13 @@ export function Shell() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleLangChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem('language', lang);
+    setShowLangDropdown(false);
+    setShowAvatarDropdown(false);
   };
 
   // Swipe handling
@@ -127,7 +135,7 @@ export function Shell() {
             className="flex items-center gap-4 md:gap-3 px-4 md:px-3 py-4 md:py-2 text-rose-500 active:bg-rose-50/20 hover:text-rose-600 hover:bg-rose-50/10 transition-colors w-full rounded-xl"
           >
             <LogOut size={20} className="md:w-[18px] md:h-[18px]" />
-            <span className="font-medium text-base md:text-sm">{t('sair')}</span>
+            <span className="font-medium text-base md:text-sm">{t('nav.sair')}</span>
           </button>
         </div>
       </aside>
@@ -158,16 +166,16 @@ export function Shell() {
                   style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)' }}
                 >
                   <Globe size={16} />
-                  <span className="uppercase">{lang.split('-')[0]}</span>
+                  <span className="uppercase">{currentLang.split('-')[0]}</span>
                 </button>
                 {showLangDropdown && (
                   <div className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg border overflow-hidden z-50"
                     style={{ backgroundColor: 'var(--surface)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
                     {LANGUAGES.map(l => (
-                      <button key={l.value} onClick={() => { setLang(l.value as any); setShowLangDropdown(false); }}
+                      <button key={l.value} onClick={() => handleLangChange(l.value)}
                         className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left transition-colors hover:bg-accent/10"
-                        style={{ color: lang === l.value ? 'var(--accent)' : 'var(--text-main)', fontWeight: lang === l.value ? '700' : '400' }}>
-                        {lang === l.value && <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />}
+                        style={{ color: currentLang === l.value ? 'var(--accent)' : 'var(--text-main)', fontWeight: currentLang === l.value ? '700' : '400' }}>
+                        {currentLang === l.value && <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />}
                         {l.label}
                       </button>
                     ))}
@@ -204,12 +212,12 @@ export function Shell() {
                   {/* Mobile Language and Theme inside avatar dropdown */}
                   <div className="md:hidden border-b py-2" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}>
                     <div className="px-4 py-2">
-                      <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t('idioma' as TranslationKey) || 'Idioma'}</p>
+                      <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t('configuracoes.idioma')}</p>
                       <div className="grid grid-cols-2 gap-2">
                         {LANGUAGES.map(l => (
-                          <button key={l.value} onClick={() => { setLang(l.value as any); setShowAvatarDropdown(false); }}
-                            className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors ${lang === l.value ? 'bg-accent text-white' : ''}`}
-                            style={{ backgroundColor: lang === l.value ? 'var(--accent)' : 'var(--bg)', color: lang === l.value ? '#fff' : 'var(--text-main)' }}>
+                          <button key={l.value} onClick={() => handleLangChange(l.value)}
+                            className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors`}
+                            style={{ backgroundColor: currentLang === l.value ? 'var(--accent)' : 'var(--bg)', color: currentLang === l.value ? '#fff' : 'var(--text-main)' }}>
                             {l.label.split(' ')[0]}
                           </button>
                         ))}
@@ -227,18 +235,18 @@ export function Shell() {
                     <button onClick={() => { navigate('/perfil'); setShowAvatarDropdown(false); }}
                       className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm active:bg-accent/10 hover:bg-accent/10 transition-colors"
                       style={{ color: 'var(--text-main)' }}>
-                      <UserCircle size={18} className="md:w-[16px] md:h-[16px]" /> {t('perfil')}
+                      <UserCircle size={18} className="md:w-[16px] md:h-[16px]" /> {t('nav.perfil')}
                     </button>
                     <button onClick={() => { navigate('/configuracoes'); setShowAvatarDropdown(false); }}
                       className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm active:bg-accent/10 hover:bg-accent/10 transition-colors"
                       style={{ color: 'var(--text-main)' }}>
-                      <Settings size={18} className="md:w-[16px] md:h-[16px]" /> {t('configuracoes')}
+                      <Settings size={18} className="md:w-[16px] md:h-[16px]" /> {t('nav.configuracoes')}
                     </button>
                   </div>
                   <div className="border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6' }}>
                     <button onClick={handleLogout}
                       className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm text-rose-500 active:bg-rose-50/20 hover:bg-rose-50/10 transition-colors">
-                      <LogOut size={18} className="md:w-[16px] md:h-[16px]" /> {t('sair')}
+                      <LogOut size={18} className="md:w-[16px] md:h-[16px]" /> {t('nav.sair')}
                     </button>
                   </div>
                 </div>
