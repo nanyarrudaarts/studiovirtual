@@ -93,16 +93,25 @@ export function Shell() {
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`} 
       >
-        <div className="p-6 flex items-center justify-between">
-          <h1 className="font-serif italic text-2xl tracking-wide">studio virtual</h1>
-          <button 
-            aria-label="Fechar menu"
-            className="md:hidden w-11 h-11 flex items-center justify-center -mr-2"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <X size={24} />
-          </button>
+        <div className="p-6 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <img src="/logo-nany.png" alt="Seal" className="w-6 h-6 object-contain" />
+              <h1 className="font-serif italic text-2xl tracking-wide">studio virtual</h1>
+            </div>
+            <button 
+              aria-label="Fechar menu"
+              className="md:hidden w-11 h-11 flex items-center justify-center -mr-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div className="mt-1 font-sans text-[11px] text-[#B0ADA8]">
+            Nany Arruda | 1988
+          </div>
         </div>
+        <div className="mx-6 mb-2 border-b border-[#B0ADA8]/20"></div>
         
         <nav className="flex-1 px-4 space-y-1 md:space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
@@ -153,7 +162,10 @@ export function Shell() {
             >
               <Menu size={24} />
             </button>
-            <h1 className="md:hidden font-serif italic text-xl tracking-wide truncate">studio virtual</h1>
+            <div className="md:hidden flex items-center gap-2">
+              <img src="/logo-nany.png" alt="Seal" className="w-5 h-5 object-contain" />
+              <h1 className="font-serif italic text-xl tracking-wide truncate">studio virtual</h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
