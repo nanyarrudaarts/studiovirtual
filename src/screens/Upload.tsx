@@ -172,75 +172,34 @@ export default function Upload() {
   };
 
   const handleImportUrl = async () => {
-    const key = localStorage.getItem('gemini_api_key')||'';
-    if (!key||key.length<10) { alert('Configure sua chave Gemini em Configurações.'); return; }
+    const key = localStorage.getItem('groq_api_key')||'';
+    if (!key||key.length<10) { alert('Configure sua chave Groq em Configurações.'); return; }
     setImportLoading(true);
     for (const p of ['Acessando página...','Extraindo informações...','Identificando fotos...']) {
       setImportPhase(p); await new Promise(r=>setTimeout(r,800));
     }
     try {
-      const prompt = `Acesse e leia o conteúdo desta URL: ${importUrl}\nExtraia informações sobre a obra de arte e retorne APENAS JSON:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","serie":"","tags":[],"imagens":[]}`;
-      
-      let text = '';
-      let usedMethod = 'Gemini Search';
-      
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              tools: [{ googleSearch: {} }]
-            })
-          }
-        );
-        if (!res.ok) throw new Error("Gemini response not ok");
-        const json = await res.json();
-        text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (!text || text.trim() === '') throw new Error("Empty text");
-      } catch (geminiErr) {
-        console.log("Gemini native search failed, falling back to Jina AI", geminiErr);
-        usedMethod = 'Jina AI';
-        
-        const jinaResponse = await fetch(`https://r.jina.ai/${importUrl}`);
-        if (!jinaResponse.ok) throw new Error('Não foi possível ler a URL nem pelo Gemini nem pelo Jina AI.');
-        const pageText = await jinaResponse.text();
-        
-        const fallbackPrompt = `Analise o texto abaixo, extraído da URL: ${importUrl}\nExtraia informações sobre a obra de arte e retorne APENAS JSON:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","serie":"","tags":[],"imagens":[]}\n\nTEXTO DA PÁGINA:\n${pageText.substring(0, 50000)}`;
-        
-        const fallbackRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: fallbackPrompt }] }] })
-          }
-        );
-        const fallbackJson = await fallbackRes.json();
-        text = fallbackJson.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      }
-
-      const match = text.match(/\{[\s\S]*\}/);
-      const data = JSON.parse(match ? match[0] : '{}');
+      const prompt = `URL: ${importUrl}\nExtraia dados desta obra de arte e retorne SOMENTE este JSON:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","serie":"","tags":[],"imagens":[]}`;
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization': `Bearer ${key}`},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],response_format:{type:'json_object'}})});
+      const json = await res.json();
+      const text = json.choices?.[0]?.message?.content||'{}';
+      const data = JSON.parse((text.match(/\{[\s\S]*\}/)||['{}'])[0]);
       setImportResult(data);
       if (data.titulo) setFormData(f=>({...f,titulo:data.titulo||f.titulo,tituloInterpretativo:data.tituloInterpretativo||'',ano:data.ano||f.ano,tecnica:data.tecnica||f.tecnica,suporte:data.suporte||f.suporte,narrativaCuratorial:data.narrativaCuratorial||'',sentencaResumo:data.descricaoCurta||'',tags:Array.isArray(data.tags)?data.tags.join(', '):f.tags}));
       if (Array.isArray(data.imagens)) setImportImages(data.imagens.map((u:string)=>({url:u,selected:true})));
-      alert(`Obra lida via ${usedMethod}`);
     } catch { alert('Erro ao analisar a URL.'); }
     setImportLoading(false);
   };
 
   const handleGenerateNarrative = async () => {
-    const key = localStorage.getItem('gemini_api_key')||'';
+    const key = localStorage.getItem('groq_api_key')||'';
     if (!key||key.length<10) return;
     const prompt = `Curador de arte: escreva narrativa curatorial de 20-75 palavras em português.\nTítulo: ${formData.titulo||'Sem Título'}\nAno: ${formData.ano}\nTécnica: ${formData.tecnica} ${formData.tecnicaFree} sobre ${formData.suporte}\nRetorne APENAS o texto.`;
     setFormData(f=>({...f,narrativaCuratorial:'Gerando…'}));
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization': `Bearer ${key}`},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}]})});
       const json = await res.json();
-      setFormData(f=>({...f,narrativaCuratorial:json.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||''}));
+      setFormData(f=>({...f,narrativaCuratorial:json.choices?.[0]?.message?.content?.trim()||''}));
     } catch { setFormData(f=>({...f,narrativaCuratorial:'Erro. Tente novamente.'})); }
   };
 

@@ -3,21 +3,53 @@ import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'luc
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
-function getGeminiKey() {
-  const apiKey = localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
-  console.log('API Key length:', apiKey?.length);
-  console.log('Provider:', 'gemini');
+function getGroqKey() {
+  const apiKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY || '';
+  console.log('Provider:', 'groq');
   return apiKey;
 }
 
-async function callGemini(key: string, contents: object[]) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) }
-  );
-  if (!res.ok) throw new Error('Gemini error');
+async function callGroq(key: string, prompt: string) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      response_format: { type: { type: 'json_object' } }
+    })
+  });
+  if (!res.ok) throw new Error(`Groq error: ${res.statusText}`);
   const json = await res.json();
-  return json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return json.choices?.[0]?.message?.content || '';
+}
+
+async function callGroqVision(key: string, mimeType: string, base64: string, prompt: string) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.2-90b-vision-preview',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
+        ]
+      }],
+      temperature: 0.1
+    })
+  });
+  if (!res.ok) throw new Error(`Groq Vision error: ${res.statusText}`);
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content || '';
 }
 
 function extractJson(text: string) {
@@ -119,8 +151,8 @@ function SmartImport({ currentData, onImport, t }: {
   const pdfRef = useRef<HTMLInputElement>(null);
 
   const importFromText = async () => {
-    const key = getGeminiKey();
-    if (!key || key.length < 10) { setError(t('perfil.configure_gemini')); return; }
+    const key = getGroqKey();
+    if (!key || key.length < 10) { setError("Por favor, configure a chave da API do Groq nas configurações."); return; }
     if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
 
@@ -134,7 +166,7 @@ CONTEÚDO DO TEXTO:
 ${textInput.substring(0, 50000)}
 `;
 
-      const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
+      const text = await callGroq(key, prompt);
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -144,8 +176,8 @@ ${textInput.substring(0, 50000)}
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
     } catch (e: unknown) {
-      console.error('Gemini error:', e);
-      setError((e as Error).message || t('perfil.erro_gemini'));
+      console.error('Groq error:', e);
+      setError((e as Error).message || "Erro de comunicação com Groq");
     }
     setLoading(false); setLoadingStep('');
   };
@@ -153,8 +185,8 @@ ${textInput.substring(0, 50000)}
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const key = getGeminiKey();
-    if (!key || key.length < 10) { setError(t('perfil.configure_gemini')); return; }
+    const key = getGroqKey();
+    if (!key || key.length < 10) { setError("Por favor, configure a chave da API do Groq nas configurações."); return; }
     setError(''); setLoading(true); setImportedData(null);
 
     setLoadingStep(t('lendo_curriculo'));
@@ -164,18 +196,21 @@ ${textInput.substring(0, 50000)}
       const base64 = (reader.result as string).split(',')[1];
       setLoadingStep(t('perfil.identificando_informacoes'));
       try {
-        const text = await callGemini(key, [{
-          parts: [
-            { inline_data: { mime_type: 'application/pdf', data: base64 } },
-            { text: `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}` }
-          ]
-        }]);
+        const text = await callGroqVision(
+          key, 
+          'application/pdf', 
+          base64, 
+          `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}`
+        );
         setLoadingStep(t('perfil.preenchendo_perfil'));
         await new Promise(r => setTimeout(r, 400));
         const data = extractJson(text);
         if (data) setImportedData(data);
         else setError(t('perfil.erro_pdf'));
-      } catch { setError(t('erro_processar_pdf')); }
+      } catch (e) {
+        console.error('Groq PDF error:', e);
+        setError("Erro ao processar PDF com Groq (o modelo de visão pode não suportar PDFs ainda).");
+      }
       setLoading(false); setLoadingStep('');
     };
   };
@@ -375,27 +410,23 @@ export default function Perfil() {
 
   const handleGenerateBio = async () => {
     setGeneratingBio(true);
-    const key = getGeminiKey();
+    const key = getGroqKey();
     if (!key || key.length < 10) {
-      alert(t('perfil.configure_gemini'));
+      alert("Por favor, configure a chave da API do Groq nas configurações.");
       setGeneratingBio(false);
       return;
     }
     try {
-      const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne JSON: {"short":"...", "long":"..."}`;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      });
-      const json = await res.json();
-      const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const data = JSON.parse(match[0]);
+      const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
+      const text = await callGroq(key, prompt);
+      const data = extractJson(text);
+      if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));
       }
-    } catch { /* silently fail */ }
+    } catch (e) { 
+      console.error(e);
+      alert("Erro ao gerar bio com Groq");
+    }
     setGeneratingBio(false);
   };
 

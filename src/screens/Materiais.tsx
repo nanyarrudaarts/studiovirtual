@@ -167,7 +167,7 @@ export default function Materiais() {
                 <button className="w-full border-2 border-dashed border-accent/30 bg-accent/5 text-accent py-6 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-accent/10 transition-colors">
                   <Camera size={28} />
                   <span className="font-bold">{t('materiais.identificar_foto')}</span>
-                  <span className="text-xs opacity-70">A IA (Gemini) preencherá os dados automaticamente lendo o rótulo.</span>
+                  <span className="text-xs opacity-70">A IA (Groq) preencherá os dados automaticamente lendo o rótulo.</span>
                 </button>
               </div>
 
