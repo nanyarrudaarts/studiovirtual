@@ -10,13 +10,10 @@ function getGeminiKey() {
   return apiKey;
 }
 
-async function callGemini(key: string, contents: object[], tools?: object[]) {
-  const body: any = { contents };
-  if (tools) body.tools = tools;
-
+async function callGemini(key: string, contents: object[]) {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) }
   );
   if (!res.ok) throw new Error('Gemini error');
   const json = await res.json();
@@ -128,45 +125,40 @@ function SmartImport({ currentData, onImport, t }: {
     setError(''); setLoading(true); setImportedData(null);
 
     try {
-      setLoadingStep('Acessando a página via IA (Gemini)...');
+      setLoadingStep('Acessando a página e lendo conteúdo...');
       
-      const prompt = `Acesse e leia o conteúdo completo desta URL: ${url}
+      // We use a free CORS proxy to fetch the HTML content
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error('Não foi possível acessar a URL.');
+      const proxyData = await response.json();
       
-Após ler a página, extraia todas as informações do artista e retorne 
-APENAS JSON válido em português brasileiro com este schema exato:
-${PROFILE_JSON_SCHEMA}`;
+      const doc = new DOMParser().parseFromString(proxyData.contents, 'text/html');
+      // Remove scripts and styles
+      const elementsToRemove = doc.querySelectorAll('script, style, noscript, iframe');
+      elementsToRemove.forEach(el => el.remove());
+      const pageText = doc.body?.textContent?.replace(/\s+/g, ' ').trim() || '';
 
-      let text = '';
-      let usedMethod = 'Gemini Search';
-      try {
-        text = await callGemini(key, [{ parts: [{ text: prompt }] }], [{ googleSearch: {} }]);
-        const testData = extractJson(text);
-        if (!testData || Object.keys(testData).length === 0) throw new Error("JSON vazio retornado pelo Gemini");
-      } catch (geminiErr) {
-        console.log("Gemini native search failed, falling back to Jina AI", geminiErr);
-        setLoadingStep('Acessando via Jina AI...');
-        usedMethod = 'Jina AI';
-        
-        const jinaResponse = await fetch(`https://r.jina.ai/${url}`);
-        if (!jinaResponse.ok) throw new Error('Não foi possível ler a URL nem pelo Gemini nem pelo Jina AI.');
-        const pageText = await jinaResponse.text();
-        
-        const fallbackPrompt = `Analise o texto abaixo, que foi extraído do site ${url}.
+      if (pageText.length < 50) {
+        throw new Error('A página parece estar vazia ou bloqueou o acesso.');
+      }
+
+      setLoadingStep('Analisando informações com IA...');
+
+      const prompt = `Analise o texto abaixo, que foi extraído do site ${url}.
 Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
 ${PROFILE_JSON_SCHEMA}
 
 CONTEÚDO DA PÁGINA:
 ${pageText.substring(0, 50000)}
 `;
-        text = await callGemini(key, [{ parts: [{ text: fallbackPrompt }] }]);
-      }
 
+      const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
       if (data) {
         setImportedData(data);
-        alert(`Página lida via ${usedMethod}`);
       } else {
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
