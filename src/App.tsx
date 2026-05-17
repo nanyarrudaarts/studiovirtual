@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { Shell } from './components/layout/Shell';
 import { supabase } from './services/supabase';
 
@@ -54,6 +55,7 @@ export default function App() {
   }
 
   return (
+    <>
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
@@ -73,6 +75,8 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <Analytics />
+    </>
     </Suspense>
   );
 }
