@@ -128,7 +128,7 @@ function SmartImport({ currentData, onImport, t }: {
       setLoadingStep('Acessando a página e lendo conteúdo...');
       
       // We use a free CORS proxy to fetch the HTML content
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Não foi possível acessar a URL.');
       const proxyData = await response.text();
