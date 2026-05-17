@@ -3,22 +3,45 @@ import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'luc
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
-function getOpenAIKey() {
-  return import.meta.env.VITE_OPENAI_API_KEY || '';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Avoid worker issues in Vite by loading from CDN
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+async function extractTextFromPDF(base64Data: string) {
+  const binaryString = window.atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const loadingTask = pdfjsLib.getDocument({ data: bytes });
+  const pdf = await loadingTask.promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    fullText += pageText + '\n';
+  }
+  return fullText;
 }
 
-async function callOpenAIJSON(prompt: string): Promise<string> {
-  const key = getOpenAIKey();
-  if (!key) throw new Error('Configure VITE_OPENAI_API_KEY no .env');
+function getGroqKey() {
+  return import.meta.env.VITE_GROQ_API_KEY || '';
+}
+
+async function callGroqJSON(prompt: string): Promise<string> {
+  const key = getGroqKey();
+  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env');
   
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${key}`
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' }
     })
@@ -26,15 +49,11 @@ async function callOpenAIJSON(prompt: string): Promise<string> {
   
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
-    throw new Error('OpenAI: ' + (e?.error?.message || res.status));
+    throw new Error('Groq: ' + (e?.error?.message || res.status));
   }
   
   const data = await res.json();
   return data.choices?.[0]?.message?.content ?? '';
-}
-
-async function callOpenAIVisionPDF(_mimeType: string, _base64: string, _prompt: string): Promise<string> {
-  throw new Error('A API do ChatGPT não lê PDFs nativamente (ao contrário do Gemini). Por favor, copie e cole o texto do seu currículo usando a opção "Colar Texto".');
 }
 
 function extractJson(text: string) {
@@ -137,13 +156,13 @@ function SmartImport({ currentData, onImport, t }: {
 
 
   const importFromText = async () => {
-    if (!getOpenAIKey()) { setError('Configure VITE_OPENAI_API_KEY no .env'); return; }
+    if (!getGroqKey()) { setError('Configure VITE_GROQ_API_KEY no .env'); return; }
     if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep('Analisando informações com IA...');
       const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${textInput.substring(0, 50000)}`;
-      const text = await callOpenAIJSON(prompt);
+      const text = await callGroqJSON(prompt);
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -162,7 +181,7 @@ function SmartImport({ currentData, onImport, t }: {
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!getOpenAIKey()) { setError('Configure VITE_OPENAI_API_KEY no .env'); return; }
+    if (!getGroqKey()) { setError('Configure VITE_GROQ_API_KEY no .env'); return; }
     setError(''); setLoading(true); setImportedData(null);
     setLoadingStep(t('lendo_curriculo'));
     const reader = new FileReader();
@@ -171,11 +190,9 @@ function SmartImport({ currentData, onImport, t }: {
       const base64 = (reader.result as string).split(',')[1];
       setLoadingStep(t('perfil.identificando_informacoes'));
       try {
-        const text = await callOpenAIVisionPDF(
-          'application/pdf',
-          base64,
-          `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}`
-        );
+        const extractedText = await extractTextFromPDF(base64);
+        const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}\n\nTEXTO DO PDF:\n${extractedText.substring(0, 50000)}`;
+        const text = await callGroqJSON(prompt);
         setLoadingStep(t('perfil.preenchendo_perfil'));
         await new Promise(r => setTimeout(r, 400));
         const data = extractJson(text);
@@ -383,20 +400,20 @@ export default function Perfil() {
 
   const handleGenerateBio = async () => {
     setGeneratingBio(true);
-    if (!getOpenAIKey()) {
-      alert('Configure VITE_OPENAI_API_KEY no .env');
+    if (!getGroqKey()) {
+      alert('Configure VITE_GROQ_API_KEY no .env');
       setGeneratingBio(false);
       return;
     }
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const text = await callOpenAIJSON(prompt);
+      const text = await callGroqJSON(prompt);
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));
       }
     } catch (e) {
-      alert((e as Error).message || 'Erro ao gerar bio com Gemini');
+      alert((e as Error).message || 'Erro ao gerar bio com IA');
     }
     setGeneratingBio(false);
   };

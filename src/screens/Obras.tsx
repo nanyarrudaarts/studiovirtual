@@ -62,10 +62,11 @@ export default function Obras() {
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <h1 className="text-3xl font-serif text-text-main">Obras</h1>
-        <button onClick={() => navigate('/upload')}
-          className="hidden md:flex items-center gap-2 bg-accent text-white px-6 py-2.5 rounded-xl font-medium hover:bg-accent/90 transition-colors">
-          <Plus size={20} /> Nova Obra
-        </button>
+        <div className="hidden md:flex items-center gap-2">
+          <button onClick={() => navigate('/upload?type=singular')} className="bg-accent text-white px-4 py-2.5 rounded-xl font-medium hover:bg-accent/90 transition-colors text-sm"><Plus size={16} className="inline mr-1 -mt-0.5"/> Obra Singular</button>
+          <button onClick={() => navigate('/upload?type=serie')} className="bg-surface text-accent border border-accent px-4 py-2.5 rounded-xl font-medium hover:bg-accent/10 transition-colors text-sm"><Plus size={16} className="inline mr-1 -mt-0.5"/> Série</button>
+          <button onClick={() => navigate('/upload?type=colecao')} className="bg-surface text-accent border border-accent px-4 py-2.5 rounded-xl font-medium hover:bg-accent/10 transition-colors text-sm"><Plus size={16} className="inline mr-1 -mt-0.5"/> Coleção</button>
+        </div>
       </div>
 
       {/* Tabs */}

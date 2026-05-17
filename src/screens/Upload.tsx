@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { saveArtwork, supabase } from '../services/supabase';
+import { saveArtwork, createCollection, createSerie, supabase } from '../services/supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 function getGroqKey() { return import.meta.env.VITE_GROQ_API_KEY || ''; }
@@ -57,6 +57,8 @@ export default function Upload() {
     quantidadePrevista: '', estruturaEdicao: '',
     periodoColecao: '', artistasEnvolvidos: '', criterioInclusao: '', instituicaoAssociada: '',
     status: 'Disponível',
+    protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
+    possuiTermo: false, possuiCOA: false, possuiCessao: false,
   });
 
   const [photos, setPhotos] = useState<PhotoSlot[]>(Array.from({length:5},()=>({file:null,url:'',label:'',w:0,h:0})));
@@ -89,42 +91,81 @@ export default function Upload() {
   };
 
   const handleSave = async () => {
-    if (!formData.titulo.trim()) { alert('Preencha o título.'); return; }
+    if (!formData.titulo.trim()) { alert('Preencha o título/nome.'); return; }
     setSaving(true);
     try {
+      // Criar Nova Coleção (sem obra)
       if (formData.classificacao === 'colecao' && formData.isNewHierarchy) {
-        const { error } = await supabase.from('collections').insert({ collection_name: formData.titulo, curatorial_description: formData.narrativaCuratorial, artistic_theme: formData.criterioInclusao, creation_year: parseInt(formData.ano) || null });
-        if (error) throw error;
-        alert('✅ Coleção salva!'); navigate('/obras'); return;
+        await createCollection({
+          collection_name: formData.titulo,
+          collection_description: formData.narrativaCuratorial || undefined,
+          artistic_theme: formData.criterioInclusao || undefined,
+          start_date: formData.ano || undefined,
+        });
+        alert('✅ Coleção criada com sucesso!'); navigate('/obras'); return;
       }
+      // Criar Nova Série (sem obra)
       if (formData.classificacao === 'serie' && formData.isNewHierarchy) {
-        const { error } = await supabase.from('series').insert({ series_title: formData.titulo, curatorial_statement: formData.narrativaCuratorial, print_run_total: parseInt(formData.quantidadePrevista) || null });
-        if (error) throw error;
-        alert('✅ Série salva!'); navigate('/obras'); return;
+        await createSerie({
+          series_title: formData.titulo,
+          conceptual_statement: formData.narrativaCuratorial || undefined,
+          print_run_total: parseInt(formData.quantidadePrevista) || undefined,
+          edition_type: (formData.estruturaEdicao as any) || undefined,
+        });
+        alert('✅ Série criada com sucesso!'); navigate('/obras'); return;
       }
+      // Salvar Obra (singular ou vinculada)
       const dimF = [formData.dimensaoW, formData.dimensaoH, formData.dimensaoD].filter(Boolean).join(' × ') + (formData.dimensaoUnidade ? ' ' + formData.dimensaoUnidade : '');
       const imgs = photos.filter(p => p.file).map(p => p.file as File);
+      const extraData = {
+        protocoloAtivacao: formData.protocoloAtivacao,
+        perfilPerformer: formData.perfilPerformer,
+        duracao: formData.duracao,
+        elementosInegociveis: formData.elementosInegociveis,
+        possuiTermo: formData.possuiTermo,
+        possuiCOA: formData.possuiCOA,
+        possuiCessao: formData.possuiCessao,
+      };
+
       await saveArtwork({
-        artwork_title: formData.titulo, artist_name: formData.autoria || undefined,
-        collection_reference: formData.classificacao === 'colecao' ? formData.parentCollectionId || undefined : undefined,
-        series_reference: formData.classificacao === 'serie' ? formData.parentSeriesId || undefined : undefined,
-        creation_year: parseInt(formData.ano) || undefined, medium: formData.tecnica || undefined,
-        support: formData.suporte || undefined, dimensions_formatted: dimF || undefined,
-        height: parseFloat(formData.dimensaoH) || undefined, width: parseFloat(formData.dimensaoW) || undefined,
-        depth: parseFloat(formData.dimensaoD) || undefined, dimensions_unit: formData.dimensaoUnidade,
+        artwork_title: formData.titulo,
+        artist_name: formData.autoria || undefined,
+        collection_reference: formData.parentCollectionId || undefined,
+        series_reference: formData.parentSeriesId || undefined,
+        creation_year: parseInt(formData.ano) || undefined,
+        medium: formData.tecnica || undefined,
+        support: formData.suporte || undefined,
+        dimensions_formatted: dimF || undefined,
+        height: parseFloat(formData.dimensaoH) || undefined,
+        width: parseFloat(formData.dimensaoW) || undefined,
+        depth: parseFloat(formData.dimensaoD) || undefined,
+        dimensions_unit: formData.dimensaoUnidade,
         sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as any ?? 'available',
-        price: parseFloat(formData.valor) || undefined, physical_location: formData.localizacao || undefined,
-        summary_sentence: formData.sentencaResumo || undefined, curatorial_narrative: formData.narrativaCuratorial || undefined,
-        inventory_number: formData.numeroRegistro || undefined, edition_number: formData.numeroEdicao || undefined,
+        price: parseFloat(formData.valor) || undefined,
+        physical_location: formData.localizacao || undefined,
+        summary_sentence: formData.sentencaResumo || undefined,
+        curatorial_narrative: formData.narrativaCuratorial || undefined,
+        inventory_number: formData.numeroRegistro || undefined,
+        edition_number: formData.numeroEdicao || undefined,
         classification: 'singular',
+        intent_note: JSON.stringify(extraData),
       }, imgs);
-      alert('✅ Obra salva!'); navigate('/obras');
-    } catch (err: unknown) { alert('Erro: ' + (err as Error).message); }
+      alert('✅ Obra salva com sucesso!'); navigate('/obras');
+    } catch (err: unknown) { alert('Erro ao salvar: ' + (err as Error).message); }
     finally { setSaving(false); }
   };
 
-  const handleNext = () => { step === 1 && formData.classificacao === 'singular' ? setStep(3) : setStep(step + 1); };
-  const handleBack = () => { step === 3 && formData.classificacao === 'singular' ? setStep(1) : setStep(step - 1); };
+  // Obra singular: step 1 (fotos) -> step 3 (ficha)
+  // Serie/Colecao: step 1 (fotos) -> step 2 (vinculação) -> step 3 (ficha)
+  const handleNext = () => {
+    if (step === 1 && formData.classificacao === 'singular') { setStep(3); return; }
+    setStep(step + 1);
+  };
+  const handleBack = () => {
+    if (step === 3 && formData.classificacao === 'singular') { setStep(1); return; }
+    if (step === 3 && formData.isNewHierarchy) { setStep(2); return; }
+    setStep(step - 1);
+  };
 
   const inp = (label: string, field: string, opts?: {span2?: boolean; rows?: number; font?: string}) => (
     <div className={opts?.span2 ? 'md:col-span-2' : ''}>
@@ -177,36 +218,9 @@ export default function Upload() {
 
       <div className="bg-surface rounded-2xl shadow-float border border-gray-100 p-8 min-h-[500px]">
 
-        {/* STEP 1: Imagem + Classificação */}
+        {/* STEP 1: Classificação */}
         {step === 1 && (
           <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-            <section>
-              <h2 className="text-2xl font-serif mb-6">Imagem Principal</h2>
-              <div className="space-y-3">
-                <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-bg hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
-                  <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
-                  {photos[0].url ? (
-                    <div className="relative w-full h-full">
-                      <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
-                      <span className="absolute top-2 left-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded">CAPA</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-text-muted group-hover:text-accent transition-colors">
-                      <Camera size={40}/><span className="text-sm font-medium">Foto principal — clique para selecionar</span>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {[1,2,3,4].map(i=>(
-                    <div key={i} className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-bg hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
-                      <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(i,e)} />
-                      {photos[i].url ? <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /> : <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
             <section>
               <h2 className="text-2xl font-serif mb-6">O que você deseja registrar?</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -268,6 +282,7 @@ export default function Upload() {
         )}
 
         {/* STEP 3: Ficha Técnica */}
+        {/* STEP 3: Ficha Técnica */}
         {step === 3 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
@@ -277,6 +292,36 @@ export default function Upload() {
                 <button onClick={() => setIaMode(true)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${iaMode ? 'bg-white text-accent shadow-sm' : 'text-gray-500'}`}><Bot size={16}/> IA</button>
               </div>
             </div>
+
+            {/* Imagem Principal — Só aparece se for obra (singular ou vinculada existente) */}
+            {(formData.classificacao === 'singular' || !formData.isNewHierarchy) && (
+              <section className="mb-8 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                <h3 className="text-lg font-serif mb-4">Imagem Principal</h3>
+                <div className="space-y-3">
+                  <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-white hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
+                    <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
+                    {photos[0].url ? (
+                      <div className="relative w-full h-full">
+                        <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
+                        <span className="absolute top-2 left-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded">CAPA</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-text-muted group-hover:text-accent transition-colors">
+                        <Camera size={40}/><span className="text-sm font-medium">Foto principal — clique para selecionar</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[1,2,3,4].map(i=>(
+                      <div key={i} className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-white hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
+                        <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(i,e)} />
+                        {photos[i].url ? <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /> : <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
 
             {iaMode ? (
               <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6">
@@ -295,17 +340,34 @@ export default function Upload() {
                 {/* OBRA SINGULAR — Ficha Completa */}
                 {formData.classificacao === 'singular' && (
                   <div className="space-y-8">
-                    {sec('I', 'Dados de Identificação', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Tipo de Objeto','tipoObjeto')}{inp('Título *','titulo',{font:'font-serif text-lg'})}{inp('Autoria','autoria')}{inp('Data / Período','ano')}</div>)}
-                    {sec('II', 'Detalhes Físicos', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Técnica','tecnica')}{inp('Suporte','suporte')}{dimInput()}{inp('Inscrições e Marcas','inscricoes')}</div>)}
-                    {sec('III', 'Curadoria', <div className="space-y-4">{inp('Descrição Curta','sentencaResumo',{span2:true})}{inp('Dossiê / Texto Curatorial','narrativaCuratorial',{span2:true, rows:4})}</div>)}
-                    {sec('IV', 'Dados de Acervo', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Nº Registro (Tombo)','numeroRegistro')}{inp('Forma de Aquisição','formaAquisicao')}{inp('Procedência e Histórico','procedencia',{span2:true, rows:2})}{inp('Estado de Conservação','estadoConservacao')}{inp('Localização Física','localizacao')}{inp('Valor','valor')}{inp('Valor do Seguro','seguro')}</div>)}
+                    {sec('I', 'Dados de Identificação Básica', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Tipo de Objeto','tipoObjeto')}{inp('Título *','titulo',{font:'font-serif text-lg'})}{inp('Autoria','autoria')}{inp('Data / Período','ano')}{inp('Materiais e Técnicas','tecnica')}{inp('Suporte','suporte')}{dimInput()}{inp('Inscrições e Marcas','inscricoes')}{inp('Descrição Curta','sentencaResumo',{span2:true})}</div>)}
+                    {sec('II', 'Dados Técnicos para Acervo e Gestão (Dossiê)', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Número de Registro (Tombo)','numeroRegistro')}{inp('Forma de Aquisição','formaAquisicao')}{inp('Procedência e Histórico','procedencia',{span2:true, rows:2})}{inp('Estado de Conservação','estadoConservacao')}{inp('Localização Física','localizacao')}{inp('Valor','valor')}{inp('Valor do Seguro','seguro')}</div>)}
+                    
+                    {/* Ficha para Performances */}
+                    {sec('III', 'Ficha Curatorial para Performances (Modelos 2025/2026)', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Protocolo de Ativação (Roteiro)','protocoloAtivacao',{span2:true, rows:3})}{inp('Perfil do Performer','perfilPerformer')}{inp('Duração','duracao')}{inp('Elementos Inegociáveis','elementosInegociveis',{span2:true, rows:2})}</div>)}
+                    
+                    {/* Documentação Jurídica */}
+                    {sec('IV', 'Documentação Jurídica Associada', <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={formData.possuiTermo} onChange={e=>setFormData({...formData, possuiTermo: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label className="text-sm font-medium">Termo de Doação/Compra assinado</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={formData.possuiCOA} onChange={e=>setFormData({...formData, possuiCOA: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label className="text-sm font-medium">Certificado de Autenticidade (COA)</label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={formData.possuiCessao} onChange={e=>setFormData({...formData, possuiCessao: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label className="text-sm font-medium">Cessão de Direitos de Imagem/Voz</label>
+                      </div>
+                    </div>)}
                   </div>
                 )}
 
                 {/* SÉRIE — Nova Série */}
                 {formData.classificacao === 'serie' && formData.isNewHierarchy && (
                   <div className="space-y-8">
-                    {sec('I', 'Ficha de Série', <div className="grid grid-cols-1 gap-4">{inp('Nome da Série *','titulo',{font:'font-serif text-lg'})}{inp('Conceito / Lógica da Série','narrativaCuratorial',{rows:4})}<div className="grid grid-cols-2 gap-4">{inp('Nº Total de Obras Previsto','quantidadePrevista')}{inp('Estrutura de Edição','estruturaEdicao')}</div></div>)}
+                    {sec('I', 'Ficha de Série', <div className="grid grid-cols-1 gap-4">{inp('Nome da Série *','titulo',{font:'font-serif text-lg'})}{inp('Conceito / Lógica da Série (Lógica de Unidade)','narrativaCuratorial',{rows:4})}<div className="grid grid-cols-2 gap-4">{inp('Nº Total de Obras Previsto','quantidadePrevista')}{inp('Estrutura de Edição','estruturaEdicao')}</div></div>)}
                   </div>
                 )}
 
