@@ -76,8 +76,13 @@ export default function Configuracoes() {
 
   useEffect(() => {
     const stored = localStorage.getItem('sv_config');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setConfig({ ...defaultConfig, ...JSON.parse(stored) });
+    const groqKey = localStorage.getItem('groq_api_key') || '';
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setConfig({ ...defaultConfig, ...parsed, groqKey: parsed.groqKey || groqKey });
+    } else if (groqKey) {
+      setConfig(c => ({ ...c, groqKey }));
+    }
   }, []);
 
   const save = (keys: (keyof Config)[]) => {

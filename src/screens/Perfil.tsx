@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +20,7 @@ async function callGroq(key: string, prompt: string) {
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
-      response_format: { type: { type: 'json_object' } }
+      response_format: { type: 'json_object' }
     })
   });
   if (!res.ok) throw new Error(`Groq error: ${res.statusText}`);
@@ -83,7 +83,7 @@ function DiffPreview({ current, imported, onApply, t }: {
   imported: ImportedData;
   onApply: (selected: ImportedData) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: any;
 }) {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
@@ -140,7 +140,7 @@ function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
   onImport: (data: ImportedData) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: any;
 }) {
   const [tab, setTab] = useState<'text' | 'pdf'>('text');
   const [textInput, setTextInput] = useState('');
@@ -182,14 +182,20 @@ ${textInput.substring(0, 50000)}
     setLoading(false); setLoadingStep('');
   };
 
-  const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importFromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const key = getGroqKey();
     if (!key || key.length < 10) { setError("Por favor, configure a chave da API do Groq nas configurações."); return; }
+
+    if (file.type === 'application/pdf') {
+      setError("O Groq ainda não suporta análise direta de PDFs. Por favor, tire um print do currículo e envie como imagem, ou copie e cole o texto no campo ao lado.");
+      return;
+    }
+
     setError(''); setLoading(true); setImportedData(null);
 
-    setLoadingStep(t('lendo_curriculo'));
+    setLoadingStep(t('perfil.lendo_arquivo', 'Lendo arquivo...'));
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
@@ -198,18 +204,18 @@ ${textInput.substring(0, 50000)}
       try {
         const text = await callGroqVision(
           key, 
-          'application/pdf', 
+          file.type,
           base64, 
-          `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}`
+          `Leia este currículo de artista (imagem) e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}`
         );
         setLoadingStep(t('perfil.preenchendo_perfil'));
         await new Promise(r => setTimeout(r, 400));
         const data = extractJson(text);
         if (data) setImportedData(data);
-        else setError(t('perfil.erro_pdf'));
+        else setError(t('perfil.erro_pdf', 'A IA não conseguiu ler os dados da imagem.'));
       } catch (e) {
-        console.error('Groq PDF error:', e);
-        setError("Erro ao processar PDF com Groq (o modelo de visão pode não suportar PDFs ainda).");
+        console.error('Groq Image error:', e);
+        setError("Erro ao processar imagem com Groq.");
       }
       setLoading(false); setLoadingStep('');
     };
@@ -227,7 +233,7 @@ ${textInput.substring(0, 50000)}
           {(['text', 'pdf'] as const).map(type => (
             <button key={type} onClick={() => { setTab(type); setImportedData(null); setError(''); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === type ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-              {type === 'text' ? <><FileText size={15}/> Colar texto</> : <><FileUp size={15}/> {t('perfil.importar_pdf')}</>}
+              {type === 'text' ? <><FileText size={15}/> Colar texto</> : <><Camera size={15}/> {t('perfil.importar_imagem', 'Imagem do Currículo')}</>}
             </button>
           ))}
         </div>
@@ -247,15 +253,15 @@ ${textInput.substring(0, 50000)}
           </div>
         )}
 
-        {/* PDF Panel */}
+        {/* Image/File Panel */}
         {tab === 'pdf' && (
           <div>
-            <input ref={pdfRef} type="file" accept=".pdf" aria-label="Selecionar PDF do currículo" className="hidden" onChange={importFromPdf} />
+            <input ref={pdfRef} type="file" accept="image/*" aria-label="Selecionar imagem do currículo" className="hidden" onChange={importFromFile} />
             <button onClick={() => pdfRef.current?.click()} disabled={loading}
               className="w-full border-2 border-dashed border-accent/30 rounded-2xl py-10 flex flex-col items-center gap-2 hover:bg-accent/5 transition-colors disabled:opacity-60">
-              <FileUp size={36} className="text-accent" />
-              <span className="font-bold text-sm">{t('arraste_curriculo')}</span>
-              <span className="text-xs text-text-muted">{t('pdf_max')}</span>
+              <Camera size={36} className="text-accent" />
+              <span className="font-bold text-sm">{t('perfil.clique_imagem', 'Clique para subir imagem do currículo')}</span>
+              <span className="text-xs text-text-muted">{t('perfil.formatos_imagem', 'PNG, JPG ou WebP')}</span>
             </button>
           </div>
         )}

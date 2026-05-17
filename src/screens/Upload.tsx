@@ -175,19 +175,27 @@ export default function Upload() {
     const key = localStorage.getItem('groq_api_key')||'';
     if (!key||key.length<10) { alert('Configure sua chave Groq em Configurações.'); return; }
     setImportLoading(true);
-    for (const p of ['Acessando página...','Extraindo informações...','Identificando fotos...']) {
-      setImportPhase(p); await new Promise(r=>setTimeout(r,800));
-    }
     try {
-      const prompt = `URL: ${importUrl}\nExtraia dados desta obra de arte e retorne SOMENTE este JSON:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","serie":"","tags":[],"imagens":[]}`;
+      setImportPhase('Acessando página...');
+      const jinaRes = await fetch(`https://r.jina.ai/${importUrl}`);
+      if (!jinaRes.ok) throw new Error('Falha ao acessar URL via Jina');
+      const pageContent = await jinaRes.text();
+
+      setImportPhase('Analisando com IA...');
+      const prompt = `Extraia dados desta obra de arte a partir do conteúdo abaixo e retorne SOMENTE este JSON:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","serie":"","tags":[],"imagens":[]}\n\nCONTEÚDO:\n${pageContent.substring(0, 15000)}`;
+
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization': `Bearer ${key}`},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],response_format:{type:'json_object'}})});
       const json = await res.json();
       const text = json.choices?.[0]?.message?.content||'{}';
       const data = JSON.parse((text.match(/\{[\s\S]*\}/)||['{}'])[0]);
+
       setImportResult(data);
       if (data.titulo) setFormData(f=>({...f,titulo:data.titulo||f.titulo,tituloInterpretativo:data.tituloInterpretativo||'',ano:data.ano||f.ano,tecnica:data.tecnica||f.tecnica,suporte:data.suporte||f.suporte,narrativaCuratorial:data.narrativaCuratorial||'',sentencaResumo:data.descricaoCurta||'',tags:Array.isArray(data.tags)?data.tags.join(', '):f.tags}));
       if (Array.isArray(data.imagens)) setImportImages(data.imagens.map((u:string)=>({url:u,selected:true})));
-    } catch { alert('Erro ao analisar a URL.'); }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao analisar a URL. Certifique-se que o link é público.');
+    }
     setImportLoading(false);
   };
 
