@@ -38,7 +38,7 @@ const defaultConfig: Config = {
 function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
   label: string; value: string; onChange: (v: string) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  placeholder: string; onSave: () => void; isSaved?: boolean; t: (k: any) => string;
+  placeholder: string; onSave: () => void; isSaved?: boolean; t: (k: string) => string;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -50,7 +50,7 @@ function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
             type={show ? 'text' : 'password'}
             value={value}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onChange={(e: any) => onChange(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
             placeholder={placeholder}
             className="w-full border border-gray-200 rounded-lg pl-4 pr-10 py-2 text-sm focus:border-accent outline-none bg-bg"
           />

@@ -2,59 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
+import { callAI, readPDFWithGemini } from '../services/ai';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Avoid worker issues in Vite by loading from CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-async function extractTextFromPDF(base64Data: string) {
-  const binaryString = window.atob(base64Data);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  const loadingTask = pdfjsLib.getDocument({ data: bytes });
-  const pdf = await loadingTask.promise;
-  let fullText = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(' ');
-    fullText += pageText + '\n';
-  }
-  return fullText;
-}
 
-function getGroqKey() {
-  return import.meta.env.VITE_GROQ_API_KEY || '';
-}
-
-async function callGroqJSON(prompt: string): Promise<string> {
-  const key = getGroqKey();
-  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env');
-  
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' }
-    })
-  });
-  
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error('Groq: ' + (e?.error?.message || res.status));
-  }
-  
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
-}
 
 function extractJson(text: string) {
   const match = text.match(/\{[\s\S]*\}/);
@@ -87,7 +42,7 @@ function DiffPreview({ current, imported, onApply, t }: {
   imported: ImportedData;
   onApply: (selected: ImportedData) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
@@ -144,7 +99,7 @@ function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
   onImport: (data: ImportedData) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const [tab, setTab] = useState<'text' | 'pdf'>('text');
   const [textInput, setTextInput] = useState('');
@@ -156,13 +111,13 @@ function SmartImport({ currentData, onImport, t }: {
 
 
   const importFromText = async () => {
-    if (!getGroqKey()) { setError('Configure VITE_GROQ_API_KEY no .env'); return; }
+    if (!import.meta.env.VITE_GEMINI_API_KEY) { setError('Configure VITE_GEMINI_API_KEY no .env'); return; }
     if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep('Analisando informações com IA...');
       const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${textInput.substring(0, 50000)}`;
-      const text = await callGroqJSON(prompt);
+      const text = await callAI(prompt, 'gemini');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -181,28 +136,21 @@ function SmartImport({ currentData, onImport, t }: {
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!getGroqKey()) { setError('Configure VITE_GROQ_API_KEY no .env'); return; }
+    if (!import.meta.env.VITE_GEMINI_API_KEY) { setError('Configure VITE_GEMINI_API_KEY no .env'); return; }
     setError(''); setLoading(true); setImportedData(null);
-    setLoadingStep(t('lendo_curriculo'));
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      setLoadingStep(t('perfil.identificando_informacoes'));
-      try {
-        const extractedText = await extractTextFromPDF(base64);
-        const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}\n\nTEXTO DO PDF:\n${extractedText.substring(0, 50000)}`;
-        const text = await callGroqJSON(prompt);
-        setLoadingStep(t('perfil.preenchendo_perfil'));
-        await new Promise(r => setTimeout(r, 400));
-        const data = extractJson(text);
-        if (data) setImportedData(data);
-        else setError(t('perfil.erro_pdf'));
-      } catch (e) {
-        setError((e as Error).message || 'Erro ao processar PDF com Gemini');
-      }
-      setLoading(false); setLoadingStep('');
-    };
+    setLoadingStep(t('perfil.identificando_informacoes'));
+    try {
+      const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}`;
+      const text = await readPDFWithGemini(file, prompt);
+      setLoadingStep(t('perfil.preenchendo_perfil'));
+      await new Promise(r => setTimeout(r, 400));
+      const data = extractJson(text);
+      if (data) setImportedData(data);
+      else setError(t('perfil.erro_pdf'));
+    } catch (e) {
+      setError((e as Error).message || 'Erro ao processar PDF com Gemini');
+    }
+    setLoading(false); setLoadingStep('');
   };
 
   return (
@@ -291,7 +239,7 @@ function AddList({ title, fields, items, onChange, t }: {
   items: ListItem[];
   onChange: (items: ListItem[]) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
   const add = () => {
     const empty: ListItem = { id: uid() };
@@ -400,14 +348,9 @@ export default function Perfil() {
 
   const handleGenerateBio = async () => {
     setGeneratingBio(true);
-    if (!getGroqKey()) {
-      alert('Configure VITE_GROQ_API_KEY no .env');
-      setGeneratingBio(false);
-      return;
-    }
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const text = await callGroqJSON(prompt);
+      const text = await callAI(prompt, 'gemini');
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));

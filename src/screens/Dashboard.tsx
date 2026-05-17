@@ -43,9 +43,20 @@ export default function Dashboard() {
           .from('artworks')
           .select('*', { count: 'exact', head: true });
 
+        const healthScore = (obrasData && obrasData.length > 0) 
+          ? Math.round((obrasData.reduce((acc, o) => {
+              let filled = 0;
+              if (o.narrativa_curatorial) filled++;
+              if (o.sentenca_resumo) filled++;
+              if (o.medium) filled++;
+              if (o.dimensions) filled++;
+              return acc + (filled / 4);
+            }, 0) / obrasData.length) * 100) 
+          : 100;
+
         setMetricas({
           totalObras: totalObras || 0,
-          healthScore: 92,
+          healthScore,
           alertasMateriais: alertasMateriais || 0,
         });
       } catch (err) {

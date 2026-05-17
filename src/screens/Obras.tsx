@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2 } from 'lucide-react';
-import { getArtworks, getSeriesList, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
+import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,7 +35,7 @@ export default function Obras() {
     setError('');
     Promise.all([
       getArtworks({ classification: 'singular' }).catch(() => []),
-      getSeriesList().catch(() => []),
+      getSeries().catch(() => []),
       getCollections().catch(() => []),
     ]).then(([a, s, c]) => {
       setArtworks(a);

@@ -4,21 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { saveArtwork, createCollection, createSerie, supabase } from '../services/supabase';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Artwork } from '../types';
+import { callAI } from '../services/ai';
 
-function getGroqKey() { return import.meta.env.VITE_GROQ_API_KEY || ''; }
 
-async function callGroqJSON(prompt: string): Promise<string> {
-  const key = getGroqKey();
-  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env.local');
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } })
-  });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error('Groq: ' + (e?.error?.message || res.status)); }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
-}
 
 interface PhotoSlot { file: File | null; url: string; label: string; w: number; h: number; }
 
@@ -87,7 +75,7 @@ export default function Upload() {
           if (error) throw error;
           if (data) {
             const artwork = data as Artwork;
-            let extraData: any = {};
+            let extraData: Record<string, any> = {};
             if (artwork.intent_note) {
               try { extraData = JSON.parse(artwork.intent_note); } catch (e) {}
             }
@@ -164,8 +152,8 @@ export default function Upload() {
     if (!aiInput.trim()) return;
     setAiLoading(true);
     try {
-      setAiPhase('Extraindo dados com Groq...');
-      const raw = await callGroqJSON(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`);
+      setAiPhase('Extraindo dados com Gemini...');
+      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'gemini');
       const d = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
       setFormData(f => ({ ...f, titulo: d.titulo||f.titulo, ano: d.ano||f.ano, tecnica: d.tecnica||f.tecnica, suporte: d.suporte||f.suporte, narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial, sentencaResumo: d.sentencaResumo||f.sentencaResumo, autoria: d.autoria||f.autoria }));
       setIaMode(false); setAiInput('');

@@ -209,7 +209,7 @@ export async function removeArtworkFromCollection(artworkId: string, collectionI
 
 // ─── SERIES ───────────────────────────────────────────────────────────────────
 
-export async function getSeriesList(): Promise<Series[]> {
+export async function getSeries(): Promise<Series[]> {
   const { data, error } = await supabase
     .from('series')
     .select('*')
