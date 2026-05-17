@@ -457,7 +457,28 @@ export default function Upload() {
                 {/* SÉRIE — Nova Série */}
                 {formData.classificacao === 'serie' && formData.isNewHierarchy && (
                   <div className="space-y-8">
-                    {sec('I', 'Ficha de Série', <div className="grid grid-cols-1 gap-4">{inp('Nome da Série *','titulo',{font:'font-serif text-lg'})}{inp('Conceito / Lógica da Série (Lógica de Unidade)','narrativaCuratorial',{rows:4})}<div className="grid grid-cols-2 gap-4">{inp('Nº Total de Obras Previsto','quantidadePrevista')}{inp('Estrutura de Edição','estruturaEdicao')}</div></div>)}
+                    {sec('I', 'Ficha de Série', 
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-sm font-medium">Nome da Coleção ou Fundo</label>
+                          <select 
+                            value={formData.parentCollectionId} 
+                            onChange={e => setFormData({...formData, parentCollectionId: e.target.value})}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all text-sm"
+                          >
+                            <option value="">Ainda não pertence a nenhuma coleção</option>
+                            {collections.map(c => (
+                              <option key={c.id} value={c.id}>{c.collection_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {inp('Título da Série *','titulo',{font:'font-serif text-lg'})}
+                        {inp('Lógica de Unidade (20 a 75 palavras)','narrativaCuratorial',{rows:4})}
+                        <div className="grid grid-cols-2 gap-4">
+                          {inp('Número de Série/Edição (ex: 2/10)','numeroEdicao')}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
