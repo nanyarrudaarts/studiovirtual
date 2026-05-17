@@ -330,7 +330,7 @@ Retorne APENAS o texto JSON: {"narrativaCuratorial": "texto"}`;
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-text-main">Coleção Pai</label>
+                <label className="block text-sm font-bold text-text-main">Coleção</label>
                 <select 
                   value={formData.parentCollectionId} 
                   onChange={e => setFormData({...formData, parentCollectionId: e.target.value})}
@@ -344,7 +344,7 @@ Retorne APENAS o texto JSON: {"narrativaCuratorial": "texto"}`;
 
               {formData.classificacao === 'singular' && (
                 <div className="space-y-2">
-                  <label className="block text-sm font-bold text-text-main">Série Pai</label>
+                  <label className="block text-sm font-bold text-text-main">Série</label>
                   <select 
                     value={formData.parentSeriesId} 
                     onChange={e => setFormData({...formData, parentSeriesId: e.target.value})}
@@ -400,93 +400,10 @@ Retorne APENAS o texto JSON: {"narrativaCuratorial": "texto"}`;
             ) : (
               <div className="space-y-10 animate-in fade-in">
                 
-                {/* DADOS BÁSICOS (Tudo) */}
-                <section>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-text-muted mb-1">Título {formData.classificacao === 'colecao' ? 'da Coleção' : formData.classificacao === 'serie' ? 'da Série' : 'da Obra'} *</label>
-                      <input type="text" value={formData.titulo} onChange={e=>setFormData({...formData,titulo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-accent outline-none bg-bg font-serif text-lg" />
-                    </div>
-                    {formData.classificacao === 'singular' && (
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1">Título Interpretativo <span className="font-normal">(1–7 palavras)</span></label>
-                        <input type="text" value={formData.tituloInterpretativo} onChange={e=>setFormData({...formData,tituloInterpretativo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-xs font-bold text-text-muted mb-1">Ano</label>
-                      <input type="text" value={formData.ano} onChange={e=>setFormData({...formData,ano:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                    </div>
-                  </div>
-                </section>
-
-                {/* TEXTO CURATORIAL (Tudo) */}
-                <section>
-                  <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">II</span> Texto Curatorial</p>
-                  <div className="space-y-4">
-                    {formData.classificacao === 'singular' && (
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1">Sentença de Resumo <span className="font-normal">(1 frase)</span></label>
-                        <input type="text" value={formData.sentencaResumo} onChange={e=>setFormData({...formData,sentencaResumo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs font-bold text-text-muted">
-                          Narrativa Curatorial / Statement
-                          <span className="ml-2 text-accent">{formData.narrativaCuratorial.split(/\s+/).filter(Boolean).length} palavras</span>
-                        </label>
-                        <button type="button" onClick={handleGenerateNarrative} className="text-xs font-bold bg-accent text-white px-3 py-1.5 rounded-full hover:bg-accent/90 transition-colors flex items-center gap-1"><Sparkles size={12}/>Gerar IA</button>
-                      </div>
-                      <textarea value={formData.narrativaCuratorial} onChange={e=>setFormData({...formData,narrativaCuratorial:e.target.value})} rows={4} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-text-muted mb-1">Tags (separadas por vírgula)</label>
-                      <input type="text" value={formData.tags} onChange={e=>setFormData({...formData,tags:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                    </div>
-                  </div>
-                </section>
-
-                {/* DETALHES FÍSICOS (Apenas Obra Singular) */}
-                {formData.classificacao === 'singular' && (
-                  <section>
-                    <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">III</span> Detalhes Físicos</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1">Técnica</label>
-                        <input type="text" value={formData.tecnica} onChange={e=>setFormData({...formData,tecnica:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1">Suporte</label>
-                        <input type="text" value={formData.suporte} onChange={e=>setFormData({...formData,suporte:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1">Dimensões (H × L × P)</label>
-                        <div className="flex gap-1 items-center">
-                          <input type="text" placeholder="H" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                          <span className="text-gray-400">×</span>
-                          <input type="text" placeholder="L" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                          <span className="text-gray-400">×</span>
-                          <input type="text" placeholder="P" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                          <select value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg">
-                            <option>cm</option><option>in</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-1">Status de Venda</label>
-                        <select value={formData.status} onChange={e=>setFormData({...formData,status:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
-                          <option>Disponível</option><option>Vendida</option><option>Reservada</option><option>Coleção Privada</option><option>Não à venda</option>
-                        </select>
-                      </div>
-                    </div>
-                  </section>
-                )}
-
                 {/* FOTOS (Apenas Obra Singular) */}
                 {formData.classificacao === 'singular' && (
                   <section>
-                    <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">IV</span> Fotografias</p>
+                    <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">I</span> Fotografias</p>
                     <div className="space-y-3">
                       <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-bg hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
                         <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
@@ -520,6 +437,92 @@ Retorne APENAS o texto JSON: {"narrativaCuratorial": "texto"}`;
                     </div>
                   </section>
                 )}
+
+                {/* DADOS BÁSICOS (Tudo) */}
+                <section>
+                  <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">{formData.classificacao === 'singular' ? 'II' : 'I'}</span> Metadados Essenciais</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-text-muted mb-1">Título {formData.classificacao === 'colecao' ? 'da Coleção' : formData.classificacao === 'serie' ? 'da Série' : 'da Obra'} *</label>
+                      <input type="text" value={formData.titulo} onChange={e=>setFormData({...formData,titulo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-accent outline-none bg-bg font-serif text-lg" />
+                    </div>
+                    {formData.classificacao === 'singular' && (
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Título Interpretativo <span className="font-normal">(1–7 palavras)</span></label>
+                        <input type="text" value={formData.tituloInterpretativo} onChange={e=>setFormData({...formData,tituloInterpretativo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-bold text-text-muted mb-1">Ano</label>
+                      <input type="text" value={formData.ano} onChange={e=>setFormData({...formData,ano:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    </div>
+                  </div>
+                </section>
+
+                {/* TEXTO CURATORIAL (Tudo) */}
+                <section>
+                  <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">{formData.classificacao === 'singular' ? 'III' : 'II'}</span> Texto Curatorial</p>
+                  <div className="space-y-4">
+                    {formData.classificacao === 'singular' && (
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Sentença de Resumo <span className="font-normal">(1 frase)</span></label>
+                        <input type="text" value={formData.sentencaResumo} onChange={e=>setFormData({...formData,sentencaResumo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-text-muted">
+                          Narrativa Curatorial / Statement
+                          <span className="ml-2 text-accent">{formData.narrativaCuratorial.split(/\s+/).filter(Boolean).length} palavras</span>
+                        </label>
+                        <button type="button" onClick={handleGenerateNarrative} className="text-xs font-bold bg-accent text-white px-3 py-1.5 rounded-full hover:bg-accent/90 transition-colors flex items-center gap-1"><Sparkles size={12}/>Gerar IA</button>
+                      </div>
+                      <textarea value={formData.narrativaCuratorial} onChange={e=>setFormData({...formData,narrativaCuratorial:e.target.value})} rows={4} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-text-muted mb-1">Tags (separadas por vírgula)</label>
+                      <input type="text" value={formData.tags} onChange={e=>setFormData({...formData,tags:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    </div>
+                  </div>
+                </section>
+
+                {/* DETALHES FÍSICOS (Apenas Obra Singular) */}
+                {formData.classificacao === 'singular' && (
+                  <section>
+                    <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">IV</span> Detalhes Físicos</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Técnica</label>
+                        <input type="text" value={formData.tecnica} onChange={e=>setFormData({...formData,tecnica:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Suporte</label>
+                        <input type="text" value={formData.suporte} onChange={e=>setFormData({...formData,suporte:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Dimensões (H × L × P)</label>
+                        <div className="flex gap-1 items-center">
+                          <input type="text" placeholder="H" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          <span className="text-gray-400">×</span>
+                          <input type="text" placeholder="L" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          <span className="text-gray-400">×</span>
+                          <input type="text" placeholder="P" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          <select value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg">
+                            <option>cm</option><option>in</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Status de Venda</label>
+                        <select value={formData.status} onChange={e=>setFormData({...formData,status:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                          <option>Disponível</option><option>Vendida</option><option>Reservada</option><option>Coleção Privada</option><option>Não à venda</option>
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+
 
               </div>
             )}
