@@ -128,12 +128,11 @@ function SmartImport({ currentData, onImport, t }: {
       setLoadingStep('Acessando a página e lendo conteúdo...');
       
       // We use a free CORS proxy to fetch the HTML content
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Não foi possível acessar a URL.');
       const proxyData = await response.json();
-      
-      const doc = new DOMParser().parseFromString(proxyData.contents, 'text/html');
+      const doc = new DOMParser().parseFromString(proxyData, 'text/html');
       // Remove scripts and styles
       const elementsToRemove = doc.querySelectorAll('script, style, noscript, iframe');
       elementsToRemove.forEach(el => el.remove());
@@ -403,7 +402,7 @@ export default function Perfil() {
     }
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne JSON: {"short":"...", "long":"..."}`;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
