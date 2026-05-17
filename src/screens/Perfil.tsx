@@ -4,16 +4,19 @@ import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
 function getGeminiKey() {
-  const apiKey = localStorage.getItem('gemini_api_key') || '';
+  const apiKey = localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
   console.log('API Key length:', apiKey?.length);
   console.log('Provider:', 'gemini');
   return apiKey;
 }
 
-async function callGemini(key: string, contents: object[]) {
+async function callGemini(key: string, contents: object[], tools?: object[]) {
+  const body: any = { contents };
+  if (tools) body.tools = tools;
+
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }) }
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
   );
   if (!res.ok) throw new Error('Gemini error');
   const json = await res.json();
@@ -50,6 +53,7 @@ function DiffPreview({ current, imported, onApply, t }: {
   current: Record<string, unknown>;
   imported: ImportedData;
   onApply: (selected: ImportedData) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: any) => string;
 }) {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -81,8 +85,8 @@ function DiffPreview({ current, imported, onApply, t }: {
           const isConflict = current[k] && current[k] !== imported[k];
           return (
             <label key={k} className="grid grid-cols-[auto_1fr_1fr] items-center gap-4 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors">
-              <input type="checkbox" checked={!!checked[k]} onChange={() => toggle(k)}
-                className="accent-accent w-4 h-4" />
+              <input type="checkbox" aria-label={`Selecionar ${k}`} checked={!!checked[k]} onChange={() => toggle(k)}
+                className="accent-accent w-4 h-4" title={`Selecionar ${k}`} />
               <span className="text-xs text-gray-400 truncate">{fmt(current[k])}</span>
               <span className={`text-xs font-medium truncate ${isNew ? 'text-emerald-600' : isConflict ? 'text-amber-600' : 'text-gray-600'}`}>
                 {fmt(imported[k])}
@@ -106,6 +110,7 @@ function DiffPreview({ current, imported, onApply, t }: {
 function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
   onImport: (data: ImportedData) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: any) => string;
 }) {
   const [tab, setTab] = useState<'url' | 'pdf'>('url');
@@ -119,25 +124,56 @@ function SmartImport({ currentData, onImport, t }: {
   const importFromUrl = async () => {
     const key = getGeminiKey();
     if (!key || key.length < 10) { setError(t('perfil.configure_gemini')); return; }
-    if (!url) { setError(t('informe_url')); return; }
+    if (!url || !url.startsWith('http')) { setError('Informe uma URL válida (http/https).'); return; }
     setError(''); setLoading(true); setImportedData(null);
 
-    setLoadingStep(t('acessando_pagina'));
-    await new Promise(r => setTimeout(r, 600));
-    setLoadingStep(t('lendo_informacoes'));
-
-    const prompt = `Acesse e leia o conteúdo desta página: ${url}
-Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
+    try {
+      setLoadingStep('Acessando a página via IA (Gemini)...');
+      
+      const prompt = `Acesse e leia o conteúdo completo desta URL: ${url}
+      
+Após ler a página, extraia todas as informações do artista e retorne 
+APENAS JSON válido em português brasileiro com este schema exato:
 ${PROFILE_JSON_SCHEMA}`;
 
-    try {
-      const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
+      let text = '';
+      let usedMethod = 'Gemini Search';
+      try {
+        text = await callGemini(key, [{ parts: [{ text: prompt }] }], [{ googleSearch: {} }]);
+        const testData = extractJson(text);
+        if (!testData || Object.keys(testData).length === 0) throw new Error("JSON vazio retornado pelo Gemini");
+      } catch (geminiErr) {
+        console.log("Gemini native search failed, falling back to Jina AI", geminiErr);
+        setLoadingStep('Acessando via Jina AI...');
+        usedMethod = 'Jina AI';
+        
+        const jinaResponse = await fetch(`https://r.jina.ai/${url}`);
+        if (!jinaResponse.ok) throw new Error('Não foi possível ler a URL nem pelo Gemini nem pelo Jina AI.');
+        const pageText = await jinaResponse.text();
+        
+        const fallbackPrompt = `Analise o texto abaixo, que foi extraído do site ${url}.
+Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
+${PROFILE_JSON_SCHEMA}
+
+CONTEÚDO DA PÁGINA:
+${pageText.substring(0, 50000)}
+`;
+        text = await callGemini(key, [{ parts: [{ text: fallbackPrompt }] }]);
+      }
+
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
-      if (data) { setImportedData(data); }
-      else setError(t('ia_erro'));
-    } catch { setError(t('erro_gemini')); }
+      if (data) {
+        setImportedData(data);
+        alert(`Página lida via ${usedMethod}`);
+      } else {
+        setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
+      }
+    } catch (e: unknown) {
+      console.error('Gemini/Fetch error:', e);
+      setError((e as Error).message || t('perfil.erro_gemini'));
+    }
     setLoading(false); setLoadingStep('');
   };
 
@@ -257,6 +293,7 @@ function AddList({ title, fields, items, onChange, t }: {
   fields: { key: string; label: string; type?: string }[];
   items: ListItem[];
   onChange: (items: ListItem[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: any) => string;
 }) {
   const add = () => {
@@ -485,8 +522,8 @@ export default function Perfil() {
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-1">{t('perfil.cidade_estado')}</label>
-                    <input value={form.cidade} onChange={e => set('cidade', e.target.value)}
+                    <label htmlFor="perfil-cidade" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.cidade_estado')}</label>
+                    <input id="perfil-cidade" aria-label={t('perfil.cidade_estado')} value={form.cidade} onChange={e => set('cidade', e.target.value)}
                       placeholder="Rio de Janeiro, RJ"
                       className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
                   </div>

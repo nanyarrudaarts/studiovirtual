@@ -32,5 +32,5 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   return <I18nContext.Provider value={{ lang, t, setLang }}>{children}</I18nContext.Provider>;
 }
-
+// eslint-disable-next-line react-refresh/only-export-components
 export const useI18n = () => useContext(I18nContext);

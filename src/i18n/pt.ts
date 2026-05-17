@@ -190,6 +190,7 @@ const pt = {
       identificando_informacoes: 'Identificando informações...',
       preenchendo_perfil: 'Preenchendo perfil...',
       erro_pdf: 'Erro ao extrair dados do PDF.',
+      erro_gemini: 'Erro na IA. Verifique se a sua Chave API é válida ou se não excedeu o limite.',
       configure_gemini: 'Configure a API Key do Gemini nas configurações.',
       clique_alterar_foto: 'Clique para alterar a foto',
       gerar_bio: 'Gerar Bio',

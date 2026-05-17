@@ -1,23 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { Shell } from './components/layout/Shell';
-import Dashboard from './screens/Dashboard';
-import Upload from './screens/Upload';
-import Materiais from './screens/Materiais';
-import Login from './screens/Login';
-import Configuracoes from './screens/Configuracoes';
-import Perfil from './screens/Perfil';
 import { supabase } from './services/supabase';
 
+// Lazy load screens
+const Dashboard = lazy(() => import('./screens/Dashboard'));
+const Upload = lazy(() => import('./screens/Upload'));
+const Materiais = lazy(() => import('./screens/Materiais'));
+const Login = lazy(() => import('./screens/Login'));
+const Configuracoes = lazy(() => import('./screens/Configuracoes'));
+const Perfil = lazy(() => import('./screens/Perfil'));
+const Obras = lazy(() => import('./screens/Obras'));
+const Dossie = lazy(() => import('./screens/Dossie'));
+
 // Placeholder Screens
-import Obras from './screens/Obras';
-import Dossie from './screens/Dossie';
 const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Análise</h1><p>Relatório de saúde e análise curatorial (em breve)</p></div>;
 const Importar = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Importar</h1><p>Importação de acervo (em breve)</p></div>;
 const Certificados = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Certificados</h1><p>Gestão de certificados (em breve)</p></div>;
 
+const LoadingScreen = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+  </div>
+);
+
 export default function App() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +56,7 @@ export default function App() {
 
   return (
     <>
+    <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
 
@@ -67,5 +77,7 @@ export default function App() {
       </Routes>
       <Analytics />
     </>
+    </Suspense>
   );
 }
+
