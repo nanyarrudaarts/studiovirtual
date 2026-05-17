@@ -1,7 +1,38 @@
-import { useState, useRef } from 'react';
-import { UploadCloud, Mic, FileText, Link as LinkIcon, CheckCircle2, AlertTriangle, Camera, Sparkles, ChevronRight, ChevronLeft, X, Plus, QrCode, Leaf, Link2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { UploadCloud, Mic, FileText, Link as LinkIcon, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft, X, Plus, QrCode, Leaf, Link2, Camera, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { saveArtwork } from '../services/supabase';
+import { saveArtwork, supabase } from '../services/supabase';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+function getGroqKey() {
+  return import.meta.env.VITE_GROQ_API_KEY || '';
+}
+
+async function callGroqJSON(prompt: string): Promise<string> {
+  const key = getGroqKey();
+  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env');
+  
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
+    })
+  });
+  
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error('Groq: ' + (e?.error?.message || res.status));
+  }
+  
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? '';
+}
 
 // ─── Jina AI URL reader ──────────────────────────────────────────────────────
 async function readURLWithJina(url: string): Promise<string> {
@@ -11,32 +42,37 @@ async function readURLWithJina(url: string): Promise<string> {
   if (!res.ok) throw new Error(`Não foi possível acessar esta página (HTTP ${res.status}). Verifique o link.`);
   return res.text();
 }
-
-
-
-
-
-
 interface PhotoSlot { file: File | null; url: string; label: string; w: number; h: number; }
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 export default function Upload() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dpiOk, setDpiOk] = useState<boolean | null>(null);
   const [resolution, setResolution] = useState<{w: number, h: number} | null>(null);
   const [saving, setSaving] = useState(false);
-  
-  // Voice state
   const [recording, setRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const typeQuery = searchParams.get('type');
+    if (typeQuery === 'singular' || typeQuery === 'serie' || typeQuery === 'colecao') {
+      setFormData(prev => ({ ...prev, classificacao: typeQuery }));
+    }
+  }, [location.search]);
+
   // Form State
   const [formData, setFormData] = useState({
-    classificacao: 'Obra Singular',
+    classificacao: 'singular', // 'singular', 'serie', 'colecao'
+    parentCollectionId: '',
+    parentSeriesId: '',
+
     emExposicao: false,
     exposicaoManual: '',
     titulo: '',
@@ -146,41 +182,61 @@ export default function Upload() {
     img.src = url;
   };
 
+
   const handleSave = async () => {
-    if (!formData.titulo.trim()) { alert('Preencha o título da obra.'); return; }
+    if (!formData.titulo.trim()) { alert('Preencha o título.'); return; }
     setSaving(true);
     try {
-      const dimFormatted = [formData.dimensaoW, formData.dimensaoH, formData.dimensaoD]
-        .filter(Boolean).join(' × ') + (formData.dimensaoUnidade ? ' ' + formData.dimensaoUnidade : '');
-      const imageFiles = photos.filter(p => p.file).map(p => p.file as File);
-      const saved = await saveArtwork({
-        artwork_title: formData.titulo,
-        alternative_title: undefined,
-        artwork_description: formData.descricao || undefined,
-        interpretive_title: formData.tituloInterpretativo || undefined,
-        creation_date: formData.ano,
-        creation_year: parseInt(formData.ano) || undefined,
-        medium: formData.tecnica || formData.tecnicaFree || undefined,
-        support: formData.suporte || undefined,
-        dimensions_formatted: dimFormatted || undefined,
-        height: parseFloat(formData.dimensaoH) || undefined,
-        width: parseFloat(formData.dimensaoW) || undefined,
-        depth: parseFloat(formData.dimensaoD) || undefined,
-        dimensions_unit: formData.dimensaoUnidade,
-        sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as 'available'|'sold'|'reserved'|'private_collection'|'not_for_sale' ?? 'available',
-        price: parseFloat(formData.valor) || undefined,
-        materials: formData.materiais.length ? formData.materiais : undefined,
-        physical_location: formData.localizacao || undefined,
-        summary_sentence: formData.sentencaResumo || undefined,
-        curatorial_narrative: formData.narrativaCuratorial || undefined,
-        intent_note: formData.notaIntencao || undefined,
-        sustainable_materials: formData.sustentavel,
-        tags: formData.tags ? formData.tags.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-        classification: 'singular',
-        artist_name: 'Nany Arruda',
-        copyright_holder: 'Nany Arruda',
-      }, imageFiles);
-      alert(`✅ Obra ${saved.accession_number} salva com sucesso!`);
+      if (formData.classificacao === 'colecao') {
+        const { error } = await supabase.from('collections').insert({
+          collection_name: formData.titulo,
+          curatorial_description: formData.narrativaCuratorial,
+          tags: formData.tags ? formData.tags.split(',').map(s => s.trim()) : null,
+          creation_year: parseInt(formData.ano) || null
+        });
+        if (error) throw error;
+        alert(`✅ Coleção salva com sucesso!`);
+        navigate('/obras');
+      } else if (formData.classificacao === 'serie') {
+        const { error } = await supabase.from('series').insert({
+          series_title: formData.titulo,
+          parent_collection_id: formData.parentCollectionId || null,
+          curatorial_statement: formData.narrativaCuratorial,
+          tags: formData.tags ? formData.tags.split(',').map(s => s.trim()) : null
+        });
+        if (error) throw error;
+        alert(`✅ Série salva com sucesso!`);
+        navigate('/obras');
+      } else {
+        const dimFormatted = [formData.dimensaoW, formData.dimensaoH, formData.dimensaoD]
+          .filter(Boolean).join(' × ') + (formData.dimensaoUnidade ? ' ' + formData.dimensaoUnidade : '');
+        const imageFiles = photos.filter(p => p.file).map(p => p.file as File);
+        const saved = await saveArtwork({
+          artwork_title: formData.titulo,
+          collection_reference: formData.parentCollectionId || undefined,
+          series_reference: formData.parentSeriesId || undefined,
+          creation_year: parseInt(formData.ano) || undefined,
+          medium: formData.tecnica || formData.tecnicaFree || undefined,
+          support: formData.suporte || undefined,
+          dimensions_formatted: dimFormatted || undefined,
+          height: parseFloat(formData.dimensaoH) || undefined,
+          width: parseFloat(formData.dimensaoW) || undefined,
+          depth: parseFloat(formData.dimensaoD) || undefined,
+          dimensions_unit: formData.dimensaoUnidade,
+          sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as 'available'|'sold'|'reserved'|'private_collection'|'not_for_sale' ?? 'available',
+          price: parseFloat(formData.valor) || undefined,
+          materials: formData.materiais.length ? formData.materiais : undefined,
+          physical_location: formData.localizacao || undefined,
+          summary_sentence: formData.sentencaResumo || undefined,
+          curatorial_narrative: formData.narrativaCuratorial || undefined,
+          intent_note: formData.notaIntencao || undefined,
+          sustainable_materials: formData.sustentavel,
+          tags: formData.tags ? formData.tags.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+          classification: 'singular',
+        }, imageFiles);
+        alert(`✅ Obra ${saved.accession_number} salva com sucesso!`);
+        navigate('/obras');
+      }
     } catch (err: unknown) {
       alert('Erro ao salvar: ' + (err as Error).message);
     } finally {
@@ -188,28 +244,6 @@ export default function Upload() {
     }
   };
 
-  const callOpenAI = async (apiKey: string, prompt: string, isJson = false) => {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: isJson ? { type: 'json_object' } : { type: 'text' },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Erro na API da OpenAI: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-  };
 
   const handleImportUrl = async () => {
     const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
@@ -219,14 +253,14 @@ export default function Upload() {
     try {
       setImportPhase('Acessando página via Jina AI...');
       const pageText = await readURLWithJina(importUrl);
-      setImportPhase('Extraindo dados com ChatGPT...');
+      setImportPhase('Extraindo dados com Groq...');
       const prompt = `Você é um curador de arte. Leia o texto abaixo e extraia dados da obra.
 Retorne SOMENTE JSON válido com estas chaves:
 {"titulo":"","tituloInterpretativo":"","ano":"","descricao":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","tags":[],"imagens":[]}
 
 Texto:
 ${pageText.slice(0, 12000)}`;
-      const rawText = await callOpenAI(openaiKey, prompt, true);
+      const rawText = await callGroqJSON(prompt);
       const jsonStr = (rawText.match(/\{[\s\S]*\}/) || ['{}'])[0];
       const data = JSON.parse(jsonStr);
       if (!data.titulo && !data.tecnica) throw new Error('Página lida mas sem informações de obra encontradas.');
@@ -252,8 +286,6 @@ ${pageText.slice(0, 12000)}`;
   };
 
   const handleGenerateNarrative = async () => {
-    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
-    if (!openaiKey) { alert('Configure VITE_OPENAI_API_KEY no .env'); return; }
     setFormData(f => ({ ...f, narrativaCuratorial: 'Gerando…' }));
     try {
       const prompt = `Você é um curador de arte contemporânea.
@@ -262,9 +294,15 @@ Título: ${formData.titulo || 'Sem Título'}
 Descrição: ${formData.descricao || 'Sem descrição'}
 Ano: ${formData.ano}
 Técnica: ${[formData.tecnica, formData.tecnicaFree].filter(Boolean).join(', ')} sobre ${formData.suporte}
-Retorne APENAS o texto, sem introdução, sem aspas.`;
-      const text = await callOpenAI(openaiKey, prompt);
-      setFormData(f => ({ ...f, narrativaCuratorial: text.trim() }));
+Retorne APENAS o texto JSON estruturado, conforme solicitado.`;
+      const text = await callGroqJSON(prompt);
+      const jsonStr = (text.match(/\{[\s\S]*\}/) || ['{}'])[0];
+      let finalStr = text;
+      try {
+        const d = JSON.parse(jsonStr);
+        finalStr = d.narrativaCuratorial || d.texto || text;
+      } catch (e) {}
+      setFormData(f => ({ ...f, narrativaCuratorial: finalStr.trim() }));
     } catch (e: unknown) {
       setFormData(f => ({ ...f, narrativaCuratorial: 'Erro: ' + ((e as Error).message || String(e)) }));
     }
@@ -645,7 +683,7 @@ Retorne APENAS o texto, sem introdução, sem aspas.`;
           <ChevronLeft size={20} /> <span className="hidden md:inline">{t('upload.btn_voltar')}</span>
         </button>
 
-        {step < 4 ? (
+        {step < 5 ? (
           <button 
             onClick={() => setStep(step + 1 as Step)}
             className="flex flex-1 md:flex-none items-center justify-center md:justify-start gap-2 px-8 py-3 ml-4 md:ml-0 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all"
