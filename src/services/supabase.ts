@@ -133,6 +133,11 @@ export async function deleteArtwork(id: string): Promise<void> {
   if (artwork?.artwork_images) {
     for (const url of artwork.artwork_images) await deleteImage(url);
   }
+  
+  // Remove vínculos com séries e coleções para evitar erro de chave estrangeira
+  await supabase.from('artworks_series').delete().eq('artwork_id', id);
+  await supabase.from('artworks_collections').delete().eq('artwork_id', id);
+  
   const { error } = await supabase.from('artworks').delete().eq('artwork_id', id);
   if (error) throw error;
 }
