@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, Link2, FileUp, Check } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
@@ -110,46 +110,28 @@ function SmartImport({ currentData, onImport, t }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: any) => string;
 }) {
-  const [tab, setTab] = useState<'url' | 'pdf'>('url');
-  const [url, setUrl] = useState('');
+  const [tab, setTab] = useState<'text' | 'pdf'>('text');
+  const [textInput, setTextInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [importedData, setImportedData] = useState<ImportedData | null>(null);
   const [error, setError] = useState('');
   const pdfRef = useRef<HTMLInputElement>(null);
 
-  const importFromUrl = async () => {
+  const importFromText = async () => {
     const key = getGeminiKey();
     if (!key || key.length < 10) { setError(t('perfil.configure_gemini')); return; }
-    if (!url || !url.startsWith('http')) { setError('Informe uma URL válida (http/https).'); return; }
+    if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
 
     try {
-      setLoadingStep('Acessando a página e lendo conteúdo...');
-      
-      // We use a free CORS proxy to fetch the HTML content
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error('Não foi possível acessar a URL.');
-      const proxyData = await response.text();
-      const doc = new DOMParser().parseFromString(proxyData, 'text/html');
-      // Remove scripts and styles
-      const elementsToRemove = doc.querySelectorAll('script, style, noscript, iframe');
-      elementsToRemove.forEach(el => el.remove());
-      const pageText = doc.body?.textContent?.replace(/\s+/g, ' ').trim() || '';
-
-      if (pageText.length < 50) {
-        throw new Error('A página parece estar vazia ou bloqueou o acesso.');
-      }
-
       setLoadingStep('Analisando informações com IA...');
 
-      const prompt = `Analise o texto abaixo, que foi extraído do site ${url}.
-Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
+      const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:
 ${PROFILE_JSON_SCHEMA}
 
-CONTEÚDO DA PÁGINA:
-${pageText.substring(0, 50000)}
+CONTEÚDO DO TEXTO:
+${textInput.substring(0, 50000)}
 `;
 
       const text = await callGemini(key, [{ parts: [{ text: prompt }] }]);
@@ -162,7 +144,7 @@ ${pageText.substring(0, 50000)}
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
     } catch (e: unknown) {
-      console.error('Gemini/Fetch error:', e);
+      console.error('Gemini error:', e);
       setError((e as Error).message || t('perfil.erro_gemini'));
     }
     setLoading(false); setLoadingStep('');
@@ -207,25 +189,24 @@ ${pageText.substring(0, 50000)}
       <div className="p-7 space-y-5">
         {/* Tabs */}
         <div className="flex gap-2">
-          {(['url', 'pdf'] as const).map(type => (
+          {(['text', 'pdf'] as const).map(type => (
             <button key={type} onClick={() => { setTab(type); setImportedData(null); setError(''); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === type ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-              {type === 'url' ? <><Link2 size={15}/> {t('perfil.importar_link')}</> : <><FileUp size={15}/> {t('perfil.importar_pdf')}</>}
+              {type === 'text' ? <><FileText size={15}/> Colar texto</> : <><FileUp size={15}/> {t('perfil.importar_pdf')}</>}
             </button>
           ))}
         </div>
 
-        {/* URL Panel */}
-        {tab === 'url' && (
+        {/* Text Panel */}
+        {tab === 'text' && (
           <div className="space-y-3">
-            <div className="flex gap-3">
-              <input type="url" value={url} onChange={e => setUrl(e.target.value)}
-                placeholder="https://nanyarruda.com/artista"
-                onKeyDown={e => e.key === 'Enter' && importFromUrl()}
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg" />
-              <button onClick={importFromUrl} disabled={loading}
+            <textarea value={textInput} onChange={e => setTextInput(e.target.value)}
+              placeholder="Cole aqui a biografia do seu site, um currículo copiado, perfil do Instagram, etc..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-32 resize-none" />
+            <div className="flex justify-end">
+              <button onClick={importFromText} disabled={loading || !textInput.trim()}
                 className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap">
-                {loading ? <Loader2 size={16} className="animate-spin" /> : t('perfil.importar_link')}
+                {loading ? <div className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Analisando...</div> : "Analisar com IA"}
               </button>
             </div>
           </div>
@@ -261,7 +242,7 @@ ${pageText.substring(0, 50000)}
         {importedData && !loading && (
           <div className="space-y-3">
             <p className="text-sm font-bold text-emerald-600">✓ {t('dados_extraidos')}</p>
-            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); }} t={t} />
+            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); setTextInput(''); }} t={t} />
           </div>
         )}
       </div>
