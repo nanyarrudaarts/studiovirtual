@@ -1,7 +1,35 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, Mic, FileText, Link as LinkIcon, CheckCircle2, AlertTriangle, Camera, Sparkles, ChevronRight, ChevronLeft, X, Plus, QrCode, Leaf, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../services/supabase';
+import { saveArtwork } from '../services/supabase';
+
+// ─── Jina AI URL reader ──────────────────────────────────────────────────────
+async function readURLWithJina(url: string): Promise<string> {
+  const res = await fetch(`https://r.jina.ai/${encodeURIComponent(url)}`, {
+    headers: { 'Accept': 'text/markdown', 'X-Return-Format': 'markdown' }
+  });
+  if (!res.ok) throw new Error(`Não foi possível acessar esta página (HTTP ${res.status}). Verifique o link.`);
+  return res.text();
+}
+
+// ─── Gemini helper ───────────────────────────────────────────────────────────
+async function callGemini(apiKey: string, prompt: string, jsonMode = false): Promise<string> {
+  const fullPrompt = jsonMode ? prompt + '\n\nResponda SOMENTE com JSON válido, sem markdown, sem explicações.' : prompt;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] }) }
+  );
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error('Gemini: ' + (e?.error?.message || res.status));
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+}
+
+
+
 
 interface PhotoSlot { file: File | null; url: string; label: string; w: number; h: number; }
 
@@ -132,75 +160,90 @@ export default function Upload() {
   };
 
   const handleSave = async () => {
+    if (!formData.titulo.trim()) { alert('Preencha o título da obra.'); return; }
     setSaving(true);
     try {
-      const payload = {
-        titulo: formData.titulo,
-        titulo_interpretativo: formData.tituloInterpretativo,
-        ano: formData.ano,
-        tecnica: formData.tecnica || formData.tecnicaFree,
-        suporte: formData.suporte,
-        dimensoes: `${formData.dimensaoW}x${formData.dimensaoH}${formData.dimensaoD ? 'x'+formData.dimensaoD : ''} ${formData.dimensaoUnidade}`,
-        status: formData.status,
-        valor: formData.valor,
-        materiais: formData.materiais,
-        localizacao: formData.localizacao,
-        proveniencia: formData.proveniencia,
-        credito_colecao: formData.creditoColecao,
-        sentenca_resumo: formData.sentencaResumo,
-        narrativa_curatorial: formData.narrativaCuratorial,
-        nota_intencao: formData.notaIntencao,
-        sustentavel: formData.sustentavel,
-        blockchain: formData.blockchain,
-        tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-        ai_curatorial_text: formData.aiCuratorialText,
-        photo_metadata: photos.map(p => ({ label: p.label, w: p.w, h: p.h }))
-      };
-
-      const { error } = await supabase.from('obras').insert(payload);
-      if (error) {
-        console.error('Error saving:', error);
-        alert(t('upload.erro_salvar', 'Erro ao salvar: ') + error.message);
-      } else {
-        alert(t('upload.salvo_com_sucesso', 'Obra salva com sucesso!'));
-      }
+      const dimFormatted = [formData.dimensaoW, formData.dimensaoH, formData.dimensaoD]
+        .filter(Boolean).join(' × ') + (formData.dimensaoUnidade ? ' ' + formData.dimensaoUnidade : '');
+      const imageFiles = photos.filter(p => p.file).map(p => p.file as File);
+      const saved = await saveArtwork({
+        artwork_title: formData.titulo,
+        interpretive_title: formData.tituloInterpretativo || undefined,
+        creation_date: formData.ano,
+        creation_year: parseInt(formData.ano) || undefined,
+        medium: formData.tecnica || formData.tecnicaFree || undefined,
+        support: formData.suporte || undefined,
+        dimensions_formatted: dimFormatted || undefined,
+        height: parseFloat(formData.dimensaoH) || undefined,
+        width: parseFloat(formData.dimensaoW) || undefined,
+        depth: parseFloat(formData.dimensaoD) || undefined,
+        dimensions_unit: formData.dimensaoUnidade,
+        sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as 'available'|'sold'|'reserved'|'private_collection'|'not_for_sale' ?? 'available',
+        price: parseFloat(formData.valor) || undefined,
+        materials: formData.materiais.length ? formData.materiais : undefined,
+        physical_location: formData.localizacao || undefined,
+        summary_sentence: formData.sentencaResumo || undefined,
+        curatorial_narrative: formData.narrativaCuratorial || undefined,
+        intent_note: formData.notaIntencao || undefined,
+        sustainable_materials: formData.sustentavel,
+        tags: formData.tags ? formData.tags.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        classification: 'singular',
+        artist_name: 'Nany Arruda',
+        copyright_holder: 'Nany Arruda',
+      }, imageFiles);
+      alert(`✅ Obra ${saved.accession_number} salva com sucesso!`);
     } catch (err: unknown) {
-      alert('Erro inesperado: ' + (err as Error).message);
+      alert('Erro ao salvar: ' + (err as Error).message);
     } finally {
       setSaving(false);
     }
   };
 
   const handleImportUrl = async () => {
-    const key = localStorage.getItem('groq_api_key')||'';
-    if (!key||key.length<10) { alert('Configure sua chave Groq em Configurações.'); return; }
+    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+    if (!importUrl.trim()) { alert('Cole uma URL válida.'); return; }
+    if (!geminiKey) { alert('Configure VITE_GEMINI_API_KEY no arquivo .env'); return; }
     setImportLoading(true);
-    for (const p of ['Acessando página...','Extraindo informações...','Identificando fotos...']) {
-      setImportPhase(p); await new Promise(r=>setTimeout(r,800));
-    }
     try {
-      const prompt = `URL: ${importUrl}\nExtraia dados desta obra de arte e retorne SOMENTE este JSON:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","serie":"","tags":[],"imagens":[]}`;
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization': `Bearer ${key}`},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],response_format:{type:'json_object'}})});
-      const json = await res.json();
-      const text = json.choices?.[0]?.message?.content||'{}';
-      const data = JSON.parse((text.match(/\{[\s\S]*\}/)||['{}'])[0]);
+      setImportPhase('Acessando página via Jina AI...');
+      const pageText = await readURLWithJina(importUrl);
+      setImportPhase('Extraindo dados com Gemini...');
+      const prompt = `Você é um curador de arte. Leia o texto abaixo e extraia dados da obra.\nRetorne SOMENTE JSON válido com estas chaves:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","tags":[],"imagens":[]}\n\nTexto:\n${pageText.slice(0, 12000)}`;
+      const rawText = await callGemini(geminiKey, prompt, true);
+      const jsonStr = (rawText.match(/\{[\s\S]*\}/) || ['{}'])[0];
+      const data = JSON.parse(jsonStr);
+      if (!data.titulo && !data.tecnica) throw new Error('Página lida mas sem informações de obra encontradas.');
       setImportResult(data);
-      if (data.titulo) setFormData(f=>({...f,titulo:data.titulo||f.titulo,tituloInterpretativo:data.tituloInterpretativo||'',ano:data.ano||f.ano,tecnica:data.tecnica||f.tecnica,suporte:data.suporte||f.suporte,narrativaCuratorial:data.narrativaCuratorial||'',sentencaResumo:data.descricaoCurta||'',tags:Array.isArray(data.tags)?data.tags.join(', '):f.tags}));
-      if (Array.isArray(data.imagens)) setImportImages(data.imagens.map((u:string)=>({url:u,selected:true})));
-    } catch { alert('Erro ao analisar a URL.'); }
+      setFormData(f => ({
+        ...f,
+        titulo: data.titulo || f.titulo,
+        tituloInterpretativo: data.tituloInterpretativo || '',
+        ano: data.ano || f.ano,
+        tecnica: data.tecnica || f.tecnica,
+        suporte: data.suporte || f.suporte,
+        narrativaCuratorial: data.narrativaCuratorial || '',
+        sentencaResumo: data.descricaoCurta || '',
+        tags: Array.isArray(data.tags) ? data.tags.join(', ') : f.tags,
+      }));
+      if (Array.isArray(data.imagens)) setImportImages(data.imagens.map((u: string) => ({ url: u, selected: true })));
+    } catch (e: unknown) {
+      alert('Erro ao analisar a URL: ' + ((e as Error).message || String(e)));
+    }
     setImportLoading(false);
+    setImportPhase('');
   };
 
   const handleGenerateNarrative = async () => {
-    const key = localStorage.getItem('groq_api_key')||'';
-    if (!key||key.length<10) return;
-    const prompt = `Curador de arte: escreva narrativa curatorial de 20-75 palavras em português.\nTítulo: ${formData.titulo||'Sem Título'}\nAno: ${formData.ano}\nTécnica: ${formData.tecnica} ${formData.tecnicaFree} sobre ${formData.suporte}\nRetorne APENAS o texto.`;
-    setFormData(f=>({...f,narrativaCuratorial:'Gerando…'}));
+    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+    if (!geminiKey) { alert('Configure VITE_GEMINI_API_KEY no .env'); return; }
+    setFormData(f => ({ ...f, narrativaCuratorial: 'Gerando…' }));
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization': `Bearer ${key}`},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}]})});
-      const json = await res.json();
-      setFormData(f=>({...f,narrativaCuratorial:json.choices?.[0]?.message?.content?.trim()||''}));
-    } catch { setFormData(f=>({...f,narrativaCuratorial:'Erro. Tente novamente.'})); }
+      const prompt = `Você é um curador de arte contemporânea.\nEscreva uma narrativa curatorial em português com 20 a 75 palavras.\nTítulo: ${formData.titulo || 'Sem Título'}\nAno: ${formData.ano}\nTécnica: ${[formData.tecnica, formData.tecnicaFree].filter(Boolean).join(', ')} sobre ${formData.suporte}\nRetorne APENAS o texto, sem introdução, sem aspas.`;
+      const text = await callGemini(geminiKey, prompt);
+      setFormData(f => ({ ...f, narrativaCuratorial: text.trim() }));
+    } catch (e: unknown) {
+      setFormData(f => ({ ...f, narrativaCuratorial: 'Erro: ' + ((e as Error).message || String(e)) }));
+    }
   };
 
   return (

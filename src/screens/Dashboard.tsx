@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
-import type { Obra } from '../types';
+import type { Artwork } from '../types';
 import { UploadCloud, FileText, Activity, AlertCircle, Sparkles, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { ptBR, enUS, es, de } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
-  const [obras, setObras] = useState<Obra[]>([]);
+  const [obras, setObras] = useState<Artwork[]>([]);
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -26,28 +26,27 @@ export default function Dashboard() {
       try {
         // Fetch obras
         const { data: obrasData } = await supabase
-          .from('obras')
+          .from('artworks')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(6);
           
         if (obrasData) setObras(obrasData);
 
-        // Fetch materiais com alerta
-        const { count } = await supabase
-          .from('materiais')
+        const { count: alertasMateriais } = await supabase
+          .from('artworks')
           .select('*', { count: 'exact', head: true })
-          .in('status_estoque', ['baixo', 'esgotado']);
+          .eq('sale_status', 'available');
 
         // Mock count for total obras
         const { count: totalObras } = await supabase
-          .from('obras')
+          .from('artworks')
           .select('*', { count: 'exact', head: true });
 
         setMetricas({
-          totalObras: totalObras || 24, // fallback mock
-          healthScore: 92, // mock health score
-          alertasMateriais: count || 3, // fallback mock
+          totalObras: totalObras || 0,
+          healthScore: 92,
+          alertasMateriais: alertasMateriais || 0,
         });
       } catch (err) {
         console.error('Error loading dashboard:', err);
@@ -134,12 +133,12 @@ export default function Dashboard() {
               ))
             ) : obras.length > 0 ? (
               obras.map((obra) => (
-                <div key={obra.id} className="min-w-[260px] md:min-w-[280px] w-[260px] md:w-[280px] shrink-0 snap-start group cursor-pointer hover-float">
+                <div key={obra.artwork_id} className="min-w-[260px] md:min-w-[280px] w-[260px] md:w-[280px] shrink-0 snap-start group cursor-pointer hover-float">
                   <div className="relative h-[300px] md:h-[320px] rounded-xl overflow-hidden mb-3 bg-gray-100">
-                    {obra.imagens?.[0]?.url ? (
-                      <img 
-                        src={obra.imagens[0].url} 
-                        alt={obra.titulo} 
+                    {obra.cover_image ? (
+                      <img
+                        src={obra.cover_image}
+                        alt={obra.artwork_title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -147,13 +146,12 @@ export default function Dashboard() {
                         {t('dashboard.sem_imagem')}
                       </div>
                     )}
-                    {/* 300 DPI Badge */}
                     <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-md">
-                      300 DPI
+                      {obra.accession_number || 'NA'}
                     </div>
                   </div>
-                  <h3 className="font-serif text-lg text-text-main">{obra.titulo}</h3>
-                  <p className="text-text-muted text-sm">{obra.ano} • {obra.suporte}</p>
+                  <h3 className="font-serif text-lg text-text-main">{obra.artwork_title}</h3>
+                  <p className="text-text-muted text-sm">{obra.creation_year} • {obra.medium}</p>
                 </div>
               ))
             ) : (

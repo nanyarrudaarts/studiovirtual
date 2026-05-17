@@ -35,10 +35,10 @@ const defaultConfig: Config = {
   watermarkText: 'Nany Arruda — nanyarruda.com',
 };
 
-function KeyInput({ label, value, onChange, placeholder, onSave, t }: {
+function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
   label: string; value: string; onChange: (v: string) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  placeholder: string; onSave: () => void; t: (k: any) => string;
+  placeholder: string; onSave: () => void; isSaved?: boolean; t: (k: any) => string;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -59,9 +59,9 @@ function KeyInput({ label, value, onChange, placeholder, onSave, t }: {
             {show ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
-        <button onClick={onSave}
-          className="px-4 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap">
-          {t('configuracoes.salvar_chave')}
+        <button type="button" onClick={onSave}
+          className="px-4 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap flex items-center gap-2">
+          {isSaved ? <><Check size={16} /> {t('configuracoes.salvo')}</> : t('configuracoes.salvar_chave')}
         </button>
       </div>
     </div>
@@ -76,15 +76,24 @@ export default function Configuracoes() {
 
   useEffect(() => {
     const stored = localStorage.getItem('sv_config');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setConfig({ ...defaultConfig, ...JSON.parse(stored) });
+    const directGroqKey = localStorage.getItem('groq_api_key');
+    let loaded = { ...defaultConfig };
+    if (stored) {
+      loaded = { ...loaded, ...JSON.parse(stored) };
+    }
+    if (directGroqKey) {
+      loaded.groqKey = directGroqKey;
+    }
+    setConfig(loaded);
   }, []);
 
   const save = (keys: (keyof Config)[]) => {
     const updated = { ...config };
+    console.log('[Configuracoes] Saving keys:', keys, 'values:', keys.map(k => `${k}=${String(updated[k]).slice(0,10)}`));
     localStorage.setItem('sv_config', JSON.stringify(updated));
     if (keys.includes('groqKey')) {
       localStorage.setItem('groq_api_key', updated.groqKey);
+      console.log('[Configuracoes] groq_api_key saved to localStorage:', updated.groqKey.slice(0, 10) + '...');
     }
     const newSaved: Record<string, boolean> = {};
     keys.forEach(k => { newSaved[k] = true; });
@@ -141,7 +150,7 @@ export default function Configuracoes() {
           <div className="space-y-4">
             <KeyInput label="Chave API Groq" value={config.groqKey}
               onChange={v => set('groqKey', v)} placeholder="gsk_..."
-              onSave={() => save(['groqKey'])} t={t} />
+              onSave={() => save(['groqKey'])} isSaved={saved['groqKey']} t={t} />
           </div>
 
           {/* NotebookLM */}
