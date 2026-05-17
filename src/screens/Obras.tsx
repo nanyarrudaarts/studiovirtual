@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2 } from 'lucide-react';
-import { getArtworks, getSeriesList, getCollections, deleteArtwork } from '../services/supabase';
+import { getArtworks, getSeriesList, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -51,6 +51,28 @@ export default function Obras() {
       setArtworks(artworks.filter(a => a.artwork_id !== id));
       setSelected(null);
       alert('✅ Obra deletada com sucesso!');
+    } catch (e) {
+      alert('Erro ao deletar: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteSerie = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar esta série? Esta ação não pode ser desfeita.')) return;
+    try {
+      await deleteSerie(id);
+      setSeries(series.filter(s => s.series_id !== id));
+      alert('✅ Série deletada com sucesso!');
+    } catch (e) {
+      alert('Erro ao deletar: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteCollection = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar esta coleção? Esta ação não pode ser desfeita.')) return;
+    try {
+      await deleteCollection(id);
+      setCollections(collections.filter(c => c.collection_id !== id));
+      alert('✅ Coleção deletada com sucesso!');
     } catch (e) {
       alert('Erro ao deletar: ' + (e as Error).message);
     }
@@ -149,8 +171,18 @@ export default function Obras() {
                     )}
                   </div>
                   <div className="p-4">
-                    <p className="text-xs text-text-muted font-mono mb-0.5">{obra.accession_number}</p>
-                    <h3 className="font-serif text-lg text-text-main leading-snug">{obra.artwork_title}</h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs text-text-muted font-mono mb-0.5">{obra.accession_number}</p>
+                        <h3 className="font-serif text-lg text-text-main leading-snug">{obra.artwork_title}</h3>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(obra.artwork_id); }}
+                        className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                     {obra.interpretive_title && <p className="text-text-muted text-xs italic mb-1">{obra.interpretive_title}</p>}
                     <p className="text-text-muted text-sm">{obra.creation_year} · {obra.medium}{obra.support ? ` sobre ${obra.support}` : ''}</p>
                     {obra.dimensions_formatted && <p className="text-text-muted text-xs mt-1">{obra.dimensions_formatted}</p>}
@@ -199,9 +231,17 @@ export default function Obras() {
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h3 className="font-serif text-xl text-text-main">{s.series_title}</h3>
-                      {s.series_number && (
-                        <span className="text-xs font-mono text-text-muted mt-1">#{s.series_number}</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {s.series_number && (
+                          <span className="text-xs font-mono text-text-muted mt-1">#{s.series_number}</span>
+                        )}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSerie(s.series_id); }}
+                          className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                     {s.conceptual_statement && (
                       <p className="text-text-muted text-sm line-clamp-2 mb-3">{s.conceptual_statement}</p>
@@ -248,7 +288,15 @@ export default function Obras() {
                     )}
                   </div>
                   <div className="p-5">
-                    <h3 className="font-serif text-xl text-text-main mb-1">{c.collection_name}</h3>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-serif text-xl text-text-main">{c.collection_name}</h3>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.collection_id); }}
+                        className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                     {c.collection_description && (
                       <p className="text-text-muted text-sm line-clamp-2 mb-3">{c.collection_description}</p>
                     )}
