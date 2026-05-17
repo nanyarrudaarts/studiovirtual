@@ -128,10 +128,10 @@ function SmartImport({ currentData, onImport, t }: {
       setLoadingStep('Acessando a página e lendo conteúdo...');
       
       // We use a free CORS proxy to fetch the HTML content
-      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Não foi possível acessar a URL.');
-      const proxyData = await response.json();
+      const proxyData = await response.text();
       const doc = new DOMParser().parseFromString(proxyData, 'text/html');
       // Remove scripts and styles
       const elementsToRemove = doc.querySelectorAll('script, style, noscript, iframe');
