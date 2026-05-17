@@ -3,43 +3,38 @@ import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'luc
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
-function getGeminiKey() {
-  return import.meta.env.VITE_GEMINI_API_KEY || '';
+function getOpenAIKey() {
+  return import.meta.env.VITE_OPENAI_API_KEY || '';
 }
 
-async function callGeminiJSON(prompt: string): Promise<string> {
-  const key = getGeminiKey();
-  if (!key) throw new Error('Configure VITE_GEMINI_API_KEY no .env');
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt + '\n\nResponda SOMENTE com JSON válido.' }] }] }) }
-  );
+async function callOpenAIJSON(prompt: string): Promise<string> {
+  const key = getOpenAIKey();
+  if (!key) throw new Error('Configure VITE_OPENAI_API_KEY no .env');
+  
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
+    })
+  });
+  
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
-    throw new Error('Gemini: ' + (e?.error?.message || res.status));
+    throw new Error('OpenAI: ' + (e?.error?.message || res.status));
   }
+  
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  return data.choices?.[0]?.message?.content ?? '';
 }
 
-async function callGeminiVisionPDF(mimeType: string, base64: string, prompt: string): Promise<string> {
-  const key = getGeminiKey();
-  if (!key) throw new Error('Configure VITE_GEMINI_API_KEY no .env');
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [
-        { inline_data: { mime_type: mimeType, data: base64 } },
-        { text: prompt + '\n\nResponda SOMENTE com JSON válido.' }
-      ] }] }) }
-  );
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error('Gemini Vision: ' + (e?.error?.message || res.status));
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+async function callOpenAIVisionPDF(_mimeType: string, _base64: string, _prompt: string): Promise<string> {
+  throw new Error('A API do ChatGPT não lê PDFs nativamente (ao contrário do Gemini). Por favor, copie e cole o texto do seu currículo usando a opção "Colar Texto".');
 }
 
 function extractJson(text: string) {
@@ -142,13 +137,13 @@ function SmartImport({ currentData, onImport, t }: {
 
 
   const importFromText = async () => {
-    if (!getGeminiKey()) { setError('Configure VITE_GEMINI_API_KEY no .env'); return; }
+    if (!getOpenAIKey()) { setError('Configure VITE_OPENAI_API_KEY no .env'); return; }
     if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep('Analisando informações com IA...');
       const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${textInput.substring(0, 50000)}`;
-      const text = await callGeminiJSON(prompt);
+      const text = await callOpenAIJSON(prompt);
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -167,7 +162,7 @@ function SmartImport({ currentData, onImport, t }: {
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!getGeminiKey()) { setError('Configure VITE_GEMINI_API_KEY no .env'); return; }
+    if (!getOpenAIKey()) { setError('Configure VITE_OPENAI_API_KEY no .env'); return; }
     setError(''); setLoading(true); setImportedData(null);
     setLoadingStep(t('lendo_curriculo'));
     const reader = new FileReader();
@@ -176,7 +171,7 @@ function SmartImport({ currentData, onImport, t }: {
       const base64 = (reader.result as string).split(',')[1];
       setLoadingStep(t('perfil.identificando_informacoes'));
       try {
-        const text = await callGeminiVisionPDF(
+        const text = await callOpenAIVisionPDF(
           'application/pdf',
           base64,
           `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro:\n${PROFILE_JSON_SCHEMA}`
@@ -388,14 +383,14 @@ export default function Perfil() {
 
   const handleGenerateBio = async () => {
     setGeneratingBio(true);
-    if (!getGeminiKey()) {
-      alert('Configure VITE_GEMINI_API_KEY no .env');
+    if (!getOpenAIKey()) {
+      alert('Configure VITE_OPENAI_API_KEY no .env');
       setGeneratingBio(false);
       return;
     }
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const text = await callGeminiJSON(prompt);
+      const text = await callOpenAIJSON(prompt);
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));

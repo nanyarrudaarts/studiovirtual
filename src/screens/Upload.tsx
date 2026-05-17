@@ -12,21 +12,7 @@ async function readURLWithJina(url: string): Promise<string> {
   return res.text();
 }
 
-// ─── Gemini helper ───────────────────────────────────────────────────────────
-async function callGemini(apiKey: string, prompt: string, jsonMode = false): Promise<string> {
-  const fullPrompt = jsonMode ? prompt + '\n\nResponda SOMENTE com JSON válido, sem markdown, sem explicações.' : prompt;
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] }) }
-  );
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error('Gemini: ' + (e?.error?.message || res.status));
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-}
+
 
 
 
@@ -56,6 +42,7 @@ export default function Upload() {
     titulo: '',
     tituloInterpretativo: '',
     ano: new Date().getFullYear().toString(),
+    descricao: '',
     tecnica: '',
     suporte: '',
     tecnicaFree: '',
@@ -168,6 +155,8 @@ export default function Upload() {
       const imageFiles = photos.filter(p => p.file).map(p => p.file as File);
       const saved = await saveArtwork({
         artwork_title: formData.titulo,
+        alternative_title: undefined,
+        artwork_description: formData.descricao || undefined,
         interpretive_title: formData.tituloInterpretativo || undefined,
         creation_date: formData.ano,
         creation_year: parseInt(formData.ano) || undefined,
@@ -199,17 +188,45 @@ export default function Upload() {
     }
   };
 
+  const callOpenAI = async (apiKey: string, prompt: string, isJson = false) => {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: isJson ? { type: 'json_object' } : { type: 'text' },
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Erro na API da OpenAI: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  };
+
   const handleImportUrl = async () => {
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
     if (!importUrl.trim()) { alert('Cole uma URL válida.'); return; }
-    if (!geminiKey) { alert('Configure VITE_GEMINI_API_KEY no arquivo .env'); return; }
+    if (!openaiKey) { alert('Configure VITE_OPENAI_API_KEY no arquivo .env'); return; }
     setImportLoading(true);
     try {
       setImportPhase('Acessando página via Jina AI...');
       const pageText = await readURLWithJina(importUrl);
-      setImportPhase('Extraindo dados com Gemini...');
-      const prompt = `Você é um curador de arte. Leia o texto abaixo e extraia dados da obra.\nRetorne SOMENTE JSON válido com estas chaves:\n{"titulo":"","tituloInterpretativo":"","ano":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","tags":[],"imagens":[]}\n\nTexto:\n${pageText.slice(0, 12000)}`;
-      const rawText = await callGemini(geminiKey, prompt, true);
+      setImportPhase('Extraindo dados com ChatGPT...');
+      const prompt = `Você é um curador de arte. Leia o texto abaixo e extraia dados da obra.
+Retorne SOMENTE JSON válido com estas chaves:
+{"titulo":"","tituloInterpretativo":"","ano":"","descricao":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","tags":[],"imagens":[]}
+
+Texto:
+${pageText.slice(0, 12000)}`;
+      const rawText = await callOpenAI(openaiKey, prompt, true);
       const jsonStr = (rawText.match(/\{[\s\S]*\}/) || ['{}'])[0];
       const data = JSON.parse(jsonStr);
       if (!data.titulo && !data.tecnica) throw new Error('Página lida mas sem informações de obra encontradas.');
@@ -219,6 +236,7 @@ export default function Upload() {
         titulo: data.titulo || f.titulo,
         tituloInterpretativo: data.tituloInterpretativo || '',
         ano: data.ano || f.ano,
+        descricao: data.descricao || f.descricao,
         tecnica: data.tecnica || f.tecnica,
         suporte: data.suporte || f.suporte,
         narrativaCuratorial: data.narrativaCuratorial || '',
@@ -234,12 +252,18 @@ export default function Upload() {
   };
 
   const handleGenerateNarrative = async () => {
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-    if (!geminiKey) { alert('Configure VITE_GEMINI_API_KEY no .env'); return; }
+    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
+    if (!openaiKey) { alert('Configure VITE_OPENAI_API_KEY no .env'); return; }
     setFormData(f => ({ ...f, narrativaCuratorial: 'Gerando…' }));
     try {
-      const prompt = `Você é um curador de arte contemporânea.\nEscreva uma narrativa curatorial em português com 20 a 75 palavras.\nTítulo: ${formData.titulo || 'Sem Título'}\nAno: ${formData.ano}\nTécnica: ${[formData.tecnica, formData.tecnicaFree].filter(Boolean).join(', ')} sobre ${formData.suporte}\nRetorne APENAS o texto, sem introdução, sem aspas.`;
-      const text = await callGemini(geminiKey, prompt);
+      const prompt = `Você é um curador de arte contemporânea.
+Escreva uma narrativa curatorial em português com 20 a 75 palavras.
+Título: ${formData.titulo || 'Sem Título'}
+Descrição: ${formData.descricao || 'Sem descrição'}
+Ano: ${formData.ano}
+Técnica: ${[formData.tecnica, formData.tecnicaFree].filter(Boolean).join(', ')} sobre ${formData.suporte}
+Retorne APENAS o texto, sem introdução, sem aspas.`;
+      const text = await callOpenAI(openaiKey, prompt);
       setFormData(f => ({ ...f, narrativaCuratorial: text.trim() }));
     } catch (e: unknown) {
       setFormData(f => ({ ...f, narrativaCuratorial: 'Erro: ' + ((e as Error).message || String(e)) }));
@@ -429,6 +453,10 @@ export default function Upload() {
                 <div>
                   <label htmlFor="up-ano" className="block text-xs font-bold text-text-muted mb-1">Ano de Criação</label>
                   <input id="up-ano" aria-label="Ano de criação" type="text" value={formData.ano} onChange={e=>setFormData({...formData,ano:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="up-desc" className="block text-xs font-bold text-text-muted mb-1">Descrição Detalhada</label>
+                  <textarea id="up-desc" aria-label="Descrição da obra" value={formData.descricao} onChange={e=>setFormData({...formData,descricao:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg h-24" placeholder="Descreva visualmente e conceitualmente a obra..." />
                 </div>
                 <div>
                   <label htmlFor="up-tecnica" className="block text-xs font-bold text-text-muted mb-1">Técnica</label>
