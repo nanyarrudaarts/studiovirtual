@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers } from 'lucide-react';
-import { getArtworks, getSeriesList, getCollections } from '../services/supabase';
+import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2 } from 'lucide-react';
+import { getArtworks, getSeriesList, getCollections, deleteArtwork } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -43,6 +43,18 @@ export default function Obras() {
       setCollections(c);
     }).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar esta obra? Esta ação não pode ser desfeita.')) return;
+    try {
+      await deleteArtwork(id);
+      setArtworks(artworks.filter(a => a.artwork_id !== id));
+      setSelected(null);
+      alert('✅ Obra deletada com sucesso!');
+    } catch (e) {
+      alert('Erro ao deletar: ' + (e as Error).message);
+    }
+  };
 
   const q = search.toLowerCase();
   const filteredArtworks = artworks.filter(a =>
@@ -275,6 +287,7 @@ export default function Obras() {
                 <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${STATUS_COLOR[selected.sale_status] ?? ''}`}>
                   {STATUS_LABEL[selected.sale_status]}
                 </span>
+                <button aria-label="Deletar" onClick={() => handleDelete(selected.artwork_id)} className="p-2 rounded-xl hover:bg-red-100 text-red-600"><Trash2 size={20} /></button>
                 <button aria-label="Fechar" onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-gray-100"><X size={20} /></button>
               </div>
             </div>
@@ -348,7 +361,8 @@ export default function Obras() {
               )}
             </div>
             <div className="sticky bottom-0 bg-surface border-t border-gray-100 px-6 py-4 flex gap-3">
-              <button className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:border-accent transition-colors">
+              <button onClick={() => navigate(`/upload?id=${selected.artwork_id}`)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:border-accent transition-colors">
                 Editar ficha
               </button>
               <button className="flex-1 py-2.5 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent/90 transition-all">

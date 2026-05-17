@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { saveArtwork, createCollection, createSerie, supabase } from '../services/supabase';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import type { Artwork } from '../types';
 
 function getGroqKey() { return import.meta.env.VITE_GROQ_API_KEY || ''; }
 
@@ -25,12 +26,16 @@ export default function Upload() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
+  
   const [step, setStep] = useState<number>(1);
   const [iaMode, setIaMode] = useState(false);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPhase, setAiPhase] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
   const [collections, setCollections] = useState<{id: string, collection_name: string}[]>([]);
   const [seriesList, setSeriesList] = useState<{id: string, series_title: string}[]>([]);
 
@@ -68,6 +73,84 @@ export default function Upload() {
     const p = new URLSearchParams(location.search).get('type');
     if (p === 'singular' || p === 'serie' || p === 'colecao') setFormData(prev => ({ ...prev, classificacao: p }));
   }, [location.search]);
+
+  useEffect(() => {
+    if (editId) {
+      (async () => {
+        setLoadingEdit(true);
+        try {
+          const { data, error } = await supabase
+            .from('artworks')
+            .select('*')
+            .eq('artwork_id', editId)
+            .single();
+          if (error) throw error;
+          if (data) {
+            const artwork = data as Artwork;
+            let extraData: any = {};
+            if (artwork.intent_note) {
+              try { extraData = JSON.parse(artwork.intent_note); } catch (e) {}
+            }
+            
+            setFormData({
+              classificacao: artwork.classification || 'singular',
+              parentCollectionId: artwork.collection_reference || '',
+              parentSeriesId: artwork.series_reference || '',
+              isNewHierarchy: false,
+              titulo: artwork.artwork_title || '',
+              tipoObjeto: 'Pintura',
+              autoria: artwork.artist_name || 'Nany Arruda',
+              ano: artwork.creation_year?.toString() || artwork.creation_date || '',
+              tecnica: artwork.medium || '',
+              suporte: artwork.support || '',
+              dimensaoW: artwork.width?.toString() || '',
+              dimensaoH: artwork.height?.toString() || '',
+              dimensaoD: artwork.depth?.toString() || '',
+              dimensaoUnidade: artwork.dimensions_unit || 'cm',
+              inscricoes: '',
+              sentencaResumo: artwork.summary_sentence || '',
+              narrativaCuratorial: artwork.curatorial_narrative || '',
+              numeroRegistro: artwork.inventory_number || '',
+              formaAquisicao: '',
+              procedencia: '',
+              estadoConservacao: 'Excelente',
+              valor: artwork.price?.toString() || '',
+              seguro: '',
+              localizacao: artwork.physical_location || '',
+              numeroEdicao: artwork.edition_number || '',
+              variacaoSerie: '',
+              quantidadePrevista: '',
+              estruturaEdicao: '',
+              periodoColecao: '',
+              artistasEnvolvidos: '',
+              criterioInclusao: '',
+              instituicaoAssociada: '',
+              status: ({'available':'Disponível','sold':'Vendida','reserved':'Reservada','private_collection':'Coleção Privada','not_for_sale':'Não à venda'} as Record<string,string>)[artwork.sale_status] ?? 'Disponível',
+              protocoloAtivacao: extraData.protocoloAtivacao || '',
+              perfilPerformer: extraData.perfilPerformer || '',
+              duracao: extraData.duracao || '',
+              elementosInegociveis: extraData.elementosInegociveis || '',
+              possuiTermo: extraData.possuiTermo || false,
+              possuiCOA: extraData.possuiCOA || false,
+              possuiCessao: extraData.possuiCessao || false,
+            });
+            
+            if (artwork.artwork_images && artwork.artwork_images.length > 0) {
+              const newPhotos = [...photos];
+              artwork.artwork_images.forEach((url, i) => {
+                if (i < 5) newPhotos[i] = { file: null, url, label: '', w: 0, h: 0 };
+              });
+              setPhotos(newPhotos);
+            }
+          }
+        } catch (e) {
+          alert('Erro ao carregar obra: ' + (e as Error).message);
+        } finally {
+          setLoadingEdit(false);
+        }
+      })();
+    }
+  }, [editId]);
 
   const handlePhotoSlot = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
@@ -128,6 +211,7 @@ export default function Upload() {
       };
 
       await saveArtwork({
+        artwork_id: editId || undefined,
         artwork_title: formData.titulo,
         artist_name: formData.autoria || undefined,
         collection_reference: formData.parentCollectionId || undefined,
@@ -201,10 +285,16 @@ export default function Upload() {
 
   return (
     <div className="max-w-[1000px] mx-auto pb-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-serif mb-2">{t('upload.title')}</h1>
-        <p className="text-text-muted">{t('upload.subtitle')}</p>
-      </div>
+      {loadingEdit ? (
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+        </div>
+      ) : (
+        <>
+          <div className="mb-8">
+            <h1 className="text-3xl font-serif mb-2">{t('upload.title')}</h1>
+            <p className="text-text-muted">{t('upload.subtitle')}</p>
+          </div>
 
       <div className="flex gap-4 mb-8">
         {[{ id: 1, label: '1. Imagem & Tipo' }, { id: 2, label: '2. Vinculação' }, { id: 3, label: '3. Ficha Técnica' }].map(s => {
@@ -416,7 +506,9 @@ export default function Upload() {
             {saving ? 'Salvando...' : 'Salvar Registro'}
           </button>
         )}
-      </div>
+        </div>
+        </>
+      )}
     </div>
   );
 }
