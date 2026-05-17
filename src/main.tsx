@@ -5,6 +5,15 @@ import './i18n/index'
 import './index.css'
 import App from './App'
 
+// Seed API keys from env vars on first load.
+// localStorage value always takes precedence (user can override in Configurações).
+if (!localStorage.getItem('gemini_api_key') && import.meta.env.VITE_GEMINI_API_KEY) {
+  localStorage.setItem('gemini_api_key', import.meta.env.VITE_GEMINI_API_KEY)
+}
+if (!localStorage.getItem('openai_api_key') && import.meta.env.VITE_OPENAI_API_KEY) {
+  localStorage.setItem('openai_api_key', import.meta.env.VITE_OPENAI_API_KEY)
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
