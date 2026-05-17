@@ -56,7 +56,6 @@ export default function App() {
   }
 
   return (
-    <>
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
