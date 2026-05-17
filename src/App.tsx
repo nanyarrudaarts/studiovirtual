@@ -76,10 +76,8 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+   <Analytics />
       <SpeedInsights />
-    </>
-      <Analytics />
-    </>
     </Suspense>
   );
 }
