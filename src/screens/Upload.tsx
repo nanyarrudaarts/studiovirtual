@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { UploadCloud, Mic, FileText, Link as LinkIcon, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft, X, Plus, QrCode, Leaf, Link2, Camera, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { saveArtwork, supabase } from '../services/supabase';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ function getGroqKey() {
 
 async function callGroqJSON(prompt: string): Promise<string> {
   const key = getGroqKey();
-  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env');
+  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env.local');
   
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -34,47 +34,47 @@ async function callGroqJSON(prompt: string): Promise<string> {
   return data.choices?.[0]?.message?.content ?? '';
 }
 
-// ─── Jina AI URL reader ──────────────────────────────────────────────────────
 async function readURLWithJina(url: string): Promise<string> {
   const res = await fetch(`https://r.jina.ai/${encodeURIComponent(url)}`, {
     headers: { 'Accept': 'text/markdown', 'X-Return-Format': 'markdown' }
   });
-  if (!res.ok) throw new Error(`Não foi possível acessar esta página (HTTP ${res.status}). Verifique o link.`);
+  if (!res.ok) throw new Error(`Não foi possível acessar a página (HTTP ${res.status}).`);
   return res.text();
 }
-interface PhotoSlot { file: File | null; url: string; label: string; w: number; h: number; }
 
-type Step = 1 | 2 | 3 | 4 | 5;
+interface PhotoSlot { file: File | null; url: string; label: string; w: number; h: number; }
 
 export default function Upload() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>(1);
-  const [, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [dpiOk, setDpiOk] = useState<boolean | null>(null);
-  const [resolution, setResolution] = useState<{w: number, h: number} | null>(null);
+
+  const [step, setStep] = useState<number>(1);
+  const [iaMode, setIaMode] = useState(false);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPhase, setAiPhase] = useState('');
+
   const [saving, setSaving] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  
+  const [collections, setCollections] = useState<{id: string, collection_name: string}[]>([]);
+  const [seriesList, setSeriesList] = useState<{id: string, series_title: string}[]>([]);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const typeQuery = searchParams.get('type');
-    if (typeQuery === 'singular' || typeQuery === 'serie' || typeQuery === 'colecao') {
-      setFormData(prev => ({ ...prev, classificacao: typeQuery }));
+    async function fetchHierarchies() {
+      const { data: cols } = await supabase.from('collections').select('id, collection_name');
+      if (cols) setCollections(cols);
+      const { data: sers } = await supabase.from('series').select('id, series_title');
+      if (sers) setSeriesList(sers);
     }
-  }, [location.search]);
+    fetchHierarchies();
+  }, []);
 
-  // Form State
   const [formData, setFormData] = useState({
-    classificacao: 'singular', // 'singular', 'serie', 'colecao'
+    classificacao: 'singular', 
     parentCollectionId: '',
     parentSeriesId: '',
 
-    emExposicao: false,
-    exposicaoManual: '',
     titulo: '',
     tituloInterpretativo: '',
     ano: new Date().getFullYear().toString(),
@@ -98,77 +98,19 @@ export default function Upload() {
     sustentavel: false,
     blockchain: false,
     tags: '',
-    aiCuratorialText: ''
   });
+
   const [photos, setPhotos] = useState<PhotoSlot[]>(Array.from({length:5},()=>({file:null,url:'',label:'',w:0,h:0})));
-  // URL Import
-  const [importUrl, setImportUrl] = useState('');
-  const [importLoading, setImportLoading] = useState(false);
-  const [importPhase, setImportPhase] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [importResult, setImportResult] = useState<any>(null);
-  const [importImages, setImportImages] = useState<{url:string;selected:boolean}[]>([]);
-  const [showImport, setShowImport] = useState(false);
   const photoRefs = useRef<(HTMLInputElement|null)[]>([]);
 
-
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      setFile(selected);
-      
-      const objectUrl = URL.createObjectURL(selected);
-      setPreview(objectUrl);
-      
-      // Fake DPI & Resolution detection
-      const img = new Image();
-      img.onload = () => {
-        setResolution({ w: img.width, h: img.height });
-        // Simulate DPI check (e.g. image width > 3000px usually means high res)
-        setDpiOk(img.width > 2000);
-      };
-      img.src = objectUrl;
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const typeQuery = searchParams.get('type');
+    if (typeQuery === 'singular' || typeQuery === 'serie' || typeQuery === 'colecao') {
+      setFormData(prev => ({ ...prev, classificacao: typeQuery }));
+      setStep(typeQuery === 'colecao' ? 3 : 2); // Skip category selection
     }
-  };
-
-  const handleVoiceDescription = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert("Seu navegador não suporta a Web Speech API.");
-      return;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    if (!recording) {
-      setRecording(true);
-      recognition.start();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (finalTranscript) {
-          setTranscript(prev => prev + ' ' + finalTranscript);
-        }
-      };
-      recognition.onend = () => {
-        setRecording(false);
-      };
-    } else {
-      setRecording(false);
-      // Usually you'd keep a ref to recognition to stop it, but this is a simplified mock for the UI.
-    }
-  };
-
+  }, [location.search]);
 
   const handlePhotoSlot = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
@@ -177,11 +119,73 @@ export default function Upload() {
     img.onload = () => {
       const s = [...photos]; s[i] = {file:f,url,label:photos[i].label,w:img.width,h:img.height};
       setPhotos(s);
-      if (i===0) { setPreview(url); setDpiOk(img.width>2000); setResolution({w:img.width,h:img.height}); }
     };
     img.src = url;
   };
 
+  const handleAIProcess = async () => {
+    if (!aiInput.trim()) { alert('Insira um texto ou URL para análise.'); return; }
+    setAiLoading(true);
+    try {
+      let textToProcess = aiInput;
+      if (aiInput.startsWith('http')) {
+        setAiPhase('Acessando URL via Jina AI...');
+        textToProcess = await readURLWithJina(aiInput);
+      }
+      
+      setAiPhase('Extraindo dados estruturados com Groq...');
+      const prompt = `Você é um curador de arte contemporânea. Analise o texto a seguir e extraia os dados para preencher a ficha técnica de uma ${formData.classificacao}.
+Retorne SOMENTE um JSON válido com estas chaves (omita se não houver no texto):
+{"titulo":"","tituloInterpretativo":"","ano":"","descricao":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","tags":[]}
+
+Texto:
+${textToProcess.slice(0, 12000)}`;
+
+      const rawText = await callGroqJSON(prompt);
+      const jsonStr = (rawText.match(/\{[\s\S]*\}/) || ['{}'])[0];
+      const data = JSON.parse(jsonStr);
+
+      setFormData(f => ({
+        ...f,
+        titulo: data.titulo || f.titulo,
+        tituloInterpretativo: data.tituloInterpretativo || f.tituloInterpretativo,
+        ano: data.ano || f.ano,
+        descricao: data.descricao || f.descricao,
+        tecnica: data.tecnica || f.tecnica,
+        suporte: data.suporte || f.suporte,
+        narrativaCuratorial: data.narrativaCuratorial || data.descricaoCurta || f.narrativaCuratorial,
+        sentencaResumo: data.descricaoCurta || f.sentencaResumo,
+        tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || f.tags),
+      }));
+
+      // Switch back to manual mode to review
+      setIaMode(false);
+      setAiInput('');
+    } catch (e: unknown) {
+      alert('Erro na análise da IA: ' + ((e as Error).message || String(e)));
+    } finally {
+      setAiLoading(false);
+      setAiPhase('');
+    }
+  };
+
+  const handleGenerateNarrative = async () => {
+    setFormData(f => ({ ...f, narrativaCuratorial: 'Gerando…' }));
+    try {
+      const prompt = `Você é um curador de arte contemporânea. Escreva uma narrativa curatorial em português com 20 a 75 palavras.
+Título: ${formData.titulo || 'Sem Título'}
+Descricao: ${formData.descricao || 'Sem descrição'}
+Ano: ${formData.ano}
+Técnica: ${[formData.tecnica, formData.tecnicaFree].filter(Boolean).join(', ')} sobre ${formData.suporte}
+Retorne APENAS o texto JSON: {"narrativaCuratorial": "texto"}`;
+      const text = await callGroqJSON(prompt);
+      const jsonStr = (text.match(/\{[\s\S]*\}/) || ['{}'])[0];
+      const d = JSON.parse(jsonStr);
+      setFormData(f => ({ ...f, narrativaCuratorial: d.narrativaCuratorial?.trim() || text }));
+    } catch (e: unknown) {
+      setFormData(f => ({ ...f, narrativaCuratorial: 'Erro: ' + ((e as Error).message || String(e)) }));
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.titulo.trim()) { alert('Preencha o título.'); return; }
@@ -211,6 +215,7 @@ export default function Upload() {
         const dimFormatted = [formData.dimensaoW, formData.dimensaoH, formData.dimensaoD]
           .filter(Boolean).join(' × ') + (formData.dimensaoUnidade ? ' ' + formData.dimensaoUnidade : '');
         const imageFiles = photos.filter(p => p.file).map(p => p.file as File);
+        
         const saved = await saveArtwork({
           artwork_title: formData.titulo,
           collection_reference: formData.parentCollectionId || undefined,
@@ -223,7 +228,7 @@ export default function Upload() {
           width: parseFloat(formData.dimensaoW) || undefined,
           depth: parseFloat(formData.dimensaoD) || undefined,
           dimensions_unit: formData.dimensaoUnidade,
-          sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as 'available'|'sold'|'reserved'|'private_collection'|'not_for_sale' ?? 'available',
+          sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as any ?? 'available',
           price: parseFloat(formData.valor) || undefined,
           materials: formData.materiais.length ? formData.materiais : undefined,
           physical_location: formData.localizacao || undefined,
@@ -244,67 +249,19 @@ export default function Upload() {
     }
   };
 
-
-  const handleImportUrl = async () => {
-    const openaiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
-    if (!importUrl.trim()) { alert('Cole uma URL válida.'); return; }
-    if (!openaiKey) { alert('Configure VITE_OPENAI_API_KEY no arquivo .env'); return; }
-    setImportLoading(true);
-    try {
-      setImportPhase('Acessando página via Jina AI...');
-      const pageText = await readURLWithJina(importUrl);
-      setImportPhase('Extraindo dados com Groq...');
-      const prompt = `Você é um curador de arte. Leia o texto abaixo e extraia dados da obra.
-Retorne SOMENTE JSON válido com estas chaves:
-{"titulo":"","tituloInterpretativo":"","ano":"","descricao":"","tecnica":"","suporte":"","dimensoes":"","descricaoCurta":"","narrativaCuratorial":"","tags":[],"imagens":[]}
-
-Texto:
-${pageText.slice(0, 12000)}`;
-      const rawText = await callGroqJSON(prompt);
-      const jsonStr = (rawText.match(/\{[\s\S]*\}/) || ['{}'])[0];
-      const data = JSON.parse(jsonStr);
-      if (!data.titulo && !data.tecnica) throw new Error('Página lida mas sem informações de obra encontradas.');
-      setImportResult(data);
-      setFormData(f => ({
-        ...f,
-        titulo: data.titulo || f.titulo,
-        tituloInterpretativo: data.tituloInterpretativo || '',
-        ano: data.ano || f.ano,
-        descricao: data.descricao || f.descricao,
-        tecnica: data.tecnica || f.tecnica,
-        suporte: data.suporte || f.suporte,
-        narrativaCuratorial: data.narrativaCuratorial || '',
-        sentencaResumo: data.descricaoCurta || '',
-        tags: Array.isArray(data.tags) ? data.tags.join(', ') : f.tags,
-      }));
-      if (Array.isArray(data.imagens)) setImportImages(data.imagens.map((u: string) => ({ url: u, selected: true })));
-    } catch (e: unknown) {
-      alert('Erro ao analisar a URL: ' + ((e as Error).message || String(e)));
+  const handleNext = () => {
+    if (step === 1 && formData.classificacao === 'colecao') {
+      setStep(3); // Coleção não tem vinculação
+    } else {
+      setStep(step + 1);
     }
-    setImportLoading(false);
-    setImportPhase('');
   };
 
-  const handleGenerateNarrative = async () => {
-    setFormData(f => ({ ...f, narrativaCuratorial: 'Gerando…' }));
-    try {
-      const prompt = `Você é um curador de arte contemporânea.
-Escreva uma narrativa curatorial em português com 20 a 75 palavras.
-Título: ${formData.titulo || 'Sem Título'}
-Descrição: ${formData.descricao || 'Sem descrição'}
-Ano: ${formData.ano}
-Técnica: ${[formData.tecnica, formData.tecnicaFree].filter(Boolean).join(', ')} sobre ${formData.suporte}
-Retorne APENAS o texto JSON estruturado, conforme solicitado.`;
-      const text = await callGroqJSON(prompt);
-      const jsonStr = (text.match(/\{[\s\S]*\}/) || ['{}'])[0];
-      let finalStr = text;
-      try {
-        const d = JSON.parse(jsonStr);
-        finalStr = d.narrativaCuratorial || d.texto || text;
-      } catch (e) {}
-      setFormData(f => ({ ...f, narrativaCuratorial: finalStr.trim() }));
-    } catch (e: unknown) {
-      setFormData(f => ({ ...f, narrativaCuratorial: 'Erro: ' + ((e as Error).message || String(e)) }));
+  const handleBack = () => {
+    if (step === 3 && formData.classificacao === 'colecao') {
+      setStep(1);
+    } else {
+      setStep(step - 1);
     }
   };
 
@@ -315,16 +272,20 @@ Retorne APENAS o texto JSON estruturado, conforme solicitado.`;
         <p className="text-text-muted">{t('upload.subtitle')}</p>
       </div>
 
-      {/* Progress Steps */}
+      {/* Progress Indicator */}
       <div className="flex gap-4 mb-8">
-        {[t('upload.entrada_arquivo'), t('upload.passo_class'), t('upload.passo_exp'), t('upload.passo_ficha')].map((label, idx) => {
-          const s = (idx + 1) as Step;
-          const isActive = step === s;
-          const isPast = step > s;
+        {[
+          { id: 1, label: '1. Categoria' },
+          { id: 2, label: '2. Contexto' },
+          { id: 3, label: '3. Ficha Técnica' }
+        ].map(s => {
+          if (s.id === 2 && formData.classificacao === 'colecao') return null; // hide for colecao
+          const isActive = step === s.id;
+          const isPast = step > s.id;
           return (
-            <div key={s} className={`flex-1 h-2 rounded-full relative ${isActive ? 'bg-accent' : isPast ? 'bg-accent/40' : 'bg-gray-200'}`}>
+            <div key={s.id} className={`flex-1 h-2 rounded-full relative ${isActive ? 'bg-accent' : isPast ? 'bg-accent/40' : 'bg-gray-200'}`}>
               <span className={`absolute -top-6 text-xs font-bold ${isActive ? 'text-accent' : 'text-gray-400'}`}>
-                {label}
+                {s.label}
               </span>
             </div>
           );
@@ -333,377 +294,265 @@ Retorne APENAS o texto JSON estruturado, conforme solicitado.`;
 
       <div className="bg-surface rounded-2xl shadow-float border border-gray-100 p-8 min-h-[500px]">
         
-        {/* STEP 1 */}
+        {/* STEP 1: Categoria */}
         {step === 1 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="border-2 border-dashed border-accent/30 rounded-2xl bg-bg p-6 md:p-10 flex flex-col items-center justify-center relative hover:bg-accent/5 transition-colors group min-h-[200px]">
-              <input aria-label="Selecionar imagem da obra" type="file" accept="image/jpeg,image/png,image/tiff" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              {!preview ? (<>
-                <UploadCloud size={48} className="text-accent mb-4 group-hover:-translate-y-2 transition-transform" />
-                <h3 className="text-lg font-serif mb-1">{t('upload.arraste')}</h3>
-                <p className="text-sm text-text-muted">{t('upload.formatos')}</p>
-              </>) : (
-                <div className="flex flex-col items-center w-full z-10 pointer-events-none">
-                  <img src={preview} alt="Preview" className="h-48 object-contain rounded-lg shadow-md mb-4" />
-                  {resolution && (
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="text-sm font-medium text-text-muted bg-white px-3 py-1 rounded-md shadow-sm">{resolution.w} x {resolution.h} px</span>
-                      {dpiOk === true && <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md shadow-sm flex items-center gap-1"><CheckCircle2 size={16} />{t('upload.dpi_ok')}</span>}
-                      {dpiOk === false && <span className="text-sm font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-md shadow-sm flex items-center gap-1"><AlertTriangle size={16} />{t('upload.dpi_baixo')}</span>}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button onClick={handleVoiceDescription} className={`flex items-center justify-center gap-2 py-4 rounded-xl border transition-colors ${recording ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-surface border-gray-200 hover:border-accent/50'}`}>
-                <Mic size={20} className={recording ? 'animate-pulse' : ''} />
-                <span className="font-medium text-sm">{recording ? t('upload.gravando') : t('upload.descricao_voz')}</span>
-              </button>
-              <button className="flex items-center justify-center gap-2 py-4 rounded-xl border border-gray-200 bg-surface hover:border-accent/50 transition-colors">
-                <FileText size={20} /><span className="font-medium text-sm">{t('upload.subir_pdf')}</span>
-              </button>
-              <button onClick={() => setShowImport(v=>!v)} className="flex items-center justify-center gap-2 py-4 rounded-xl border border-gray-200 bg-surface hover:border-accent/50 transition-colors">
-                <Link2 size={20} /><span className="font-medium text-sm">Importar de link</span>
-              </button>
-            </div>
-
-            {showImport && (
-              <div className="border border-accent/30 rounded-2xl bg-accent/5 p-6 space-y-4">
-                <h3 className="font-serif text-accent flex items-center gap-2"><LinkIcon size={18}/>Importar de URL</h3>
-                <div className="flex gap-2">
-                  <input aria-label="URL da obra" type="url" placeholder="https://www.nanyarruda.com/golden-s-tears" value={importUrl} onChange={e=>setImportUrl(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                  <button onClick={handleImportUrl} disabled={importLoading||!importUrl} className="bg-accent text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-accent/90 disabled:opacity-50 transition-colors">Analisar página</button>
-                </div>
-                {importLoading && <p className="text-sm text-accent italic flex items-center gap-2"><span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin inline-block"/>{importPhase}</p>}
-                {importResult && !importLoading && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Dados extraídos — edite antes de confirmar</p>
-                    {importImages.length > 0 && (
-                      <div>
-                        <p className="text-xs font-bold text-text-muted mb-2">Imagens encontradas</p>
-                        <div className="flex flex-wrap gap-2">
-                          {importImages.map((img,i)=>(
-                            <label key={i} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-colors ${img.selected?'border-accent':'border-gray-200'}`}>
-                              <input type="checkbox" className="sr-only" checked={img.selected} onChange={()=>setImportImages(s=>s.map((x,j)=>j===i?{...x,selected:!x.selected}:x))} />
-                              <img src={img.url} alt={`Imagem ${i+1}`} className="w-20 h-20 object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}} />
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <button onClick={()=>{setShowImport(false);setStep(4);}} className="bg-accent text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-accent/90 transition-colors">Confirmar e continuar →</button>
-                  </div>
-                )}
-              </div>
-            )}
-            {transcript && <div className="bg-bg p-4 rounded-xl border border-gray-100 text-sm italic text-text-muted">"{transcript}"</div>}
-          </div>
-        )}
-
-
-        {/* STEP 2: Classificação */}
-        {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-serif mb-6">{t('upload.classificar')}</h2>
+            <h2 className="text-2xl font-serif mb-6">O que você deseja registrar?</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[t('upload.obra_singular'), t('upload.colecao'), t('upload.serie')].map(tipo => (
+              {[
+                { id: 'singular', label: 'Obra Singular', desc: 'Uma obra individual, com ou sem série/coleção' },
+                { id: 'serie', label: 'Série', desc: 'Um conjunto de obras que compartilham o mesmo tema ou técnica' },
+                { id: 'colecao', label: 'Coleção', desc: 'Um grupo maior que pode englobar várias séries e obras' }
+              ].map(tipo => (
                 <button 
-                  key={tipo}
-                  onClick={() => setFormData({...formData, classificacao: tipo})}
-                  className={`py-8 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 ${formData.classificacao === tipo ? 'border-accent bg-accent/5 text-accent' : 'border-gray-100 bg-surface text-text-main hover:border-accent/30'}`}
+                  key={tipo.id}
+                  onClick={() => setFormData({...formData, classificacao: tipo.id})}
+                  className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col gap-2 ${formData.classificacao === tipo.id ? 'border-accent bg-accent/5 text-accent' : 'border-gray-100 bg-surface text-text-main hover:border-accent/30'}`}
                 >
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.classificacao === tipo ? 'border-accent' : 'border-gray-300'}`}>
-                    {formData.classificacao === tipo && <div className="w-2 h-2 bg-accent rounded-full" />}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${formData.classificacao === tipo.id ? 'border-accent' : 'border-gray-300'}`}>
+                      {formData.classificacao === tipo.id && <div className="w-2 h-2 bg-accent rounded-full" />}
+                    </div>
+                    <span className="font-serif text-lg">{tipo.label}</span>
                   </div>
-                  <span className="font-serif text-lg">{tipo}</span>
+                  <p className={`text-sm ml-7 ${formData.classificacao === tipo.id ? 'text-accent/80' : 'text-text-muted'}`}>{tipo.desc}</p>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* STEP 3: Exposição */}
-        {step === 3 && (
+        {/* STEP 2: Vinculação (Contexto) */}
+        {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-serif mb-6">{t('upload.exposta')}</h2>
+            <h2 className="text-2xl font-serif mb-6">Contexto da Criação</h2>
+            <p className="text-sm text-text-muted mb-4">Vincule a uma coleção ou série existente para manter seu portfólio organizado. (Opcional)</p>
             
-            <label className="flex items-center gap-3 cursor-pointer">
-              <div className="relative">
-                <input 
-                  type="checkbox" 
-                  className="sr-only" 
-                  checked={formData.emExposicao}
-                  onChange={(e) => setFormData({...formData, emExposicao: e.target.checked})}
-                />
-                <div className={`block w-14 h-8 rounded-full transition-colors ${formData.emExposicao ? 'bg-accent' : 'bg-gray-300'}`}></div>
-                <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${formData.emExposicao ? 'translate-x-6' : ''}`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-text-main">Coleção Pai</label>
+                <select 
+                  value={formData.parentCollectionId} 
+                  onChange={e => setFormData({...formData, parentCollectionId: e.target.value})}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg"
+                >
+                  <option value="">Nenhuma coleção / Selecione...</option>
+                  {collections.map(c => <option key={c.id} value={c.id}>{c.collection_name}</option>)}
+                </select>
+                <p className="text-xs text-text-muted">A qual coleção macro esta {formData.classificacao === 'serie' ? 'série' : 'obra'} pertence?</p>
               </div>
-              <span className="font-medium">{t('upload.sim_hist_exp')}</span>
-            </label>
 
-            {formData.emExposicao && (
-              <div className="bg-bg p-6 rounded-xl border border-gray-100 space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-text-muted mb-2">{t('upload.busca_ia')}</label>
-                  <div className="flex gap-2">
-                    <input type="text" placeholder={t('upload.pesq_curador')} className="flex-1 rounded-lg border-gray-200 px-4 py-2 text-sm outline-none focus:border-accent" />
-                    <button className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium">{t('upload.btn_buscar_ia')}</button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">{t('upload.busca_ia_desc')}</p>
+              {formData.classificacao === 'singular' && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-text-main">Série Pai</label>
+                  <select 
+                    value={formData.parentSeriesId} 
+                    onChange={e => setFormData({...formData, parentSeriesId: e.target.value})}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg"
+                  >
+                    <option value="">Nenhuma série / Selecione...</option>
+                    {seriesList.map(s => <option key={s.id} value={s.id}>{s.series_title}</option>)}
+                  </select>
+                  <p className="text-xs text-text-muted">Faz parte de alguma série específica?</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-text-muted mb-2">{t('upload.reg_manual')}</label>
-                  <input 
-                    type="text" 
-                    placeholder={t('upload.nome_exp')} 
-                    value={formData.exposicaoManual}
-                    onChange={(e) => setFormData({...formData, exposicaoManual: e.target.value})}
-                    className="w-full rounded-lg border-gray-200 border px-4 py-2 text-sm outline-none focus:border-accent" 
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Ficha Técnica */}
+        {step === 3 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+            
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <h2 className="text-2xl font-serif">Ficha Técnica</h2>
+              <div className="flex bg-gray-100 p-1 rounded-xl">
+                <button onClick={() => setIaMode(false)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!iaMode ? 'bg-white text-accent shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  <PenTool size={16}/> Manual
+                </button>
+                <button onClick={() => setIaMode(true)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${iaMode ? 'bg-white text-accent shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  <Bot size={16}/> IA (Texto Livre)
+                </button>
+              </div>
+            </div>
+
+            {iaMode ? (
+              <div className="space-y-4 animate-in fade-in">
+                <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6">
+                  <h3 className="font-serif text-accent flex items-center gap-2 mb-2"><Sparkles size={18}/> Extração com Inteligência Artificial</h3>
+                  <p className="text-sm text-text-muted mb-4">
+                    Cole um texto livre descrevendo a {formData.classificacao}, suas intenções, técnicas e medidas, ou cole a URL de um site/portfolio. A IA do Groq estruturará tudo automaticamente para a Ficha Técnica.
+                  </p>
+                  <textarea 
+                    value={aiInput} 
+                    onChange={e => setAiInput(e.target.value)} 
+                    placeholder="Ex: 'Esta obra chamada Lágrimas Douradas foi feita em 2025 usando acrílica sobre tela, medindo 100x100cm...'"
+                    className="w-full h-40 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none mb-4"
                   />
+                  <div className="flex justify-end">
+                    <button onClick={handleAIProcess} disabled={aiLoading || !aiInput.trim()} className="bg-accent text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-float hover-float">
+                      {aiLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <Sparkles size={16}/>}
+                      {aiLoading ? aiPhase || 'Processando...' : 'Analisar e Preencher'}
+                    </button>
+                  </div>
                 </div>
+              </div>
+            ) : (
+              <div className="space-y-10 animate-in fade-in">
+                
+                {/* DADOS BÁSICOS (Tudo) */}
+                <section>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-text-muted mb-1">Título {formData.classificacao === 'colecao' ? 'da Coleção' : formData.classificacao === 'serie' ? 'da Série' : 'da Obra'} *</label>
+                      <input type="text" value={formData.titulo} onChange={e=>setFormData({...formData,titulo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:border-accent outline-none bg-bg font-serif text-lg" />
+                    </div>
+                    {formData.classificacao === 'singular' && (
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Título Interpretativo <span className="font-normal">(1–7 palavras)</span></label>
+                        <input type="text" value={formData.tituloInterpretativo} onChange={e=>setFormData({...formData,tituloInterpretativo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-bold text-text-muted mb-1">Ano</label>
+                      <input type="text" value={formData.ano} onChange={e=>setFormData({...formData,ano:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    </div>
+                  </div>
+                </section>
+
+                {/* TEXTO CURATORIAL (Tudo) */}
+                <section>
+                  <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">II</span> Texto Curatorial</p>
+                  <div className="space-y-4">
+                    {formData.classificacao === 'singular' && (
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Sentença de Resumo <span className="font-normal">(1 frase)</span></label>
+                        <input type="text" value={formData.sentencaResumo} onChange={e=>setFormData({...formData,sentencaResumo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-text-muted">
+                          Narrativa Curatorial / Statement
+                          <span className="ml-2 text-accent">{formData.narrativaCuratorial.split(/\s+/).filter(Boolean).length} palavras</span>
+                        </label>
+                        <button type="button" onClick={handleGenerateNarrative} className="text-xs font-bold bg-accent text-white px-3 py-1.5 rounded-full hover:bg-accent/90 transition-colors flex items-center gap-1"><Sparkles size={12}/>Gerar IA</button>
+                      </div>
+                      <textarea value={formData.narrativaCuratorial} onChange={e=>setFormData({...formData,narrativaCuratorial:e.target.value})} rows={4} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-text-muted mb-1">Tags (separadas por vírgula)</label>
+                      <input type="text" value={formData.tags} onChange={e=>setFormData({...formData,tags:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                    </div>
+                  </div>
+                </section>
+
+                {/* DETALHES FÍSICOS (Apenas Obra Singular) */}
+                {formData.classificacao === 'singular' && (
+                  <section>
+                    <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">III</span> Detalhes Físicos</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Técnica</label>
+                        <input type="text" value={formData.tecnica} onChange={e=>setFormData({...formData,tecnica:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Suporte</label>
+                        <input type="text" value={formData.suporte} onChange={e=>setFormData({...formData,suporte:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Dimensões (H × L × P)</label>
+                        <div className="flex gap-1 items-center">
+                          <input type="text" placeholder="H" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          <span className="text-gray-400">×</span>
+                          <input type="text" placeholder="L" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          <span className="text-gray-400">×</span>
+                          <input type="text" placeholder="P" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          <select value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg">
+                            <option>cm</option><option>in</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-1">Status de Venda</label>
+                        <select value={formData.status} onChange={e=>setFormData({...formData,status:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                          <option>Disponível</option><option>Vendida</option><option>Reservada</option><option>Coleção Privada</option><option>Não à venda</option>
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* FOTOS (Apenas Obra Singular) */}
+                {formData.classificacao === 'singular' && (
+                  <section>
+                    <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">IV</span> Fotografias</p>
+                    <div className="space-y-3">
+                      <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-bg hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
+                        <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
+                        {photos[0].url ? (
+                          <div className="relative w-full h-full">
+                            <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
+                            <div className="absolute top-2 left-2 flex gap-2">
+                              <span className="bg-accent text-white text-xs font-bold px-2 py-1 rounded">CAPA</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-text-muted group-hover:text-accent transition-colors">
+                            <Camera size={40}/><span className="text-sm font-medium">Foto principal — clique para selecionar</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        {[1,2,3,4].map(i=>(
+                          <div key={i} className="space-y-1">
+                            <div className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-bg hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
+                              <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(i,e)} />
+                              {photos[i].url ? (
+                                <div className="relative w-full h-full"><img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /></div>
+                              ) : (
+                                <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
               </div>
             )}
           </div>
         )}
 
-        {/* STEP 4: Ficha Técnica */}
-        {step === 4 && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-
-            {/* I — METADADOS */}
-            <section>
-              <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">I</span> Metadados Essenciais</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="up-artista" className="block text-xs font-bold text-text-muted mb-1">Nome do Artista</label>
-                  <input id="up-artista" aria-label="Nome do artista" type="text" value="Nany Arruda" readOnly className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm outline-none bg-gray-50 text-text-muted cursor-default" />
-                </div>
-                <div>
-                  <label htmlFor="up-titulo" className="block text-xs font-bold text-text-muted mb-1">Título da Obra *</label>
-                  <input id="up-titulo" aria-label="Título da obra" type="text" value={formData.titulo} onChange={e=>setFormData({...formData,titulo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <label htmlFor="up-tint" className="block text-xs font-bold text-text-muted mb-1">Título Interpretativo <span className="font-normal">(1–7 palavras)</span></label>
-                  <input id="up-tint" aria-label="Título interpretativo" type="text" value={formData.tituloInterpretativo} onChange={e=>setFormData({...formData,tituloInterpretativo:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <label htmlFor="up-ano" className="block text-xs font-bold text-text-muted mb-1">Ano de Criação</label>
-                  <input id="up-ano" aria-label="Ano de criação" type="text" value={formData.ano} onChange={e=>setFormData({...formData,ano:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="up-desc" className="block text-xs font-bold text-text-muted mb-1">Descrição Detalhada</label>
-                  <textarea id="up-desc" aria-label="Descrição da obra" value={formData.descricao} onChange={e=>setFormData({...formData,descricao:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg h-24" placeholder="Descreva visualmente e conceitualmente a obra..." />
-                </div>
-                <div>
-                  <label htmlFor="up-tecnica" className="block text-xs font-bold text-text-muted mb-1">Técnica</label>
-                  <select id="up-tecnica" aria-label="Técnica" value={formData.tecnica} onChange={e=>setFormData({...formData,tecnica:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
-                    <option value="">Selecione...</option>
-                    <option>{t('upload.tec_oleo')}</option><option>{t('upload.tec_acrilica')}</option>
-                    <option>{t('upload.tec_aquarela')}</option><option>{t('upload.tec_mista')}</option>
-                    <option>Técnica Digital</option><option>Bordado</option><option>Colagem</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="up-suporte" className="block text-xs font-bold text-text-muted mb-1">Suporte</label>
-                  <select id="up-suporte" aria-label="Suporte" value={formData.suporte} onChange={e=>setFormData({...formData,suporte:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
-                    <option value="">Selecione...</option>
-                    <option>{t('upload.sup_tela')}</option><option>{t('upload.sup_papel_alg')}</option>
-                    <option>{t('upload.sup_madeira')}</option><option>Papel algodão</option><option>Papel kraft</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="up-tecfree" className="block text-xs font-bold text-text-muted mb-1">Materiais adicionais / detalhes técnicos</label>
-                  <input id="up-tecfree" aria-label="Materiais adicionais" type="text" placeholder="ex: pigmento mineral, verniz, encáustica..." value={formData.tecnicaFree} onChange={e=>setFormData({...formData,tecnicaFree:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-text-muted mb-1">Dimensões (H × L × P)</label>
-                  <div className="flex gap-1 items-center">
-                    <input aria-label="Altura" type="text" placeholder="H" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                    <span className="text-gray-400 shrink-0">×</span>
-                    <input aria-label="Largura" type="text" placeholder="L" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                    <span className="text-gray-400 shrink-0">×</span>
-                    <input aria-label="Profundidade" type="text" placeholder="P" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                    <select aria-label="Unidade" value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg shrink-0">
-                      <option>cm</option><option>in</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="up-status" className="block text-xs font-bold text-text-muted mb-1">Status</label>
-                  <select id="up-status" aria-label="Status" value={formData.status} onChange={e=>setFormData({...formData,status:e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
-                    <option>Disponível</option><option>Vendida</option><option>Reservada</option><option>Coleção Privada</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="up-valor" className="block text-xs font-bold text-text-muted mb-1">Valor Estimado R$ <span className="font-normal text-text-muted">(privado)</span></label>
-                  <input id="up-valor" aria-label="Valor estimado" type="text" value={formData.valor} onChange={e=>setFormData({...formData,valor:e.target.value})} placeholder="0,00" className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <label htmlFor="up-local" className="block text-xs font-bold text-text-muted mb-1">Localização Física</label>
-                  <input id="up-local" aria-label="Localização física" type="text" value={formData.localizacao} onChange={e=>setFormData({...formData,localizacao:e.target.value})} placeholder="Ateliê / Galeria / Residência..." className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <label htmlFor="up-credito" className="block text-xs font-bold text-text-muted mb-1">Crédito de Coleção</label>
-                  <input id="up-credito" aria-label="Crédito de coleção" type="text" value={formData.creditoColecao} onChange={e=>setFormData({...formData,creditoColecao:e.target.value})} placeholder="Coleção particular / Museu X..." className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div className="md:col-span-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-bold text-text-muted">Proveniência / Histórico de Propriedade</label>
-                    <button type="button" onClick={()=>setFormData(f=>({...f,proveniencia:[...f.proveniencia,{dono:'',ano:''}]}))} className="text-accent text-xs font-bold flex items-center gap-1 hover:underline"><Plus size={12}/>Adicionar</button>
-                  </div>
-                  <div className="space-y-2">
-                    {formData.proveniencia.map((p,i)=>(
-                      <div key={i} className="flex gap-2">
-                        <input aria-label="Proprietário" placeholder="Nome / Galeria" value={p.dono} onChange={e=>{const v=[...formData.proveniencia];v[i]={...v[i],dono:e.target.value};setFormData({...formData,proveniencia:v});}} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                        <input aria-label="Ano da aquisição" placeholder="Ano" value={p.ano} onChange={e=>{const v=[...formData.proveniencia];v[i]={...v[i],ano:e.target.value};setFormData({...formData,proveniencia:v});}} className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                        <button type="button" aria-label="Remover proveniência" onClick={()=>setFormData(f=>({...f,proveniencia:f.proveniencia.filter((_,j)=>j!==i)}))} className="text-gray-400 hover:text-red-500 px-2"><X size={16}/></button>
-                      </div>
-                    ))}
-                    {formData.proveniencia.length===0 && <p className="text-xs text-text-muted italic">Nenhum registro. Clique em Adicionar para incluir histórico de propriedade.</p>}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* II — CURATORIAL */}
-            <section>
-              <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">II</span> Texto Curatorial</p>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="up-sentenca" className="block text-xs font-bold text-text-muted mb-1">Sentença de Resumo <span className="font-normal">(1 frase)</span></label>
-                  <input id="up-sentenca" aria-label="Sentença de resumo" type="text" value={formData.sentencaResumo} onChange={e=>setFormData({...formData,sentencaResumo:e.target.value})} placeholder="Uma frase que sintetiza a obra..." className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label htmlFor="up-narrativa" className="block text-xs font-bold text-text-muted">
-                      Narrativa Curatorial <span className="font-normal">(20–75 palavras)</span>
-                      <span className="ml-2 text-accent">{formData.narrativaCuratorial.split(/\s+/).filter(Boolean).length} palavras</span>
-                    </label>
-                    <button type="button" onClick={handleGenerateNarrative} className="text-xs font-bold bg-accent text-white px-3 py-1.5 rounded-full hover:bg-accent/90 transition-colors flex items-center gap-1"><Sparkles size={12}/>Gerar com IA</button>
-                  </div>
-                  <textarea id="up-narrativa" aria-label="Narrativa curatorial" value={formData.narrativaCuratorial} onChange={e=>setFormData({...formData,narrativaCuratorial:e.target.value})} rows={4} className="w-full border-2 border-accent/30 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-accent/5 italic resize-none font-serif" placeholder="Narrativa curatorial da obra..." />
-                </div>
-                <div>
-                  <label htmlFor="up-intencao" className="block text-xs font-bold text-text-muted mb-1">O que você quis dizer — uso interno <span className="font-normal italic">(nunca exportado)</span></label>
-                  <textarea id="up-intencao" aria-label="Nota de intenção interna" value={formData.notaIntencao} onChange={e=>setFormData({...formData,notaIntencao:e.target.value})} rows={3} className="w-full border border-dashed border-gray-300 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" placeholder="Notas pessoais sobre a intenção da obra..." />
-                </div>
-              </div>
-            </section>
-
-            {/* III — INOVAÇÕES */}
-            <section>
-              <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">III</span> Inovações 2025/2026</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="border border-gray-200 rounded-xl p-4 flex flex-col gap-2 bg-bg">
-                  <div className="flex items-center gap-2 text-sm font-bold"><QrCode size={18} className="text-accent"/>QR Code</div>
-                  <p className="text-xs text-text-muted">Gerado automaticamente ao salvar, linkando a página pública da obra.</p>
-                  <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center mt-1"><QrCode size={32} className="text-gray-300"/></div>
-                </div>
-                <div className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3 bg-bg">
-                  <div className="flex items-center gap-2 text-sm font-bold"><span className="text-accent">⛓</span>Blockchain</div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <div className="relative shrink-0">
-                      <input type="checkbox" className="sr-only" checked={formData.blockchain} onChange={e=>setFormData({...formData,blockchain:e.target.checked})} />
-                      <div className={`w-10 h-6 rounded-full transition-colors ${formData.blockchain?'bg-accent':'bg-gray-300'}`}/>
-                      <div className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.blockchain?'translate-x-4':''}`}/>
-                    </div>
-                    <span className="text-xs">Registrar proveniência</span>
-                  </label>
-                  <p className="text-xs text-text-muted italic">Em breve — integração com registro descentralizado.</p>
-                </div>
-                <div className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3 bg-bg">
-                  <div className="flex items-center gap-2 text-sm font-bold"><Leaf size={18} className="text-emerald-500"/>Sustentabilidade</div>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input type="checkbox" id="up-sustentavel" checked={formData.sustentavel} onChange={e=>setFormData({...formData,sustentavel:e.target.checked})} className="w-4 h-4 accent-accent rounded" />
-                    <span>Materiais sustentáveis / reaproveitados</span>
-                  </label>
-                </div>
-              </div>
-            </section>
-
-            {/* IV — FOTOS */}
-            <section>
-              <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">IV</span> Fotos da Obra <span className="font-normal text-text-muted normal-case">(até 5 · primeira = capa)</span></p>
-              <div className="space-y-3">
-                {/* Main photo */}
-                <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-bg hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
-                  <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" aria-label="Foto principal da obra" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
-                  {photos[0].url ? (
-                    <div className="relative w-full h-full">
-                      <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
-                      <div className="absolute top-2 left-2 flex gap-2">
-                        <span className="bg-accent text-white text-xs font-bold px-2 py-1 rounded">CAPA</span>
-                        {photos[0].w>0 && <span className={`text-xs font-bold px-2 py-1 rounded ${photos[0].w>2000?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}`}>{photos[0].w}×{photos[0].h}</span>}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-text-muted group-hover:text-accent transition-colors">
-                      <Camera size={40}/><span className="text-sm font-medium">Foto principal — clique para selecionar</span>
-                    </div>
-                  )}
-                </div>
-                {/* Secondary 4 */}
-                <div className="grid grid-cols-4 gap-3">
-                  {[1,2,3,4].map(i=>(
-                    <div key={i} className="space-y-1">
-                      <div className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-bg hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
-                        <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" aria-label={`Foto secundária ${i}`} className="hidden" onChange={e=>handlePhotoSlot(i,e)} />
-                        {photos[i].url ? (
-                          <div className="relative w-full h-full">
-                            <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" />
-                            {photos[i].w>0 && <span className={`absolute bottom-1 left-1 text-xs font-bold px-1.5 py-0.5 rounded ${photos[i].w>2000?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}`}>{photos[i].w>2000?'HD':'LD'}</span>}
-                          </div>
-                        ) : (
-                          <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>
-                        )}
-                      </div>
-                      <input aria-label={`Legenda da foto ${i+1}`} type="text" placeholder="Vista frontal..." value={photos[i].label} onChange={e=>{const s=[...photos];s[i]={...s[i],label:e.target.value};setPhotos(s);}} className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:border-accent outline-none bg-bg" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-          </div>
-        )}
-
       </div>
-
-
 
       {/* Footer Navigation */}
       <div className="fixed md:static bottom-0 left-0 right-0 p-4 md:p-0 bg-surface md:bg-transparent border-t border-gray-100 md:border-t-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:shadow-none z-50 flex justify-between items-center md:mt-6 mt-0">
         <button 
-          onClick={() => setStep(step - 1 as Step)}
+          onClick={handleBack}
           disabled={step === 1}
-          className={`flex items-center justify-center md:justify-start gap-2 px-4 md:px-6 py-3 rounded-xl font-medium transition-colors ${step === 1 ? 'opacity-0 cursor-default' : 'bg-surface border border-gray-200 hover:bg-gray-50'}`}
+          className={`flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-medium transition-colors ${step === 1 ? 'opacity-0 cursor-default pointer-events-none' : 'bg-surface border border-gray-200 hover:bg-gray-50'}`}
         >
-          <ChevronLeft size={20} /> <span className="hidden md:inline">{t('upload.btn_voltar')}</span>
+          <ChevronLeft size={20} /> Voltar
         </button>
 
-        {step < 5 ? (
+        {step < 3 ? (
           <button 
-            onClick={() => setStep(step + 1 as Step)}
-            className="flex flex-1 md:flex-none items-center justify-center md:justify-start gap-2 px-8 py-3 ml-4 md:ml-0 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all"
+            onClick={handleNext}
+            className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all shadow-float"
           >
-            {t('upload.btn_avancar')} <ChevronRight size={20} />
+            Avançar <ChevronRight size={20} />
           </button>
         ) : (
-          <div className="flex flex-1 md:flex-none gap-2 md:gap-4 ml-4 md:ml-0">
-            <button className="flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-medium bg-surface border border-gray-200 hover:border-accent transition-colors">
-              <span className="hidden md:inline">{t('upload.nova_foto')}</span>
-              <span className="md:hidden">Nova</span>
-            </button>
-            <button 
-              onClick={handleSave}
-              disabled={saving}
-              className="flex flex-1 md:flex-none items-center justify-center gap-2 px-4 md:px-8 py-3 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all shadow-float disabled:opacity-50"
-            >
-              {saving ? t('upload.salvando', 'Salvando...') : t('upload.salvar')}
-            </button>
-          </div>
+          <button 
+            onClick={handleSave}
+            disabled={saving || iaMode}
+            className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold bg-accent text-white hover:bg-accent/90 hover-float transition-all shadow-float disabled:opacity-50 disabled:hover:translate-y-0"
+          >
+            {saving ? 'Salvando...' : 'Salvar Registro'}
+          </button>
         )}
       </div>
 
