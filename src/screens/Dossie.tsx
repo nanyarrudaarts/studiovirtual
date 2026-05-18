@@ -3,6 +3,42 @@ import { Printer, CheckSquare, Square, Eye, User, Loader2, BookOpen, Layers } fr
 import { getArtworks, supabase } from '../services/supabase';
 import type { Artwork } from '../types';
 
+interface FormacaoItem {
+  anoInicio: string;
+  anoFim?: string;
+  curso: string;
+  instituicao: string;
+  cidade?: string;
+}
+
+interface PremioItem {
+  ano: string;
+  nome: string;
+  instituicao: string;
+}
+
+interface ResidenciaItem {
+  ano: string;
+  nome: string;
+  local: string;
+}
+
+interface ExposicaoItem {
+  ano: string;
+  titulo: string;
+  local: string;
+  curador?: string;
+}
+
+interface PublicacaoItem {
+  autor?: string;
+  tituloLivro?: string;
+  editora?: string;
+  ano?: string;
+  isbn?: string;
+  contribuicao?: string;
+}
+
 interface ArtistProfile {
   nome: string;
   nomeArtistico: string;
@@ -16,14 +52,14 @@ interface ArtistProfile {
   exposicoes: string;
   foto_url: string;
   email?: string;
-  instagrams: any[];
-  social_links: any[];
-  formacao: any[];
-  premios: any[];
-  residencias: any[];
-  expos_individuais: any[];
-  expos_coletivas: any[];
-  publicacoes: any[];
+  instagrams: unknown[];
+  social_links: unknown[];
+  formacao: FormacaoItem[];
+  premios: PremioItem[];
+  residencias: ResidenciaItem[];
+  expos_individuais: ExposicaoItem[];
+  expos_coletivas: ExposicaoItem[];
+  publicacoes: PublicacaoItem[];
 }
 
 export default function Dossie() {
@@ -66,13 +102,13 @@ export default function Dossie() {
         alert('Erro ao carregar perfil do artista: ' + error.message);
       }
       if (data) {
-        const ensureArray = (v: any) => {
+        const ensureArray = (v: unknown): unknown[] => {
           if (Array.isArray(v)) return v;
           if (typeof v === 'string' && v.trim().startsWith('[')) {
             try {
               const parsed = JSON.parse(v);
               if (Array.isArray(parsed)) return parsed;
-            } catch (e) { /* ignore */ }
+            } catch { /* ignore */ }
           }
           return [];
         };
@@ -92,12 +128,12 @@ export default function Dossie() {
           email: data.email || '',
           instagrams: ensureArray(data.instagrams),
           social_links: ensureArray(data.social_links),
-          formacao: ensureArray(data.formacao),
-          premios: ensureArray(data.premios),
-          residencias: ensureArray(data.residencias),
-          expos_individuais: ensureArray(data.expos_individuais),
-          expos_coletivas: ensureArray(data.expos_coletivas),
-          publicacoes: ensureArray(data.publicacoes),
+          formacao: ensureArray(data.formacao) as FormacaoItem[],
+          premios: ensureArray(data.premios) as PremioItem[],
+          residencias: ensureArray(data.residencias) as ResidenciaItem[],
+          expos_individuais: ensureArray(data.expos_individuais) as ExposicaoItem[],
+          expos_coletivas: ensureArray(data.expos_coletivas) as ExposicaoItem[],
+          publicacoes: ensureArray(data.publicacoes) as PublicacaoItem[],
         });
       }
       setLoadingArtist(false);
@@ -124,7 +160,7 @@ export default function Dossie() {
 
   const selectedArtworks = artworks.filter(a => selectedArtworkIds.includes(a.artwork_id));
 
-  const renderCVSection = (title: string, list: any[], renderer: (item: any, idx: number) => React.ReactNode) => {
+  const renderCVSection = <T,>(title: string, list: T[] | undefined, renderer: (item: T, idx: number) => React.ReactNode) => {
     if (!list || list.length === 0) return null;
     return (
       <div className="space-y-3 avoid-break">
@@ -536,9 +572,23 @@ export default function Dossie() {
                 </div>
               ) : (
                 selectedArtworks.map((a, idx) => {
-                  let extra: any = {};
+                  interface ArtworkExtra {
+                    protocoloAtivacao?: string;
+                    perfilPerformer?: string;
+                    duracao?: string;
+                    elementosInegociveis?: string;
+                    possuiTermo?: boolean;
+                    possuiCOA?: boolean;
+                    possuiCessao?: boolean;
+                    recursosHibridos?: string;
+                    suporteDigital?: string;
+                    hashBlockchain?: string;
+                    redeBlockchain?: string;
+                    registroCertificado?: string;
+                  }
+                  let extra: ArtworkExtra = {};
                   if (a.intent_note) {
-                    try { extra = JSON.parse(a.intent_note); } catch(e) {}
+                    try { extra = JSON.parse(a.intent_note) as ArtworkExtra; } catch { extra = {}; }
                   }
 
                   return (
@@ -653,7 +703,7 @@ export default function Dossie() {
                                 <tbody>
                                   <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted w-1/3">Nº Registro (Tombo):</td><td className="py-1 text-text-main">{a.inventory_number || 'Sem código'}</td></tr>
                                   <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted">Nº Edição/Tiragem:</td><td className="py-1 text-text-main">{a.edition_number || 'Obra Única'}</td></tr>
-                                  <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted">Disponibilidade:</td><td className="py-1 text-text-main">{({'available':'Disponível','sold':'Vendida','reserved':'Reservada','private_collection':'Coleção Privada','not_for_sale':'Não à venda'} as any)[a.sale_status] || 'Disponível'}</td></tr>
+                                  <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted">Disponibilidade:</td><td className="py-1 text-text-main">{({ available: 'Disponível', sold: 'Vendida', reserved: 'Reservada', private_collection: 'Coleção Privada', not_for_sale: 'Não à venda' } as Record<string, string>)[a.sale_status || ''] || 'Disponível'}</td></tr>
                                   <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted">Preço Avaliado:</td><td className="py-1 text-text-main">{a.price ? `R$ ${a.price.toLocaleString('pt-BR')}` : 'Não avaliada'}</td></tr>
                                   <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted">Localização Física:</td><td className="py-1 text-text-main">{a.physical_location || 'Ateliê do Artista'}</td></tr>
                                   <tr className="border-b border-gray-50"><td className="py-1 font-bold text-text-muted">Estado Conservação:</td><td className="py-1 text-text-main">Excelente (Padrão Museológico)</td></tr>

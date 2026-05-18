@@ -102,7 +102,7 @@ export default function Upload() {
             }
             let extraData: ExtraData = {};
             if (artwork.intent_note) {
-              try { extraData = JSON.parse(artwork.intent_note) as ExtraData; } catch { }
+              try { extraData = JSON.parse(artwork.intent_note) as ExtraData; } catch { extraData = {}; }
             }
             
             setFormData(prev => ({

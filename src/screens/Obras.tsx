@@ -33,7 +33,6 @@ export default function Obras() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
     setError('');
     Promise.all([
       getArtworks({ classification: 'singular' }).catch(() => []),
