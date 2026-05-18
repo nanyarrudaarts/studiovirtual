@@ -323,14 +323,15 @@ export default function Perfil() {
       if (data) {
         setForm(f => ({ ...f, ...data }));
         if (data.foto_url) setPhotoUrl(data.foto_url);
-        if (data.instagrams) setInstagrams(data.instagrams);
-        if (data.social_links) setSocialLinks(data.social_links);
-        if (data.formacao) setFormacao(data.formacao);
-        if (data.premios) setPremios(data.premios);
-        if (data.residencias) setResidencias(data.residencias);
-        if (data.expos_individuais) setExposIndividuais(data.expos_individuais);
-        if (data.expos_coletivas) setExposColetivas(data.expos_coletivas);
-        if (data.publicacoes) setPublicacoes(data.publicacoes);
+        const ensureArray = (v: any) => Array.isArray(v) ? v : [];
+        if (data.instagrams) setInstagrams(ensureArray(data.instagrams));
+        if (data.social_links) setSocialLinks(ensureArray(data.social_links));
+        if (data.formacao) setFormacao(ensureArray(data.formacao));
+        if (data.premios) setPremios(ensureArray(data.premios));
+        if (data.residencias) setResidencias(ensureArray(data.residencias));
+        if (data.expos_individuais) setExposIndividuais(ensureArray(data.expos_individuais));
+        if (data.expos_coletivas) setExposColetivas(ensureArray(data.expos_coletivas));
+        if (data.publicacoes) setPublicacoes(ensureArray(data.publicacoes));
       }
     });
   }, []);
