@@ -666,6 +666,7 @@ export default function Perfil() {
   const [profileTab, setProfileTab] = useState<'pessoal' | 'artistico'>('pessoal');
   const [isEditing, setIsEditing] = useState(false);
 
+  const [artistId, setArtistId] = useState<number | null>(null);
   const [form, setForm] = useState({
     nome: 'Nany Arruda',
     nomeArtistico: 'Nany Arruda',
@@ -697,6 +698,7 @@ export default function Perfil() {
         alert('Erro ao carregar perfil: ' + error.message);
       }
       if (data) {
+        if (data.id) setArtistId(data.id);
         // Clean null and undefined values from database response before merging
         const cleanData: Record<string, unknown> = {};
         Object.entries(data).forEach(([key, val]) => {
@@ -767,7 +769,7 @@ export default function Perfil() {
     setSaving(true);
     
     const payload = {
-      id: 1,
+      id: artistId || 1,
       nome: form.nome,
       nacionalidade: form.nacionalidade,
       cidade: form.cidade,
@@ -792,7 +794,7 @@ export default function Perfil() {
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from('artista').upsert(payload);
+    const { error } = await supabase.from('artista').upsert(payload, { onConflict: 'id' });
     if (error) {
       alert('Erro ao salvar perfil: ' + error.message);
     } else {
