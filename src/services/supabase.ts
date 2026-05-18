@@ -17,10 +17,10 @@ async function uploadImage(file: File, folder: string): Promise<string> {
   return data.publicUrl;
 }
 
-async function deleteImage(url: string) {
-  const path = url.split('/obras-images/')[1];
-  if (path) await supabase.storage.from('obras-images').remove([path]);
-}
+// async function deleteImage(url: string) {
+//   const path = url.split('/obras-images/')[1];
+//   if (path) await supabase.storage.from('obras-images').remove([path]);
+// }
 
 async function generateAccessionNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -131,18 +131,36 @@ export async function updateArtwork(id: string, data: Partial<Artwork>): Promise
   return updated as Artwork;
 }
 
-export async function deleteArtwork(id: string): Promise<void> {
-  const artwork = await getArtwork(id);
-  if (artwork?.artwork_images) {
-    for (const url of artwork.artwork_images) await deleteImage(url);
+export async function deleteArtwork(id: string) {
+  // Delete images from storage first
+  try {
+    const artwork = await getArtwork(id);
+    if (artwork?.artwork_images?.length) {
+      const fileNames = artwork.artwork_images
+        .map((url: string) => url.split('/').pop())
+        .filter((name): name is string => !!name);
+      if (fileNames.length) {
+        await supabase.storage.from('obras-images').remove(fileNames);
+      }
+    }
+  } catch {
+    // Storage cleanup failed silently — proceed with record delete
   }
   
   // Remove vínculos com séries e coleções para evitar erro de chave estrangeira
   await supabase.from('artworks_series').delete().eq('artwork_id', id);
   await supabase.from('artworks_collections').delete().eq('artwork_id', id);
   
-  const { error } = await supabase.from('artworks').delete().eq('artwork_id', id);
-  if (error) throw error;
+  // Delete the record
+  const { data, error } = await supabase
+    .from('artworks').delete().eq('artwork_id', id).select();
+  
+  if (error) return { error };
+  if (!data || data.length === 0) {
+    return { error: new Error('Nenhuma obra foi deletada. Verifique as permissões de RLS no Supabase.') };
+  }
+  
+  return { error: null };
 }
 
 // ─── COLLECTIONS ─────────────────────────────────────────────────────────────
@@ -154,6 +172,16 @@ export async function getCollections(): Promise<Collection[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Collection[];
+}
+
+export async function getCollection(id: string): Promise<Collection | null> {
+  const { data, error } = await supabase
+    .from('collections')
+    .select('*')
+    .eq('collection_id', id)
+    .single();
+  if (error) throw error;
+  return data as Collection;
 }
 
 export async function createCollection(data: Partial<Collection>): Promise<Collection> {
@@ -179,8 +207,9 @@ export async function updateCollection(id: string, data: Partial<Collection>): P
 }
 
 export async function deleteCollection(id: string): Promise<void> {
-  const { error } = await supabase.from('collections').delete().eq('collection_id', id);
+  const { data, error } = await supabase.from('collections').delete().eq('collection_id', id).select();
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Nenhuma coleção foi deletada. Verifique as permissões de RLS no Supabase.');
 }
 
 export async function getArtworksInCollection(collectionId: string): Promise<Artwork[]> {
@@ -212,7 +241,7 @@ export async function removeArtworkFromCollection(artworkId: string, collectionI
 
 // ─── SERIES ───────────────────────────────────────────────────────────────────
 
-export async function getSeriesList(): Promise<Series[]> {
+export async function getSeries(): Promise<Series[]> {
   const { data, error } = await supabase
     .from('series')
     .select('*')
@@ -220,6 +249,16 @@ export async function getSeriesList(): Promise<Series[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Series[];
+}
+
+export async function getSerie(id: string): Promise<Series | null> {
+  const { data, error } = await supabase
+    .from('series')
+    .select('*')
+    .eq('series_id', id)
+    .single();
+  if (error) throw error;
+  return data as Series;
 }
 
 export async function createSerie(data: Partial<Series>): Promise<Series> {
@@ -245,8 +284,9 @@ export async function updateSerie(id: string, data: Partial<Series>): Promise<Se
 }
 
 export async function deleteSerie(id: string): Promise<void> {
-  const { error } = await supabase.from('series').delete().eq('series_id', id);
+  const { data, error } = await supabase.from('series').delete().eq('series_id', id).select();
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Nenhuma série foi deletada. Verifique as permissões de RLS no Supabase.');
 }
 
 export async function getArtworksInSerie(serieId: string): Promise<Artwork[]> {

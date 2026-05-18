@@ -2,29 +2,16 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool, Plus, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { saveArtwork, createCollection, createSerie, supabase } from '../services/supabase';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Artwork } from '../types';
+import { callAI } from '../services/ai';
 
-function getGroqKey() { return import.meta.env.VITE_GROQ_API_KEY || ''; }
 
-async function callGroqJSON(prompt: string): Promise<string> {
-  const key = getGroqKey();
-  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env.local');
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } })
-  });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error('Groq: ' + (e?.error?.message || res.status)); }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
-}
 
 interface PhotoSlot { file: File | null; url: string; label: string; w: number; h: number; }
 
 export default function Upload() {
   const { t } = useTranslation();
-  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
@@ -47,22 +34,39 @@ export default function Upload() {
     }
   }, [toast]);
 
-  const [formData, setFormData] = useState({
-    classificacao: 'singular',
-    parentCollectionId: '', parentSeriesId: '', isNewHierarchy: false,
-    titulo: '', tipoObjeto: 'Pintura', autoria: '',
-    ano: new Date().getFullYear().toString(),
-    tecnica: '', suporte: '',
-    dimensaoW: '', dimensaoH: '', dimensaoD: '', dimensaoUnidade: 'cm',
-    inscricoes: '', sentencaResumo: '', narrativaCuratorial: '',
-    numeroRegistro: '', formaAquisicao: '', procedencia: '',
-    estadoConservacao: 'Excelente', valor: '', seguro: '', localizacao: '',
-    numeroEdicao: '', variacaoSerie: '',
-    quantidadePrevista: '', estruturaEdicao: '',
-    periodoColecao: '', artistasEnvolvidos: '', criterioInclusao: '', instituicaoAssociada: '',
-    status: 'Disponível',
-    protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
-    possuiTermo: false, possuiCOA: false, possuiCessao: false,
+  const [formData, setFormData] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('type');
+    const classification = (p === 'singular' || p === 'serie' || p === 'colecao') ? p : 'singular';
+    return {
+      classificacao: classification,
+      parentCollectionId: '', parentSeriesId: '', isNewHierarchy: false,
+      titulo: '', tipoObjeto: 'Pintura', autoria: '',
+      ano: new Date().getFullYear().toString(),
+      tecnica: '', suporte: '',
+      dimensaoW: '', dimensaoH: '', dimensaoD: '', dimensaoUnidade: 'cm',
+      inscricoes: '', sentencaResumo: '', narrativaCuratorial: '',
+      numeroRegistro: '', formaAquisicao: '', procedencia: '',
+      estadoConservacao: 'Excelente', valor: '', seguro: '', localizacao: '',
+      numeroEdicao: '', variacaoSerie: '',
+      quantidadePrevista: '', estruturaEdicao: '',
+      periodoColecao: '', artistasEnvolvidos: '', criterioInclusao: '', instituicaoAssociada: '',
+      status: 'Disponível',
+      protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
+      possuiTermo: false, possuiCOA: false, possuiCessao: false,
+      // Novos campos para Série (Estrutura Curatorial)
+      subtitle: '', statusSerie: 'Em andamento',
+      resumoConceitual: '', logicaUnidade: '', temas: '', referencias: '', palavrasChave: '',
+      anoInicial: '', anoFinal: '', periodoProducao: '', locaisCriacao: '',
+      tecnicas: '', materiais: '', suportes: '', linguagens: '',
+      codigoInterno: '', tagsCuratoriais: '',
+      direitosAutorais: '', certificados: '', documentosAnexos: '', historicoExpositivo: '',
+      // Recursos interdisciplinares, blockchain e certificados
+      recursosHibridos: '',
+      suporteDigital: '',
+      hashBlockchain: '',
+      redeBlockchain: 'Ethereum',
+      registroCertificado: '',
+    };
   });
 
   useEffect(() => {
@@ -82,11 +86,6 @@ export default function Upload() {
   const photoRefs = useRef<(HTMLInputElement|null)[]>([]);
 
   useEffect(() => {
-    const p = new URLSearchParams(location.search).get('type');
-    if (p === 'singular' || p === 'serie' || p === 'colecao') setFormData(prev => ({ ...prev, classificacao: p }));
-  }, [location.search]);
-
-  useEffect(() => {
     if (editId) {
       (async () => {
         setLoadingEdit(true);
@@ -99,12 +98,27 @@ export default function Upload() {
           if (error) throw error;
           if (data) {
             const artwork = data as Artwork;
-            let extraData: any = {};
+            interface ExtraData {
+              protocoloAtivacao?: string;
+              perfilPerformer?: string;
+              duracao?: string;
+              elementosInegociveis?: string;
+              possuiTermo?: boolean;
+              possuiCOA?: boolean;
+              possuiCessao?: boolean;
+              recursosHibridos?: string;
+              suporteDigital?: string;
+              hashBlockchain?: string;
+              redeBlockchain?: string;
+              registroCertificado?: string;
+            }
+            let extraData: ExtraData = {};
             if (artwork.intent_note) {
-              try { extraData = JSON.parse(artwork.intent_note); } catch (e) {}
+              try { extraData = JSON.parse(artwork.intent_note) as ExtraData; } catch { extraData = {}; }
             }
             
-            setFormData({
+            setFormData(prev => ({
+              ...prev,
               classificacao: artwork.classification || 'singular',
               parentCollectionId: artwork.collection_reference || '',
               parentSeriesId: artwork.series_reference || '',
@@ -145,14 +159,22 @@ export default function Upload() {
               possuiTermo: extraData.possuiTermo || false,
               possuiCOA: extraData.possuiCOA || false,
               possuiCessao: extraData.possuiCessao || false,
-            });
+              recursosHibridos: extraData.recursosHibridos || '',
+              suporteDigital: extraData.suporteDigital || '',
+              hashBlockchain: extraData.hashBlockchain || '',
+              redeBlockchain: extraData.redeBlockchain || 'Ethereum',
+              registroCertificado: extraData.registroCertificado || '',
+            }));
             
-            if (artwork.artwork_images && artwork.artwork_images.length > 0) {
-              const newPhotos = [...photos];
-              artwork.artwork_images.forEach((url, i) => {
-                if (i < 5) newPhotos[i] = { file: null, url, label: '', w: 0, h: 0 };
+            const imgs = artwork.artwork_images;
+            if (imgs && imgs.length > 0) {
+              setPhotos(prev => {
+                const newPhotos = [...prev];
+                imgs.forEach((url, i) => {
+                  if (i < 5) newPhotos[i] = { file: null, url, label: '', w: 0, h: 0 };
+                });
+                return newPhotos;
               });
-              setPhotos(newPhotos);
             }
           }
         } catch (e) {
@@ -176,10 +198,23 @@ export default function Upload() {
     if (!aiInput.trim()) return;
     setAiLoading(true);
     try {
-      setAiPhase('Extraindo dados com Groq...');
-      const raw = await callGroqJSON(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`);
+      setAiPhase('Extraindo dados com IA...');
+      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":"","recursosHibridos":"","suporteDigital":"","registroCertificado":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'groq');
       const d = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
       setFormData(f => ({ ...f, titulo: d.titulo||f.titulo, ano: d.ano||f.ano, tecnica: d.tecnica||f.tecnica, suporte: d.suporte||f.suporte, narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial, sentencaResumo: d.sentencaResumo||f.sentencaResumo, autoria: d.autoria||f.autoria || f.autoria }));
+      setFormData(f => ({
+        ...f,
+        titulo: d.titulo||f.titulo,
+        ano: d.ano||f.ano,
+        tecnica: d.tecnica||f.tecnica,
+        suporte: d.suporte||f.suporte,
+        narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial,
+        sentencaResumo: d.sentencaResumo||f.sentencaResumo,
+        autoria: d.autoria||f.autoria,
+        recursosHibridos: d.recursosHibridos||f.recursosHibridos,
+        suporteDigital: d.suporteDigital||f.suporteDigital,
+        registroCertificado: d.registroCertificado||f.registroCertificado,
+      }));
       setIaMode(false); setAiInput('');
     } catch (e: unknown) { setToast({ message: 'Erro IA: ' + ((e as Error).message), type: 'error' }); }
     finally { setAiLoading(false); setAiPhase(''); }
@@ -210,7 +245,7 @@ export default function Upload() {
           series_title: formData.titulo,
           conceptual_statement: formData.narrativaCuratorial || undefined,
           print_run_total: parseInt(formData.quantidadePrevista) || undefined,
-          edition_type: (formData.estruturaEdicao as any) || undefined,
+          edition_type: (formData.estruturaEdicao as 'unique' | 'limited' | 'open' | 'artist_proof') || undefined,
         });
         setToast({ message: '✅ Série criada com sucesso!', type: 'success' });
         setTimeout(() => navigate('/obras'), 1000);
@@ -227,6 +262,11 @@ export default function Upload() {
         possuiTermo: formData.possuiTermo,
         possuiCOA: formData.possuiCOA,
         possuiCessao: formData.possuiCessao,
+        recursosHibridos: formData.recursosHibridos,
+        suporteDigital: formData.suporteDigital,
+        hashBlockchain: formData.hashBlockchain,
+        redeBlockchain: formData.redeBlockchain,
+        registroCertificado: formData.registroCertificado,
       };
 
       await saveArtwork({
@@ -243,7 +283,7 @@ export default function Upload() {
         width: parseFloat(formData.dimensaoW) || undefined,
         depth: parseFloat(formData.dimensaoD) || undefined,
         dimensions_unit: formData.dimensaoUnidade,
-        sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as any ?? 'available',
+        sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string, 'available' | 'sold' | 'reserved' | 'private_collection' | 'not_for_sale'>)[formData.status] ?? 'available',
         price: parseFloat(formData.valor) || undefined,
         physical_location: formData.localizacao || undefined,
         summary_sentence: formData.sentencaResumo || undefined,
@@ -274,27 +314,30 @@ export default function Upload() {
     setStep(step - 1);
   };
 
-  const inp = (label: string, field: string, opts?: {span2?: boolean; rows?: number; font?: string}) => (
-    <div className={opts?.span2 ? 'md:col-span-2' : ''}>
-      <label className="block text-xs font-bold text-text-muted mb-1">{label}</label>
-      {opts?.rows ? (
-        <textarea value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
-      ) : (
-        <input type="text" value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.font || ''}`} />
-      )}
-    </div>
-  );
+  const inp = (label: string, field: string, opts?: {span2?: boolean; rows?: number; font?: string}) => {
+    const id = `inp-${field}`;
+    return (
+      <div className={opts?.span2 ? 'md:col-span-2' : ''}>
+        <label htmlFor={id} className="block text-xs font-bold text-text-muted mb-1">{label}</label>
+        {opts?.rows ? (
+          <textarea id={id} value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
+        ) : (
+          <input id={id} type="text" value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.font || ''}`} />
+        )}
+      </div>
+    );
+  };
 
   const dimInput = () => (
     <div>
       <label className="block text-xs font-bold text-text-muted mb-1">Dimensões (H × L × P)</label>
       <div className="flex gap-1 items-center">
-        <input type="text" placeholder="H" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <input type="text" placeholder="H" aria-label="Altura" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
         <span className="text-gray-400">×</span>
-        <input type="text" placeholder="L" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <input type="text" placeholder="L" aria-label="Largura" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
         <span className="text-gray-400">×</span>
-        <input type="text" placeholder="P" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-        <select value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg"><option>cm</option><option>in</option></select>
+        <input type="text" placeholder="P" aria-label="Profundidade" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <select aria-label="Unidade de medida" value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg"><option>cm</option><option>in</option></select>
       </div>
     </div>
   );
@@ -377,14 +420,14 @@ export default function Upload() {
 
             {!formData.isNewHierarchy && (
               <div className="mt-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
-                <label className="block text-sm font-bold text-text-main mb-2">Selecione</label>
+                <label htmlFor="parent-selector" className="block text-sm font-bold text-text-main mb-2">Selecione</label>
                 {formData.classificacao === 'serie' ? (
-                  <select value={formData.parentSeriesId} onChange={e => setFormData({...formData, parentSeriesId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
+                  <select id="parent-selector" value={formData.parentSeriesId} onChange={e => setFormData({...formData, parentSeriesId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
                     <option value="">Selecione uma série...</option>
                     {seriesList.map(s => <option key={s.id} value={s.id}>{s.series_title}</option>)}
                   </select>
                 ) : (
-                  <select value={formData.parentCollectionId} onChange={e => setFormData({...formData, parentCollectionId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
+                  <select id="parent-selector" value={formData.parentCollectionId} onChange={e => setFormData({...formData, parentCollectionId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
                     <option value="">Selecione uma coleção...</option>
                     {collections.map(c => <option key={c.id} value={c.id}>{c.collection_name}</option>)}
                   </select>
@@ -412,7 +455,7 @@ export default function Upload() {
                 <h3 className="text-lg font-serif mb-4">Imagem Principal</h3>
                 <div className="space-y-3">
                   <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-white hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
-                    <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
+                    <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" aria-label="Upload imagem principal" onChange={e=>handlePhotoSlot(0,e)} />
                     {photos[0].url ? (
                       <div className="relative w-full h-full">
                         <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
@@ -427,7 +470,7 @@ export default function Upload() {
                   <div className="grid grid-cols-4 gap-3">
                     {[1,2,3,4].map(i=>(
                       <div key={i} className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-white hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
-                        <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(i,e)} />
+                        <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" aria-label={`Upload imagem ${i+1}`} onChange={e=>handlePhotoSlot(i,e)} />
                         {photos[i].url ? <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /> : <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>}
                       </div>
                     ))}
@@ -462,29 +505,89 @@ export default function Upload() {
                     {/* Documentação Jurídica */}
                     {sec('IV', 'Documentação Jurídica Associada', <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={formData.possuiTermo} onChange={e=>setFormData({...formData, possuiTermo: e.target.checked})} className="rounded text-accent focus:ring-accent" />
-                        <label className="text-sm font-medium">Termo de Doação/Compra assinado</label>
+                        <input id="possuiTermo" type="checkbox" checked={formData.possuiTermo} onChange={e=>setFormData({...formData, possuiTermo: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label htmlFor="possuiTermo" className="text-sm font-medium">Termo de Doação/Compra assinado</label>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={formData.possuiCOA} onChange={e=>setFormData({...formData, possuiCOA: e.target.checked})} className="rounded text-accent focus:ring-accent" />
-                        <label className="text-sm font-medium">Certificado de Autenticidade (COA)</label>
+                        <input id="possuiCOA" type="checkbox" checked={formData.possuiCOA} onChange={e=>setFormData({...formData, possuiCOA: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label htmlFor="possuiCOA" className="text-sm font-medium">Certificado de Autenticidade (COA)</label>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={formData.possuiCessao} onChange={e=>setFormData({...formData, possuiCessao: e.target.checked})} className="rounded text-accent focus:ring-accent" />
-                        <label className="text-sm font-medium">Cessão de Direitos de Imagem/Voz</label>
+                        <input id="possuiCessao" type="checkbox" checked={formData.possuiCessao} onChange={e=>setFormData({...formData, possuiCessao: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label htmlFor="possuiCessao" className="text-sm font-medium">Cessão de Direitos de Imagem/Voz</label>
                       </div>
                     </div>)}
+
+                    {/* Recursos Interdisciplinares e Blockchain */}
+                    {sec('V', 'Recursos Interdisciplinares & Autenticação Digital (Blockchain)', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {inp('Recursos Híbridos / Multimídia (ex: Instalação sonora)', 'recursosHibridos')}
+                      {inp('Suporte Digital / Mídia (ex: NFT, Custom Software)', 'suporteDigital')}
+                      {inp('Registro / Hash do Smart Contract (Blockchain)', 'hashBlockchain')}
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="inp-redeBlockchain" className="block text-xs font-bold text-text-muted mb-1">Rede Blockchain</label>
+                        <select id="inp-redeBlockchain" value={formData.redeBlockchain} onChange={e=>setFormData({...formData, redeBlockchain: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                          <option value="Ethereum">Ethereum</option>
+                          <option value="Tezos">Tezos</option>
+                          <option value="Solana">Solana</option>
+                          <option value="Polygon">Polygon</option>
+                          <option value="Outra / L2">Outra / L2</option>
+                        </select>
+                      </div>
+                      {inp('Código do Certificado (COA ID)', 'registroCertificado', {span2: true})}
+                    </div>)}
+
+                    {/* Wall Label Preview Section */}
+                    <section className="border-t border-gray-100 pt-8 mt-8">
+                      <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4">Etiqueta de Parede (Museum Standard Label)</p>
+                      <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="space-y-2 max-w-md font-serif text-text-main bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group overflow-hidden">
+                          <div className="absolute top-0 right-0 bg-accent/10 text-accent text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-bl">
+                            WALL LABEL PREVIEW
+                          </div>
+                          <p className="font-bold text-base">{formData.autoria || 'Nany Arruda'}</p>
+                          <p className="text-sm italic font-medium">
+                            {formData.titulo || 'Sem Título'}
+                            <span className="not-italic font-normal">{formData.ano ? `, ${formData.ano}` : ''}</span>
+                          </p>
+                          <p className="text-xs font-sans text-text-muted">
+                            {formData.tecnica || 'Técnica Mista'}
+                            {formData.suporte ? ` sobre ${formData.suporte}` : ''}
+                          </p>
+                          {[formData.dimensaoH, formData.dimensaoW, formData.dimensaoD].filter(Boolean).length > 0 && (
+                            <p className="text-xs font-sans text-text-muted">
+                              {[formData.dimensaoH, formData.dimensaoW, formData.dimensaoD].filter(Boolean).join(' × ')} {formData.dimensaoUnidade || 'cm'}
+                            </p>
+                          )}
+                          {formData.numeroRegistro && (
+                            <p className="text-[10px] font-sans text-text-muted mt-2 bg-gray-100 px-1.5 py-0.5 rounded inline-block">
+                              Inv. Reg: {formData.numeroRegistro}
+                            </p>
+                          )}
+                          {formData.hashBlockchain && (
+                            <p className="text-[10px] font-sans text-accent mt-2 bg-accent/5 px-1.5 py-0.5 rounded inline-block ml-2">
+                              ⛓️ {formData.redeBlockchain}: {formData.hashBlockchain.slice(0, 8)}...
+                            </p>
+                          )}
+                        </div>
+                        <div className="max-w-xs space-y-2 text-sm text-text-muted">
+                          <p className="font-bold text-text-main">Ficha Curatorial Dinâmica</p>
+                          <p>Esta etiqueta é gerada em tempo real seguindo o padrão internacional de identificação de acervo (Object ID).</p>
+                          <p>Ela reflete exatamente as informações que serão geradas no Dossiê PDF da obra.</p>
+                        </div>
+                      </div>
+                    </section>
                   </div>
                 )}
 
                 {/* SÉRIE — Nova Série */}
                 {formData.classificacao === 'serie' && formData.isNewHierarchy && (
                   <div className="space-y-8">
-                    {sec('I', 'Ficha de Série', 
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-sm font-medium">Nome da Coleção ou Fundo</label>
+                    {sec('I', 'Identificação Principal', 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1 md:col-span-2">
+                          <label htmlFor="series-parent-collection" className="text-sm font-medium">Nome da Coleção ou Fundo</label>
                           <select 
+                            id="series-parent-collection"
                             value={formData.parentCollectionId} 
                             onChange={e => setFormData({...formData, parentCollectionId: e.target.value})}
                             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all text-sm"
@@ -496,10 +599,65 @@ export default function Upload() {
                           </select>
                         </div>
                         {inp('Título da Série *','titulo',{font:'font-serif text-lg'})}
-                        {inp('Lógica de Unidade (20 a 75 palavras)','narrativaCuratorial',{rows:4})}
-                        <div className="grid grid-cols-2 gap-4">
-                          {inp('Número de Série/Edição (ex: 2/10)','numeroEdicao')}
+                        {inp('Subtítulo','subtitle')}
+                        {inp('Artista/Autoria *','autoria')}
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="statusSerie" className="text-sm font-medium">Status</label>
+                          <select id="statusSerie" value={formData.statusSerie} onChange={e=>setFormData({...formData, statusSerie: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all text-sm">
+                            <option value="Em andamento">Em andamento</option>
+                            <option value="Finalizada">Finalizada</option>
+                            <option value="Arquivada">Arquivada</option>
+                          </select>
                         </div>
+                      </div>
+                    )}
+                    
+                    {sec('II', 'Contexto Conceitual',
+                      <div className="grid grid-cols-1 gap-4">
+                        {inp('Resumo Conceitual / Poética *','resumoConceitual',{rows:3})}
+                        {inp('Lógica de Unidade *','logicaUnidade',{rows:3})}
+                        {inp('Temas principais','temas')}
+                        {inp('Referências','referencias',{rows:2})}
+                        {inp('Palavras-chave','palavrasChave')}
+                      </div>
+                    )}
+
+                    {sec('III', 'Temporalidade',
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {inp('Ano inicial *','anoInicial')}
+                        {inp('Ano final','anoFinal')}
+                        {inp('Período de produção','periodoProducao')}
+                        {inp('Locais de criação','locaisCriacao')}
+                      </div>
+                    )}
+
+                    {sec('IV', 'Estrutura Técnica',
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {inp('Técnicas utilizadas','tecnicas')}
+                        {inp('Materiais','materiais')}
+                        {inp('Suportes','suportes')}
+                        {inp('Linguagens artísticas','linguagens')}
+                      </div>
+                    )}
+
+                    {sec('V', 'Organização Interna',
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {inp('Código interno','codigoInterno')}
+                        {inp('Tags curatoriais','tagsCuratoriais')}
+                      </div>
+                    )}
+
+                    {sec('VI', 'Direitos e Documentação',
+                      <div className="grid grid-cols-1 gap-4">
+                        {inp('Direitos autorais','direitosAutorais')}
+                        {inp('Certificados','certificados')}
+                        {inp('Histórico expositivo','historicoExpositivo',{rows:3})}
+                      </div>
+                    )}
+
+                    {sec('VII', 'Estrutura Relacional',
+                      <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-500">
+                        Obras vinculadas serão listadas aqui. (Funcionalidade em desenvolvimento)
                       </div>
                     )}
                   </div>

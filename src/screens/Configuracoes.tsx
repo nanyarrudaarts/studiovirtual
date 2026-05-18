@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
-
 
 type AIProvider = 'groq';
 
@@ -38,8 +37,7 @@ const defaultConfig: Config = {
 
 function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
   label: string; value: string; onChange: (v: string) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  placeholder: string; onSave: () => void; isSaved?: boolean; t: (k: any) => string;
+  placeholder: string; onSave: () => void; isSaved?: boolean; t: (k: string) => string;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -50,8 +48,7 @@ function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
           <input
             type={show ? 'text' : 'password'}
             value={value}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onChange={(e: any) => onChange(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
             placeholder={placeholder}
             className="w-full border border-gray-200 rounded-lg pl-4 pr-10 py-2 text-sm focus:border-accent outline-none bg-bg"
           />
@@ -83,26 +80,31 @@ export default function Configuracoes() {
       }
     });
 
+  const [config, setConfig] = useState<Config>(() => {
     const stored = localStorage.getItem('sv_config');
     const directGroqKey = localStorage.getItem('groq_api_key');
+
     let loaded = { ...defaultConfig };
     if (stored) {
-      loaded = { ...loaded, ...JSON.parse(stored) };
+      try {
+        loaded = { ...loaded, ...JSON.parse(stored) };
+      } catch {
+        // Ignorar erro de parse
+      }
     }
-    if (directGroqKey) {
-      loaded.groqKey = directGroqKey;
-    }
-    setConfig(loaded);
-  }, []);
+    if (directGroqKey) loaded.groqKey = directGroqKey;
+    loaded.aiProvider = 'groq';
+    return loaded;
+  });
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [showDangerModal, setShowDangerModal] = useState(false);
 
   const save = (keys: (keyof Config)[]) => {
     const updated = { ...config };
-    console.log('[Configuracoes] Saving keys:', keys, 'values:', keys.map(k => `${k}=${String(updated[k]).slice(0,10)}`));
     localStorage.setItem('sv_config', JSON.stringify(updated));
-    if (keys.includes('groqKey')) {
-      localStorage.setItem('groq_api_key', updated.groqKey);
-      console.log('[Configuracoes] groq_api_key saved to localStorage:', updated.groqKey.slice(0, 10) + '...');
-    }
+    localStorage.setItem('ai_provider', 'groq');
+    if (keys.includes('groqKey')) localStorage.setItem('groq_api_key', updated.groqKey);
+
     const newSaved: Record<string, boolean> = {};
     keys.forEach(k => { newSaved[k] = true; });
     setSaved(s => ({ ...s, ...newSaved }));
@@ -111,13 +113,15 @@ export default function Configuracoes() {
     }), 2000);
   };
 
-  const set = (key: keyof Config, value: string | boolean) => {
-    setConfig(c => ({ ...c, [key]: value }));
+  const set = <K extends keyof Config>(key: K, value: Config[K]) => {
+    setConfig(c => {
+      const updated = { ...c, [key]: value };
+      if (key === 'aiProvider') {
+        localStorage.setItem('ai_provider', 'groq');
+      }
+      return updated;
+    });
   };
-
-  const aiProviders = [
-    { id: 'groq', label: 'Groq', sub: 'Llama 3 · Ultra Rápido', tag: '✓' }
-  ] as const;
 
   return (
     <div className="max-w-[800px] mx-auto pb-16 space-y-8">
@@ -132,33 +136,31 @@ export default function Configuracoes() {
           <h2 className="text-lg font-serif">{t('configuracoes.provedores_ia')}</h2>
         </div>
         <div className="p-7 space-y-7">
-          {/* Provider Selector */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {aiProviders.map(p => (
-              <button key={p.id} onClick={() => set('aiProvider', p.id)}
-                className={`border-2 rounded-xl p-4 text-left transition-all ${
-                  config.aiProvider === p.id
-                    ? 'border-accent bg-accent/5'
-                    : 'border-gray-200 hover:border-accent/30'
-                }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-sm">{p.label}</span>
-                  {config.aiProvider === p.id && (
-                    <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-                      <Check size={10} className="text-white" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-text-muted">{p.sub}</p>
-              </button>
-            ))}
+          {/* Provider Selector Info */}
+          <div className="border border-accent/20 bg-accent/5 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-sm text-text-main flex items-center gap-2">
+                Groq Ativo
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+              </h3>
+              <p className="text-xs text-text-muted mt-1">Llama 3.3-70b-versatile · Ultra Rápido</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+              <Check size={16} className="text-accent" />
+            </div>
           </div>
 
           {/* API Keys */}
           <div className="space-y-4">
-            <KeyInput label="Chave API Groq" value={config.groqKey}
-              onChange={v => set('groqKey', v)} placeholder="gsk_..."
-              onSave={() => save(['groqKey'])} isSaved={saved['groqKey']} t={t} />
+            <KeyInput 
+              label="Chave API Groq" 
+              value={config.groqKey}
+              onChange={v => set('groqKey', v)} 
+              placeholder="gsk_..."
+              onSave={() => save(['groqKey'])} 
+              isSaved={saved['groqKey']} 
+              t={t} 
+            />
           </div>
 
           {/* NotebookLM */}

@@ -4,6 +4,9 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 import { Shell } from './components/layout/Shell';
 import { supabase } from './services/supabase';
+import ErrorBoundary from './components/common/ErrorBoundary';
+
+import type { Session } from '@supabase/supabase-js';
 
 // Lazy load screens
 const Dashboard = lazy(() => import('./screens/Dashboard'));
@@ -27,8 +30,7 @@ const LoadingScreen = () => (
 );
 
 export default function App() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,28 +58,30 @@ export default function App() {
   }
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <Routes>
-        <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
 
-        <Route path="/" element={session ? <Shell /> : <Navigate to="/login" replace />}>
-          <Route index element={<Dashboard />} />
-          <Route path="upload" element={<Upload />} />
-          <Route path="obras" element={<Obras />} />
-          <Route path="dossie" element={<Dossie />} />
-          <Route path="analise" element={<Analise />} />
-          <Route path="importar" element={<Importar />} />
-          <Route path="certificados" element={<Certificados />} />
-          <Route path="materiais" element={<Materiais />} />
-          <Route path="configuracoes" element={<Configuracoes />} />
-          <Route path="perfil" element={<Perfil />} />
-        </Route>
+          <Route path="/" element={session ? <Shell /> : <Navigate to="/login" replace />}>
+            <Route index element={<Dashboard />} />
+            <Route path="upload" element={<Upload />} />
+            <Route path="obras" element={<Obras />} />
+            <Route path="dossie" element={<Dossie />} />
+            <Route path="analise" element={<Analise />} />
+            <Route path="importar" element={<Importar />} />
+            <Route path="certificados" element={<Certificados />} />
+            <Route path="materiais" element={<Materiais />} />
+            <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="perfil" element={<Perfil />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-   <Analytics />
-      <SpeedInsights />
-    </Suspense>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Analytics />
+        <SpeedInsights />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

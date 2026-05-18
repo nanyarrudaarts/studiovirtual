@@ -1,60 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Globe, PenLine } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
+import { callAI, readURLWithJina } from '../services/ai';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Avoid worker issues in Vite by loading from CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-async function extractTextFromPDF(base64Data: string) {
-  const binaryString = window.atob(base64Data);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  const loadingTask = pdfjsLib.getDocument({ data: bytes });
-  const pdf = await loadingTask.promise;
-  let fullText = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(' ');
-    fullText += pageText + '\n';
-  }
-  return fullText;
-}
 
-function getGroqKey() {
-  return import.meta.env.VITE_GROQ_API_KEY || '';
-}
-
-async function callGroqJSON(prompt: string): Promise<string> {
-  const key = getGroqKey();
-  if (!key) throw new Error('Configure VITE_GROQ_API_KEY no .env');
-  
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' }
-    })
-  });
-  
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error('Groq: ' + (e?.error?.message || res.status));
-  }
-  
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
-}
 
 function extractJson(text: string) {
   const match = text.match(/\{[\s\S]*\}/);
@@ -67,16 +22,17 @@ const PROFILE_JSON_SCHEMA = `{
   "nomeArtistico": "string",
   "nacionalidade": "string",
   "cidade": "string",
+  "email": "string",
   "bioShort": "string (máx 120 palavras)",
   "bioLong": "string (3-4 parágrafos)",
   "website": "string",
   "instagrams": ["string"],
   "formacao": [{"curso":"","instituicao":"","anoInicio":"","anoFim":""}],
-  "exposIndividuais": [{"titulo":"","local":"","cidade":"","pais":"","ano":""}],
-  "exposColetivas": [{"titulo":"","local":"","cidade":"","pais":"","ano":""}],
+  "exposIndividuais": [{"titulo":"","local":"","cidade":"","pais":"","ano":"","curador":""}],
+  "exposColetivas": [{"titulo":"","local":"","cidade":"","pais":"","ano":"","curador":""}],
   "premios": [{"nome":"","instituicao":"","ano":""}],
   "residencias": [{"nome":"","local":"","ano":""}],
-  "publicacoes": [{"titulo":"","editora":"","ano":"","link":""}]
+  "publicacoes": [{"tipo":"Livro|Jornal|Website|Revista|Catálogo|Exposição|Outro","titulo":"","tituloLivro":"","autor":"","editora":"","ano":"","isbn":"","contribuicao":"Ilustração|Texto|Fotografia|Capa|Prefácio|Outro","localContribuicao":"","link":""}]
 }`;
 
 type ImportedData = Record<string, unknown>;
@@ -86,12 +42,19 @@ function DiffPreview({ current, imported, onApply, t }: {
   current: Record<string, unknown>;
   imported: ImportedData;
   onApply: (selected: ImportedData) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
+  const [prevImported, setPrevImported] = useState<ImportedData | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const keys = Object.keys(imported).filter(k => imported[k] !== undefined && imported[k] !== null && imported[k] !== '');
+
+  if (imported !== prevImported) {
+    setPrevImported(imported);
+    const initial: Record<string, boolean> = {};
+    keys.forEach(k => { initial[k] = true; });
+    setChecked(initial);
+  }
 
   const toggle = (k: string) => setChecked(c => ({ ...c, [k]: !c[k] }));
 
@@ -139,30 +102,129 @@ function DiffPreview({ current, imported, onApply, t }: {
   );
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  all: 'Geral (Auto-detectar tudo)',
+  identidade: 'Identidade (Nome, Nacionalidade, Cidade, Website)',
+  biografia: 'Biografia (Bio Curta, Bio Longa)',
+  formacao: 'Formação e Trajetória',
+  premios: 'Prêmios e Distinções',
+  residencias: 'Residências Artísticas',
+  exposIndividuais: 'Exposições Individuais',
+  exposColetivas: 'Exposições Coletivas',
+  publicacoes: 'Publicações'
+};
+
+function getSectionSchema(section: string): string {
+  switch (section) {
+    case 'identidade':
+      return `{
+        "nome": "string",
+        "nomeArtistico": "string",
+        "nacionalidade": "string",
+        "cidade": "string",
+        "email": "string",
+        "website": "string"
+      }`;
+    case 'biografia':
+      return `{
+        "bioShort": "string (máx 120 palavras)",
+        "bioLong": "string (3-4 parágrafos)"
+      }`;
+    case 'formacao':
+      return `{
+        "formacao": [{"curso":"string","instituicao":"string","anoInicio":"string","anoFim":"string"}]
+      }`;
+    case 'premios':
+      return `{
+        "premios": [{"nome":"string","instituicao":"string","ano":"string"}]
+      }`;
+    case 'residencias':
+      return `{
+        "residencias": [{"nome":"string","local":"string","ano":"string"}]
+      }`;
+    case 'exposIndividuais':
+      return `{
+        "exposIndividuais": [{"titulo":"string","local":"string","cidade":"string","pais":"string","ano":"string","curador":"string"}]
+      }`;
+    case 'exposColetivas':
+      return `{
+        "exposColetivas": [{"titulo":"string","local":"string","cidade":"string","pais":"string","ano":"string","curador":"string"}]
+      }`;
+    case 'publicacoes':
+      return `{
+        "publicacoes": [{
+          "tipo": "Livro|Jornal|Website|Revista|Catálogo|Exposição|Outro",
+          "titulo": "string",
+          "tituloLivro": "string",
+          "autor": "string",
+          "editora": "string",
+          "ano": "string",
+          "isbn": "string",
+          "contribuicao": "Ilustração|Texto|Fotografia|Capa|Prefácio|Outro",
+          "localContribuicao": "string",
+          "link": "string"
+        }]
+      }`;
+    default:
+      return '{}';
+  }
+}
+
+async function extractTextFromPDF(base64Data: string) {
+  const binaryString = window.atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const loadingTask = pdfjsLib.getDocument({ data: bytes });
+  const pdf = await loadingTask.promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: unknown) => (item as { str: string }).str).join(' ');
+    fullText += pageText + '\n';
+  }
+  return fullText;
+}
+
 /* ---- Smart Import ---- */
 function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
   onImport: (data: ImportedData) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: (k: string) => string;
 }) {
-  const [tab, setTab] = useState<'text' | 'pdf'>('text');
+  const [tab, setTab] = useState<'text' | 'pdf' | 'url'>('text');
+  const [targetSection, setTargetSection] = useState<string>('all');
   const [textInput, setTextInput] = useState('');
+  const [urlInput, setUrlInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [importedData, setImportedData] = useState<ImportedData | null>(null);
   const [error, setError] = useState('');
   const pdfRef = useRef<HTMLInputElement>(null);
 
+  const getPrompt = (inputText: string) => {
+    if (targetSection === 'all') {
+      return `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${inputText.substring(0, 50000)}`;
+    }
+    return `Você é um curador de arte especialista e assistente pessoal de IA. Analise o texto fornecido e extraia informações com foco total e absoluto na seção específica: "${SECTION_LABELS[targetSection]}".
+Se o texto descrever participações, livros contendo obras do artista, exposições ou qualquer prêmio/formação do artista no contexto do texto, capture e retorne corretamente estruturado.
+Retorne APENAS um JSON válido em português brasileiro contendo esses dados mapeados exatamente para este schema (seja extremamente preciso e não perca nenhum detalhe de ano, local ou editora):
+
+${getSectionSchema(targetSection)}
+
+CONTEÚDO DO TEXTO:
+${inputText.substring(0, 50000)}`;
+  };
 
   const importFromText = async () => {
-    if (!getGroqKey()) { setError('Configure VITE_GROQ_API_KEY no .env'); return; }
-    if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
+    if (!textInput.trim() || textInput.trim().length < 5) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
-      setLoadingStep('Analisando informações com IA...');
-      const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${textInput.substring(0, 50000)}`;
-      const text = await callGroqJSON(prompt);
+      setLoadingStep(`Extraindo dados de ${SECTION_LABELS[targetSection]} com IA...`);
+      const prompt = getPrompt(textInput);
+      const text = await callAI(prompt, 'groq');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -172,37 +234,61 @@ function SmartImport({ currentData, onImport, t }: {
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
     } catch (e: unknown) {
-      setError((e as Error).message || 'Erro de comunicação com Gemini');
+      setError(e instanceof Error ? e.message : 'Erro de comunicação com IA');
     }
     setLoading(false); setLoadingStep('');
   };
 
-
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!getGroqKey()) { setError('Configure VITE_GROQ_API_KEY no .env'); return; }
     setError(''); setLoading(true); setImportedData(null);
-    setLoadingStep(t('lendo_curriculo'));
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      setLoadingStep(t('perfil.identificando_informacoes'));
-      try {
-        const extractedText = await extractTextFromPDF(base64);
-        const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}\n\nTEXTO DO PDF:\n${extractedText.substring(0, 50000)}`;
-        const text = await callGroqJSON(prompt);
-        setLoadingStep(t('perfil.preenchendo_perfil'));
-        await new Promise(r => setTimeout(r, 400));
-        const data = extractJson(text);
-        if (data) setImportedData(data);
-        else setError(t('perfil.erro_pdf'));
-      } catch (e) {
-        setError((e as Error).message || 'Erro ao processar PDF com Gemini');
+    try {
+      setLoadingStep('Extraindo texto do PDF localmente...');
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const base64 = await base64Promise;
+      const extractedText = await extractTextFromPDF(base64);
+
+      setLoadingStep(`Analisando currículo com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
+      const prompt = getPrompt(extractedText);
+      const text = await callAI(prompt, 'groq');
+      setLoadingStep(t('perfil.preenchendo_perfil'));
+      await new Promise(r => setTimeout(r, 400));
+      const data = extractJson(text);
+      if (data) setImportedData(data);
+      else setError('A IA não conseguiu estruturar as informações do PDF.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao processar PDF');
+    }
+    setLoading(false); setLoadingStep('');
+  };
+
+  const importFromUrl = async () => {
+    if (!urlInput.trim()) { setError('Insira uma URL válida.'); return; }
+    setError(''); setLoading(true); setImportedData(null);
+    try {
+      setLoadingStep('Extraindo conteúdo da página via Jina Reader...');
+      const webText = await readURLWithJina(urlInput);
+      setLoadingStep(`Analisando dados do site com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
+      const prompt = getPrompt(webText);
+      const text = await callAI(prompt, 'groq');
+      setLoadingStep(t('perfil.preenchendo_perfil'));
+      await new Promise(r => setTimeout(r, 400));
+      const data = extractJson(text);
+      if (data) {
+        setImportedData(data);
+      } else {
+        setError('A IA não conseguiu estruturar as informações da página.');
       }
-      setLoading(false); setLoadingStep('');
-    };
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao importar da URL');
+    }
+    setLoading(false); setLoadingStep('');
   };
 
   return (
@@ -212,21 +298,46 @@ function SmartImport({ currentData, onImport, t }: {
         <p className="text-sm text-text-muted">{t('perfil.importar_subtitle')}</p>
       </div>
       <div className="p-7 space-y-5">
-        {/* Tabs */}
-        <div className="flex gap-2">
-          {(['text', 'pdf'] as const).map(type => (
-            <button key={type} onClick={() => { setTab(type); setImportedData(null); setError(''); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === type ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-              {type === 'text' ? <><FileText size={15}/> Colar texto</> : <><FileUp size={15}/> {t('perfil.importar_pdf')}</>}
+        {/* Tabs & Section Target */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+          <div className="flex gap-2">
+            <button onClick={() => { setTab('text'); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'text' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              <FileText size={15}/> Colar texto
             </button>
-          ))}
+            <button onClick={() => { setTab('pdf'); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'pdf' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              <FileUp size={15}/> Enviar PDF
+            </button>
+            <button onClick={() => { setTab('url'); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'url' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              <Globe size={15}/> Importar de URL
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label htmlFor="section-select" className="text-xs font-bold text-text-muted whitespace-nowrap">Seção para preencher:</label>
+            <select
+              id="section-select"
+              value={targetSection}
+              onChange={(e) => { setTargetSection(e.target.value); setImportedData(null); setError(''); }}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:border-accent outline-none bg-white font-bold text-text-main cursor-pointer"
+            >
+              {Object.entries(SECTION_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Text Panel */}
         {tab === 'text' && (
           <div className="space-y-3">
             <textarea value={textInput} onChange={e => setTextInput(e.target.value)}
-              placeholder="Cole aqui a biografia do seu site, um currículo copiado, perfil do Instagram, etc..."
+              placeholder={targetSection === 'all' 
+                ? "Cole aqui a biografia do seu site, um currículo copiado, perfil do Instagram, etc..."
+                : `Cole aqui as informações correspondentes a: ${SECTION_LABELS[targetSection]}...`
+              }
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-32 resize-none" />
             <div className="flex justify-end">
               <button onClick={importFromText} disabled={loading || !textInput.trim()}
@@ -239,14 +350,40 @@ function SmartImport({ currentData, onImport, t }: {
 
         {/* PDF Panel */}
         {tab === 'pdf' && (
-          <div>
-            <input ref={pdfRef} type="file" accept=".pdf" aria-label="Selecionar PDF do currículo" className="hidden" onChange={importFromPdf} />
-            <button onClick={() => pdfRef.current?.click()} disabled={loading}
-              className="w-full border-2 border-dashed border-accent/30 rounded-2xl py-10 flex flex-col items-center gap-2 hover:bg-accent/5 transition-colors disabled:opacity-60">
-              <FileUp size={36} className="text-accent" />
-              <span className="font-bold text-sm">{t('arraste_curriculo')}</span>
-              <span className="text-xs text-text-muted">{t('pdf_max')}</span>
-            </button>
+          <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-bg hover:border-accent transition-colors relative cursor-pointer"
+            onClick={() => pdfRef.current?.click()}>
+            <input type="file" ref={pdfRef} onChange={importFromPdf} accept="application/pdf" className="hidden" aria-label="Upload de arquivo PDF" />
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                <FileUp size={24} />
+              </div>
+              <p className="text-sm font-bold text-text-main">Escolha seu arquivo PDF ou arraste aqui</p>
+              <p className="text-xs text-text-muted">Currículos artísticos, biografias e dossiês</p>
+            </div>
+          </div>
+        )}
+
+        {/* URL Panel */}
+        {tab === 'url' && (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={urlInput}
+                onChange={e => setUrlInput(e.target.value)}
+                placeholder="https://seu-site.com/biografia ou link do portfolio"
+                aria-label="URL para importação"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:border-accent outline-none bg-bg"
+              />
+              <button
+                onClick={importFromUrl}
+                disabled={loading || !urlInput.trim()}
+                className="px-5 py-2 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : "Importar"}
+              </button>
+            </div>
+            <p className="text-xs text-text-muted">Busca e extrai automaticamente o conteúdo visível de qualquer página pública utilizando o Jina Reader.</p>
           </div>
         )}
 
@@ -267,68 +404,249 @@ function SmartImport({ currentData, onImport, t }: {
         {importedData && !loading && (
           <div className="space-y-3">
             <p className="text-sm font-bold text-emerald-600">✓ {t('dados_extraidos')}</p>
-            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); setTextInput(''); }} t={t} />
+            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); setTextInput(''); setUrlInput(''); }} t={t} />
           </div>
         )}
       </div>
     </section>
+
   );
 }
 
 
 
 
+const NACIONALIDADE_SUGGESTIONS = [
+  "Brasileira",
+  "Brasileiro",
+  "Portuguesa",
+  "Português",
+  "Americana",
+  "Americano",
+  "Italiana",
+  "Italiano",
+  "Espanhola",
+  "Espanhol",
+  "Francesa",
+  "Francês",
+  "Alemã",
+  "Alemão",
+  "Inglesa",
+  "Inglês",
+  "Argentina",
+  "Argentino",
+  "Chilena",
+  "Chileno",
+  "Uruguaia",
+  "Uruguaio",
+  "Canadense",
+  "Japonesa",
+  "Japonês",
+  "Chinesa",
+  "Chinês",
+  "Mexicana",
+  "Mexicano",
+  "Colombiana",
+  "Colombiano"
+];
+
+const RESIDENCIA_SUGGESTIONS = [
+  "Rio de Janeiro, RJ, Brasil",
+  "São Paulo, SP, Brasil",
+  "Belo Horizonte, MG, Brasil",
+  "Porto Alegre, RS, Brasil",
+  "Curitiba, PR, Brasil",
+  "Salvador, BA, Brasil",
+  "Recife, PE, Brasil",
+  "Fortaleza, CE, Brasil",
+  "Brasília, DF, Brasil",
+  "Florianópolis, SC, Brasil",
+  "Vitória, ES, Brasil",
+  "Goiânia, GO, Brasil",
+  "Manaus, AM, Brasil",
+  "Belém, PA, Brasil",
+  "Lisboa, Portugal",
+  "Porto, Portugal",
+  "Coimbra, Portugal",
+  "Braga, Portugal",
+  "Faro, Portugal",
+  "Funchal, Madeira, Portugal",
+  "Ponta Delgada, Açores, Portugal",
+  "Madrid, Espanha",
+  "Barcelona, Espanha",
+  "Paris, França",
+  "Berlim, Alemanha",
+  "Londres, Reino Unido",
+  "Roma, Itália",
+  "Milão, Itália",
+  "Nova York, NY, EUA",
+  "Miami, FL, EUA",
+  "Los Angeles, CA, EUA",
+  "Tóquio, Japão",
+  "Buenos Aires, Argentina"
+];
+
+function AutocompleteInput({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  suggestions,
+  className = "",
+  disabled = false
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  suggestions: string[];
+  className?: string;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const safeVal = (value || '').trim();
+  const filtered = useMemo(() => {
+    if (!safeVal) {
+      return suggestions;
+    }
+    const query = safeVal.toLowerCase();
+    return suggestions.filter(item =>
+      item.toLowerCase().includes(query) && item.toLowerCase() !== query
+    );
+  }, [safeVal, suggestions]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <label htmlFor={id} className="block text-sm font-bold text-text-muted mb-1">{label}</label>
+      <input
+        id={id}
+        aria-label={label}
+        value={value}
+        disabled={disabled}
+        onChange={e => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder={placeholder}
+        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed"
+        autoComplete="off"
+      />
+      {isOpen && !disabled && filtered.length > 0 && (
+        <ul className="absolute z-[999] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-50">
+          {filtered.map((item, idx) => (
+            <li key={idx}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(item);
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-white transition-colors"
+              >
+                {item}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 interface ListItem {
+
   id: string;
   [key: string]: string;
 }
 
 const uid = () => Math.random().toString(36).slice(2);
 
-function AddList({ title, fields, items, onChange, t }: {
+function AddList({ title, fields, items, onChange, t, disabled }: {
   title: string;
-  fields: { key: string; label: string; type?: string }[];
+  fields: { key: string; label: string; type?: string; options?: string[]; className?: string }[];
   items: ListItem[];
   onChange: (items: ListItem[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (k: any) => string;
+  t: (k: string) => string;
+  disabled?: boolean;
 }) {
   const add = () => {
+    if (disabled) return;
     const empty: ListItem = { id: uid() };
     fields.forEach(f => { empty[f.key] = ''; });
     onChange([...items, empty]);
   };
-  const remove = (id: string) => onChange(items.filter(i => i.id !== id));
-  const update = (id: string, key: string, value: string) =>
+  const remove = (id: string) => {
+    if (disabled) return;
+    onChange(items.filter(i => i.id !== id));
+  };
+  const update = (id: string, key: string, value: string) => {
+    if (disabled) return;
     onChange(items.map(i => i.id === id ? { ...i, [key]: value } : i));
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-text-muted">{title}</h4>
-        <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
-          <Plus size={14} /> {t('perfil.adicionar')}
-        </button>
+        {!disabled && (
+          <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
+            <Plus size={14} /> {t('perfil.adicionar')}
+          </button>
+        )}
       </div>
       {items.map(item => (
         <div key={item.id} className="bg-bg rounded-xl p-4 relative">
-          <button onClick={() => remove(item.id)}
-            aria-label="Remover item"
-            className="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition-colors">
-            <X size={16} />
-          </button>
+          {!disabled && (
+            <button onClick={() => remove(item.id)}
+              aria-label="Remover item"
+              className="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition-colors">
+              <X size={16} />
+            </button>
+          )}
           <div className="grid grid-cols-2 gap-3 pr-6">
             {fields.map(f => (
-              <div key={f.key} className={f.key === fields[0].key ? 'col-span-2' : ''}>
+              <div key={f.key} className={f.className || (f.key === fields[0].key ? 'col-span-2' : '')}>
                 <label htmlFor={`${item.id}-${f.key}`} className="block text-xs text-text-muted mb-1">{f.label}</label>
-                <input
-                  id={`${item.id}-${f.key}`}
-                  aria-label={f.label}
-                  type={f.type || 'text'}
-                  value={item[f.key] || ''}
-                  onChange={e => update(item.id, f.key, e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white"
-                />
+                {f.options ? (
+                  <select
+                    id={`${item.id}-${f.key}`}
+                    aria-label={f.label}
+                    value={item[f.key] || ''}
+                    disabled={disabled}
+                    onChange={e => update(item.id, f.key, e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white font-medium text-text-main cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{t('perfil.selecione') || 'Selecione...'}</option>
+                    {f.options.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={`${item.id}-${f.key}`}
+                    aria-label={f.label}
+                    type={f.type || 'text'}
+                    value={item[f.key] || ''}
+                    disabled={disabled}
+                    onChange={e => update(item.id, f.key, e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white disabled:opacity-75 disabled:cursor-not-allowed"
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -345,18 +663,25 @@ export default function Perfil() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
+  const [profileTab, setProfileTab] = useState<'pessoal' | 'artistico'>('pessoal');
+  const [isEditing, setIsEditing] = useState(false);
 
+  const [artistId, setArtistId] = useState<number | null>(null);
   const [form, setForm] = useState({
     nome: '',
     nomeArtistico: '',
     nacionalidade: 'Brasil',
     cidade: '',
     nascimento: '',
+    email: '',
     website: 'nanyarruda.com',
     bioShort: '',
     bioLong: '',
     tags: '',
+    telefone: '',
+    whatsapp: '',
   });
+
 
   const [instagrams, setInstagrams] = useState(['@nany_arruda', '@nanyarrudaart']);
   const [socialLinks, setSocialLinks] = useState<{id:string; label:string; url:string}[]>([]);
@@ -390,6 +715,43 @@ export default function Perfil() {
             if (data.publicacoes) setPublicacoes(data.publicacoes);
           }
         });
+    supabase.from('artista').select('*').single().then(({ data, error }) => {
+      if (error && error.code !== 'PGRST116') {
+        alert('Erro ao carregar perfil: ' + error.message);
+      }
+      if (data) {
+        if (data.id) setArtistId(data.id);
+        // Clean null and undefined values from database response before merging
+        const cleanData: Record<string, unknown> = {};
+        Object.entries(data).forEach(([key, val]) => {
+          if (val !== null && val !== undefined) {
+            const lowerKey = key.toLowerCase();
+            if (lowerKey === 'nomeartistico') cleanData.nomeArtistico = val;
+            else if (lowerKey === 'bioshort') cleanData.bioShort = val;
+            else if (lowerKey === 'biolong') cleanData.bioLong = val;
+            else cleanData[key] = val;
+          }
+        });
+        setForm(f => ({ ...f, ...cleanData }));
+        if (data.foto_url) setPhotoUrl(data.foto_url);
+        const ensureArray = (v: unknown) => {
+          if (Array.isArray(v)) return v;
+          if (typeof v === 'string' && v.trim().startsWith('[')) {
+            try {
+              const parsed = JSON.parse(v);
+              if (Array.isArray(parsed)) return parsed;
+            } catch { /* ignore */ }
+          }
+          return [];
+        };
+        if (data.instagrams) setInstagrams(ensureArray(data.instagrams));
+        if (data.social_links) setSocialLinks(ensureArray(data.social_links));
+        if (data.formacao) setFormacao(ensureArray(data.formacao));
+        if (data.premios) setPremios(ensureArray(data.premios));
+        if (data.residencias) setResidencias(ensureArray(data.residencias));
+        if (data.expos_individuais) setExposIndividuais(ensureArray(data.expos_individuais));
+        if (data.expos_coletivas) setExposColetivas(ensureArray(data.expos_coletivas));
+        if (data.publicacoes) setPublicacoes(ensureArray(data.publicacoes));
       }
     });
   }, []);
@@ -401,7 +763,9 @@ export default function Perfil() {
     const ext = file.name.split('.').pop();
     const path = `perfil/foto.${ext}`;
     const { error } = await supabase.storage.from('perfil').upload(path, file, { upsert: true });
-    if (!error) {
+    if (error) {
+      alert('Erro ao enviar foto: ' + error.message);
+    } else {
       const { data: { publicUrl } } = supabase.storage.from('perfil').getPublicUrl(path);
       setPhotoUrl(publicUrl);
     }
@@ -410,14 +774,9 @@ export default function Perfil() {
 
   const handleGenerateBio = async () => {
     setGeneratingBio(true);
-    if (!getGroqKey()) {
-      alert('Configure VITE_GROQ_API_KEY no .env');
-      setGeneratingBio(false);
-      return;
-    }
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const text = await callGroqJSON(prompt);
+      const text = await callAI(prompt, 'groq');
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));
@@ -439,17 +798,39 @@ export default function Perfil() {
     await supabase.from('artista').upsert({
       id: user.id,
       ...form,
+    
+    const payload = {
+      id: artistId || 1,
+      nome: form.nome,
+      nacionalidade: form.nacionalidade,
+      cidade: form.cidade,
+      nascimento: form.nascimento,
+      email: form.email,
+      website: form.website,
+      nomeartistico: form.nomeArtistico,
+      bioshort: form.bioShort,
+      biolong: form.bioLong,
+      tags: form.tags,
+      telefone: form.telefone,
+      whatsapp: form.whatsapp,
       foto_url: photoUrl,
-      instagrams,
+      instagrams: instagrams,
       social_links: socialLinks,
-      formacao,
-      premios,
-      residencias,
+      formacao: formacao,
+      premios: premios,
+      residencias: residencias,
       expos_individuais: exposIndividuais,
       expos_coletivas: exposColetivas,
-      publicacoes,
+      publicacoes: publicacoes,
       updated_at: new Date().toISOString(),
-    });
+    };
+
+    const { error } = await supabase.from('artista').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      alert('Erro ao salvar perfil: ' + error.message);
+    } else {
+      alert('Perfil salvo com sucesso!');
+    }
     setSaving(false);
   };
 
@@ -459,16 +840,18 @@ export default function Perfil() {
   const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
   const handleImport = (data: ImportedData) => {
-    const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'bioShort', 'bioLong', 'website'] as const;
+    const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'email', 'bioShort', 'bioLong', 'website', 'telefone', 'whatsapp'] as const;
     strKeys.forEach(k => { if (data[k]) setForm(f => ({ ...f, [k]: String(data[k]) })); });
-    if (Array.isArray(data.instagrams)) setInstagrams(data.instagrams as string[]);
+    if (Array.isArray(data.instagrams)) {
+      setInstagrams(prev => Array.from(new Set([...prev, ...(data.instagrams as string[])])));
+    }
     const toList = (arr: unknown[]) => arr.map(i => ({ id: uid(), ...(i as object) }));
-    if (Array.isArray(data.formacao)) setFormacao(toList(data.formacao));
-    if (Array.isArray(data.premios)) setPremios(toList(data.premios));
-    if (Array.isArray(data.residencias)) setResidencias(toList(data.residencias));
-    if (Array.isArray(data.exposIndividuais)) setExposIndividuais(toList(data.exposIndividuais));
-    if (Array.isArray(data.exposColetivas)) setExposColetivas(toList(data.exposColetivas));
-    if (Array.isArray(data.publicacoes)) setPublicacoes(toList(data.publicacoes));
+    if (Array.isArray(data.formacao)) setFormacao(prev => [...prev, ...toList(data.formacao as unknown[])]);
+    if (Array.isArray(data.premios)) setPremios(prev => [...prev, ...toList(data.premios as unknown[])]);
+    if (Array.isArray(data.residencias)) setResidencias(prev => [...prev, ...toList(data.residencias as unknown[])]);
+    if (Array.isArray(data.exposIndividuais)) setExposIndividuais(prev => [...prev, ...toList(data.exposIndividuais as unknown[])]);
+    if (Array.isArray(data.exposColetivas)) setExposColetivas(prev => [...prev, ...toList(data.exposColetivas as unknown[])]);
+    if (Array.isArray(data.publicacoes)) setPublicacoes(prev => [...prev, ...toList(data.publicacoes as unknown[])]);
   };
 
   const currentFormAsRecord: Record<string, unknown> = { ...form, instagrams, formacao, premios, residencias, exposIndividuais, exposColetivas, publicacoes };
@@ -480,241 +863,342 @@ export default function Perfil() {
         <p className="text-text-muted">{t('perfil.subtitle')}</p>
       </div>
 
-      <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
+      {isEditing && (
+        <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
+      )}
 
-      {/* Identity + Digital Presence */}
-      <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-        <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('perfil.identidade')}</h2>
-        </div>
-        <div className="p-7">
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Left — Identity */}
-            <div className="flex flex-col items-center md:items-start gap-6 md:w-1/2">
-              {/* Photo */}
-              <div className="flex flex-col items-center gap-2">
-                <div className="relative w-[120px] h-[120px]">
-                  <div className="w-[120px] h-[120px] rounded-full overflow-hidden bg-gray-100 border-2 border-accent/20 flex items-center justify-center">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="Foto" className="w-full h-full object-cover" />
-                    ) : (
-                      <Camera size={32} className="text-gray-400" />
-                    )}
-                  </div>
-                  <button onClick={() => fileRef.current?.click()}
-                    aria-label="Alterar foto de perfil"
-                    className="absolute bottom-1 right-1 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center shadow hover:bg-accent/90 transition-colors">
-                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
-                  </button>
-                  <input ref={fileRef} type="file" accept="image/*" aria-label="Selecionar foto de perfil" className="hidden" onChange={handlePhotoUpload} />
-                </div>
-                <p className="text-xs text-text-muted">{t('perfil.clique_alterar_foto')}</p>
-              </div>
+      {/* Modern Premium Tabs */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setProfileTab('pessoal')}
+          className={`flex-1 py-4 text-center font-bold text-sm transition-all border-b-2 outline-none ${
+            profileTab === 'pessoal'
+              ? 'border-accent text-accent'
+              : 'border-transparent text-text-muted hover:text-text hover:border-gray-300'
+          }`}
+        >
+          {t('perfil.pessoal', 'Perfil Pessoal')}
+        </button>
+        <button
+          onClick={() => setProfileTab('artistico')}
+          className={`flex-1 py-4 text-center font-bold text-sm transition-all border-b-2 outline-none ${
+            profileTab === 'artistico'
+              ? 'border-accent text-accent'
+              : 'border-transparent text-text-muted hover:text-text hover:border-gray-300'
+          }`}
+        >
+          {t('perfil.artistico', 'Perfil Artístico')}
+        </button>
+      </div>
 
-              <div className="w-full space-y-3">
-                <div>
-                  <label htmlFor="perfil-nome" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
-                  <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} onChange={e => set('nome', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div>
-                  <label htmlFor="perfil-nomeArtistico" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_artistico')}</label>
-                  <input id="perfil-nomeArtistico" aria-label={t('perfil.nome_artistico')} value={form.nomeArtistico} onChange={e => set('nomeArtistico', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="perfil-nacionalidade" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nacionalidade')}</label>
-                    <input id="perfil-nacionalidade" aria-label={t('perfil.nacionalidade')} value={form.nacionalidade} onChange={e => set('nacionalidade', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+      {/* Tab 1: PERFIL PESSOAL */}
+      {profileTab === 'pessoal' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Identity + Digital Presence */}
+          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
+            <div className="px-7 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-serif">{t('perfil.identidade_pessoal', 'Identificação Pessoal')}</h2>
+            </div>
+            <div className="p-7">
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Left — Identity */}
+                <div className="flex flex-col items-center md:items-start gap-6 md:w-1/2">
+                  {/* Photo */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="relative w-[120px] h-[120px]">
+                      <div className="w-[120px] h-[120px] rounded-full overflow-hidden bg-gray-100 border-2 border-accent/20 flex items-center justify-center">
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="Foto" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera size={32} className="text-gray-400" />
+                        )}
+                        {isEditing && (
+                          <button onClick={() => fileRef.current?.click()}
+                            aria-label="Alterar foto de perfil"
+                            className="absolute bottom-1 right-1 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center shadow hover:bg-accent/90 transition-colors">
+                            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                          </button>
+                        )}
+                      </div>
+                      <input ref={fileRef} type="file" accept="image/*" aria-label="Selecionar foto de perfil" className="hidden" onChange={handlePhotoUpload} />
+                    </div>
+                    {isEditing && <p className="text-xs text-text-muted">{t('perfil.clique_alterar_foto')}</p>}
                   </div>
-                  <div>
-                    <label htmlFor="perfil-cidade" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.cidade_estado')}</label>
-                    <input id="perfil-cidade" aria-label={t('perfil.cidade_estado')} value={form.cidade} onChange={e => set('cidade', e.target.value)}
-                      placeholder="Rio de Janeiro, RJ"
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+
+                  <div className="w-full space-y-3">
+                    <div>
+                      <label htmlFor="perfil-nome" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
+                      <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} disabled={!isEditing} onChange={e => set('nome', e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="perfil-email" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.email', 'E-mail Profissional')}</label>
+                      <input id="perfil-email" aria-label={t('perfil.email')} type="email" placeholder="email@exemplo.com" value={form.email} disabled={!isEditing} onChange={e => set('email', e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="perfil-telefone" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.telefone', 'Telefone')}</label>
+                        <input id="perfil-telefone" aria-label={t('perfil.telefone')} placeholder="+55 21 99999-9999" value={form.telefone} disabled={!isEditing} onChange={e => set('telefone', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                      </div>
+                      <div>
+                        <label htmlFor="perfil-whatsapp" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.whatsapp', 'WhatsApp')}</label>
+                        <input id="perfil-whatsapp" aria-label={t('perfil.whatsapp')} placeholder="+55 21 99999-9999" value={form.whatsapp} disabled={!isEditing} onChange={e => set('whatsapp', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <AutocompleteInput
+                        id="perfil-nacionalidade"
+                        label={t('perfil.nacionalidade')}
+                        value={form.nacionalidade}
+                        disabled={!isEditing}
+                        onChange={val => set('nacionalidade', val)}
+                        placeholder="Ex: Brasileira"
+                        suggestions={NACIONALIDADE_SUGGESTIONS}
+                      />
+                      <AutocompleteInput
+                        id="perfil-cidade"
+                        label="Residência: (Cidade / Estado / País)"
+                        value={form.cidade}
+                        disabled={!isEditing}
+                        onChange={val => set('cidade', val)}
+                        placeholder="Ex: Rio de Janeiro, RJ, Brasil"
+                        suggestions={RESIDENCIA_SUGGESTIONS}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="perfil-nascimento" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
+                      <input id="perfil-nascimento" aria-label={t('perfil.nascimento')} type="date" value={form.nascimento} disabled={!isEditing} onChange={e => set('nascimento', e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="perfil-nascimento" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
-                  <input id="perfil-nascimento" aria-label={t('perfil.nascimento')} type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+
+                {/* Right — Digital Presence */}
+                <div className="md:w-1/2 space-y-4">
+                  <div>
+                    <label htmlFor="perfil-website" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
+                    <input id="perfil-website" aria-label={t('perfil.website')} value={form.website} disabled={!isEditing} onChange={e => set('website', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm font-bold text-text-muted">{t('perfil.instagram')}</label>
+                      {isEditing && (
+                        <button onClick={() => setInstagrams(ig => [...ig, ''])}
+                          className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
+                          <Plus size={12} /> {t('perfil.adicionar')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {instagrams.map((ig, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} disabled={!isEditing} onChange={e => {
+                            const n = [...instagrams]; n[i] = e.target.value; setInstagrams(n);
+                          }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          {isEditing && (
+                            <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
+                              aria-label="Remover Instagram"
+                              className="text-gray-400 hover:text-red-500 px-2">
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm font-bold text-text-muted">{t('perfil.outros_links')}</label>
+                      {isEditing && (
+                        <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
+                          className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
+                          <Plus size={12} /> {t('perfil.adicionar_campo')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {socialLinks.map(link => (
+                        <div key={link.id} className="flex gap-2">
+                          <input aria-label="Nome do link (ex: LinkedIn)" placeholder="LinkedIn" value={link.label}
+                            disabled={!isEditing}
+                            onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, label: e.target.value} : l))}
+                            className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          <input aria-label="URL do link" placeholder="https://..." value={link.url}
+                            disabled={!isEditing}
+                            onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          {isEditing && (
+                            <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
+                              aria-label="Remover link"
+                              className="text-gray-400 hover:text-red-500 px-2">
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+          </section>
+        </div>
+      )}
 
-            {/* Right — Digital Presence */}
-            <div className="md:w-1/2 space-y-4">
-              <div>
-                <label htmlFor="perfil-website" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
-                <input id="perfil-website" aria-label={t('perfil.website')} value={form.website} onChange={e => set('website', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-              </div>
+      {/* Tab 2: PERFIL ARTÍSTICO */}
+      {profileTab === 'artistico' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Professional Artistic Name */}
+          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden p-7">
+            <div>
+              <label htmlFor="perfil-nomeArtistico" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_artistico', 'Nome Artístico / Profissional')}</label>
+              <input id="perfil-nomeArtistico" aria-label={t('perfil.nome_artistico')} value={form.nomeArtistico} disabled={!isEditing} onChange={e => set('nomeArtistico', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+            </div>
+          </section>
 
+          {/* Bio */}
+          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
+            <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-serif">{t('perfil.biografia')}</h2>
+              {isEditing && (
+                <button onClick={handleGenerateBio}
+                  className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-sm font-bold rounded-lg hover:bg-accent/20 transition-colors">
+                  {generatingBio ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {t('perfil.gerar_bio')}
+                </button>
+              )}
+            </div>
+            <div className="p-7 space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-bold text-text-muted">{t('perfil.instagram')}</label>
-                  <button onClick={() => setInstagrams(ig => [...ig, ''])}
-                    className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                    <Plus size={12} /> {t('perfil.adicionar')}
-                  </button>
+                  <label className="text-sm font-bold text-text-muted">{t('perfil.bio_curta')}</label>
+                  <span className={`text-xs ${wordCount(form.bioShort) > 120 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {wordCount(form.bioShort)}/120 {t('perfil.palavras')}
+                  </span>
                 </div>
-                <div className="space-y-2">
-                  {instagrams.map((ig, i) => (
-                    <div key={i} className="flex gap-2">
-                      <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} onChange={e => {
-                        const n = [...instagrams]; n[i] = e.target.value; setInstagrams(n);
-                      }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
-                        aria-label="Remover Instagram"
-                        className="text-gray-400 hover:text-red-500 px-2">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <textarea value={form.bioShort} disabled={!isEditing} onChange={e => set('bioShort', e.target.value)}
+                  placeholder={t('perfil.usada_capa')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-28 resize-none disabled:opacity-75 disabled:cursor-not-allowed" />
               </div>
-
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-bold text-text-muted">{t('perfil.outros_links')}</label>
-                  <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
-                    className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                    <Plus size={12} /> {t('perfil.adicionar_campo')}
-                  </button>
+                  <label className="text-sm font-bold text-text-muted">{t('perfil.bio_longa')}</label>
+                  <span className="text-xs text-gray-400">{wordCount(form.bioLong)} {t('perfil.palavras')}</span>
                 </div>
-                <div className="space-y-2">
-                  {socialLinks.map(link => (
-                    <div key={link.id} className="flex gap-2">
-                      <input aria-label="Nome do link (ex: LinkedIn)" placeholder="LinkedIn" value={link.label}
-                        onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, label: e.target.value} : l))}
-                        className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      <input aria-label="URL do link" placeholder="https://..." value={link.url}
-                        onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
-                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-                      <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
-                        aria-label="Remover link"
-                        className="text-gray-400 hover:text-red-500 px-2">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <textarea value={form.bioLong} disabled={!isEditing} onChange={e => set('bioLong', e.target.value)}
+                  placeholder={t('perfil.usada_portfolio')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none disabled:opacity-75 disabled:cursor-not-allowed" />
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* Bio */}
-      <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-        <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-serif">{t('perfil.biografia')}</h2>
-          <button onClick={handleGenerateBio}
-            className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-sm font-bold rounded-lg hover:bg-accent/20 transition-colors">
-            {generatingBio ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {t('perfil.gerar_bio')}
-          </button>
-        </div>
-        <div className="p-7 space-y-5">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-bold text-text-muted">{t('perfil.bio_curta')}</label>
-              <span className={`text-xs ${wordCount(form.bioShort) > 120 ? 'text-red-500' : 'text-gray-400'}`}>
-                {wordCount(form.bioShort)}/120 {t('perfil.palavras')}
-              </span>
+          {/* Formação e Trajetória */}
+          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
+            <div className="px-7 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-serif">{t('perfil.formacao_traj')}</h2>
             </div>
-            <textarea value={form.bioShort} onChange={e => set('bioShort', e.target.value)}
-              placeholder={t('perfil.usada_capa')}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-28 resize-none" />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-bold text-text-muted">{t('perfil.bio_longa')}</label>
-              <span className="text-xs text-gray-400">{wordCount(form.bioLong)} {t('perfil.palavras')}</span>
+            <div className="p-7 space-y-7">
+              <AddList title={t('perfil.educacao')} items={formacao} disabled={!isEditing} onChange={setFormacao} t={t} fields={[
+                { key: 'curso', label: t('perfil.curso') },
+                { key: 'instituicao', label: t('perfil.instituicao') },
+                { key: 'anoInicio', label: t('perfil.ano_inicio') },
+                { key: 'anoFim', label: t('perfil.ano_fim') },
+              ]} />
+              <div className="border-t border-gray-100 pt-6">
+                <AddList title={t('perfil.premios_distincoes')} items={premios} disabled={!isEditing} onChange={setPremios} t={t} fields={[
+                  { key: 'nome', label: t('perfil.nome_premio') },
+                  { key: 'instituicao', label: t('perfil.instituicao') },
+                  { key: 'ano', label: t('ano') },
+                ]} />
+              </div>
+              <div className="border-t border-gray-100 pt-6">
+                <AddList title={t('perfil.residencias_artisticas')} items={residencias} disabled={!isEditing} onChange={setResidencias} t={t} fields={[
+                  { key: 'nome', label: t('nome') },
+                  { key: 'local', label: t('perfil.local') },
+                  { key: 'ano', label: t('ano') },
+                ]} />
+              </div>
             </div>
-            <textarea value={form.bioLong} onChange={e => set('bioLong', e.target.value)}
-              placeholder={t('perfil.usada_portfolio')}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none" />
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* Formação e Trajetória */}
-      <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-        <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('perfil.formacao_traj')}</h2>
-        </div>
-        <div className="p-7 space-y-7">
-          <AddList title={t('perfil.educacao')} items={formacao} onChange={setFormacao} t={t} fields={[
-            { key: 'curso', label: t('perfil.curso') },
-            { key: 'instituicao', label: t('perfil.instituicao') },
-            { key: 'anoInicio', label: t('perfil.ano_inicio') },
-            { key: 'anoFim', label: t('perfil.ano_fim') },
-          ]} />
-          <div className="border-t border-gray-100 pt-6">
-            <AddList title={t('perfil.premios_distincoes')} items={premios} onChange={setPremios} t={t} fields={[
-              { key: 'nome', label: t('perfil.nome_premio') },
-              { key: 'instituicao', label: t('perfil.instituicao') },
-              { key: 'ano', label: t('ano') },
-            ]} />
-          </div>
-          <div className="border-t border-gray-100 pt-6">
-            <AddList title={t('perfil.residencias_artisticas')} items={residencias} onChange={setResidencias} t={t} fields={[
-              { key: 'nome', label: t('nome') },
-              { key: 'local', label: t('perfil.local') },
-              { key: 'ano', label: t('ano') },
-            ]} />
-          </div>
-        </div>
-      </section>
+          {/* Exposições */}
+          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
+            <div className="px-7 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-serif">{t('exposicoes')}</h2>
+            </div>
+            <div className="p-7 space-y-7">
+              <AddList title={t('perfil.individuais')} items={exposIndividuais} disabled={!isEditing} onChange={setExposIndividuais} t={t} fields={[
+                { key: 'titulo', label: t('titulo') },
+                { key: 'local', label: t('perfil.galeria_museu') },
+                { key: 'cidade', label: t('perfil.cidade') },
+                { key: 'pais', label: t('perfil.pais') },
+                { key: 'ano', label: t('ano') },
+              ]} />
+              <div className="border-t border-gray-100 pt-6">
+                <AddList title={t('perfil.coletivas')} items={exposColetivas} disabled={!isEditing} onChange={setExposColetivas} t={t} fields={[
+                  { key: 'titulo', label: t('titulo') },
+                  { key: 'local', label: t('perfil.galeria_museu') },
+                  { key: 'cidade', label: t('perfil.cidade') },
+                  { key: 'pais', label: t('perfil.pais') },
+                  { key: 'ano', label: t('ano') },
+                ]} />
+              </div>
+            </div>
+          </section>
 
-      {/* Exposições */}
-      <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-        <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('exposicoes')}</h2>
+          {/* Publicações */}
+          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
+            <div className="px-7 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-serif">{t('perfil.publicacoes')}</h2>
+            </div>
+            <div className="p-7">
+              <AddList title={t('perfil.publicacoes')} items={publicacoes} disabled={!isEditing} onChange={setPublicacoes} t={t} fields={[
+                { key: 'titulo', label: t('titulo') },
+                { key: 'editora', label: t('perfil.editora_veiculo') },
+                { key: 'ano', label: t('ano') },
+                { key: 'link', label: t('perfil.link_opcional') },
+              ]} />
+            </div>
+          </section>
         </div>
-        <div className="p-7 space-y-7">
-          <AddList title={t('perfil.individuais')} items={exposIndividuais} onChange={setExposIndividuais} t={t} fields={[
-            { key: 'titulo', label: t('titulo') },
-            { key: 'local', label: t('perfil.galeria_museu') },
-            { key: 'cidade', label: t('perfil.cidade') },
-            { key: 'pais', label: t('perfil.pais') },
-            { key: 'ano', label: t('ano') },
-          ]} />
-          <div className="border-t border-gray-100 pt-6">
-            <AddList title={t('perfil.coletivas')} items={exposColetivas} onChange={setExposColetivas} t={t} fields={[
-              { key: 'titulo', label: t('titulo') },
-              { key: 'local', label: t('perfil.galeria_museu') },
-              { key: 'cidade', label: t('perfil.cidade') },
-              { key: 'pais', label: t('perfil.pais') },
-              { key: 'ano', label: t('ano') },
-            ]} />
-          </div>
-        </div>
-      </section>
-
-      {/* Publicações */}
-      <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-        <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-serif">{t('perfil.publicacoes')}</h2>
-        </div>
-        <div className="p-7">
-          <AddList title={t('perfil.publicacoes')} items={publicacoes} onChange={setPublicacoes} t={t} fields={[
-            { key: 'titulo', label: t('titulo') },
-            { key: 'editora', label: t('perfil.editora_veiculo') },
-            { key: 'ano', label: t('ano') },
-            { key: 'link', label: t('perfil.link_opcional') },
-          ]} />
-        </div>
-      </section>
+      )}
 
       {/* Fixed Save Button */}
       <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
-        <button onClick={handleSave}
-          className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
-          {saving ? <><Loader2 size={18} className="animate-spin" /> {t('perfil.salvando')}...</> : t('perfil.salvar_perfil')}
-        </button>
+        {!isEditing ? (
+          <button onClick={() => setIsEditing(true)}
+            className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
+            <PenLine size={18} /> {t('perfil.editar_perfil', 'Editar Perfil')}
+          </button>
+        ) : (
+          <div className="flex gap-3 w-full md:w-auto">
+            <button onClick={() => {
+              setIsEditing(false);
+              window.location.reload();
+            }}
+              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-6 py-3 bg-gray-100 text-text-muted hover:text-text-main font-bold rounded-xl transition-all">
+              {t('cancelar', 'Cancelar')}
+            </button>
+            <button onClick={async () => {
+              await handleSave();
+              setIsEditing(false);
+            }}
+              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
+              {saving ? <><Loader2 size={18} className="animate-spin" /> {t('perfil.salvando')}...</> : t('perfil.salvar_perfil')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -165,7 +165,7 @@ const pt = {
       nome_completo: 'Nome completo',
       nome_artistico: 'Nome artístico',
       nacionalidade: 'Nacionalidade',
-      cidade_estado: 'Cidade / Estado',
+      cidade_estado: 'Residência: (Cidade / Estado / País)',
       nascimento: 'Nascimento',
       website: 'Website',
       instagram: 'Instagram',

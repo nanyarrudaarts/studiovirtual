@@ -165,7 +165,7 @@ const en = {
       nome_completo: 'Full name',
       nome_artistico: 'Artistic name',
       nacionalidade: 'Nationality',
-      cidade_estado: 'City / State',
+      cidade_estado: 'Residence: (City / State / Country)',
       nascimento: 'Date of birth',
       website: 'Website',
       instagram: 'Instagram',
