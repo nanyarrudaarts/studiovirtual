@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Database, Globe } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Globe } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 import { callAI, readURLWithJina } from '../services/ai';
@@ -985,71 +985,6 @@ export default function Perfil() {
                         </div>
                       ))}
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Informações de Banco de Dados / Supabase */}
-              <div className="mt-8 pt-6 border-t border-gray-100 space-y-4">
-                <div className="bg-amber-50 rounded-xl p-5 border border-amber-200 flex items-start gap-4">
-                  <div className="bg-amber-100 p-2 rounded-lg text-amber-800 shrink-0">
-                    <Database size={20} />
-                  </div>
-                  <div className="space-y-2 w-full">
-                    <h3 className="text-sm font-bold text-amber-900">Integração de Campos no Supabase</h3>
-                    <p className="text-xs text-amber-800 leading-relaxed">
-                      Se você encontrar algum erro de coluna ao salvar, o seu banco de dados Supabase pode precisar das novas colunas de biografia, identificação e contatos na tabela <strong>artista</strong>. Execute o seguinte comando SQL completo no SQL Editor do seu painel do Supabase:
-                    </p>
-                    <pre className="bg-amber-900/5 text-amber-950 p-3 rounded-lg text-xs font-mono select-all overflow-x-auto block w-full whitespace-pre-wrap break-all leading-normal">
-{`-- Criar ou atualizar a tabela 'artista' para suportar todos os dados do perfil
-CREATE TABLE IF NOT EXISTS artista (
-    id bigint PRIMARY KEY DEFAULT 1,
-    nome text DEFAULT '',
-    "nomeArtistico" text DEFAULT '',
-    nacionalidade text DEFAULT '',
-    cidade text DEFAULT '',
-    nascimento text DEFAULT '',
-    email text DEFAULT '',
-    website text DEFAULT '',
-    "bioShort" text DEFAULT '',
-    "bioLong" text DEFAULT '',
-    tags text DEFAULT '',
-    telefone text DEFAULT '',
-    whatsapp text DEFAULT '',
-    foto_url text DEFAULT '',
-    instagrams jsonb DEFAULT '[]'::jsonb,
-    social_links jsonb DEFAULT '[]'::jsonb,
-    formacao jsonb DEFAULT '[]'::jsonb,
-    premios jsonb DEFAULT '[]'::jsonb,
-    residencias jsonb DEFAULT '[]'::jsonb,
-    expos_individuais jsonb DEFAULT '[]'::jsonb,
-    expos_coletivas jsonb DEFAULT '[]'::jsonb,
-    publicacoes jsonb DEFAULT '[]'::jsonb,
-    updated_at timestamptz DEFAULT now()
-);
-
--- Garantir que todos os campos existam se a tabela já existia
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS "nomeArtistico" text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS nacionalidade text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS cidade text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS nascimento text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS email text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS website text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS "bioShort" text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS "bioLong" text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS tags text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS telefone text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS whatsapp text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS foto_url text DEFAULT '';
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS instagrams jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS social_links jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS formacao jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS premios jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS residencias jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS expos_individuais jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS expos_coletivas jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE artista ADD COLUMN IF NOT EXISTS publicacoes jsonb DEFAULT '[]'::jsonb;`}
-                    </pre>
                   </div>
                 </div>
               </div>
