@@ -128,18 +128,31 @@ export async function updateArtwork(id: string, data: Partial<Artwork>): Promise
   return updated as Artwork;
 }
 
-export async function deleteArtwork(id: string): Promise<void> {
-  const artwork = await getArtwork(id);
-  if (artwork?.artwork_images) {
-    for (const url of artwork.artwork_images) await deleteImage(url);
+export async function deleteArtwork(id: string) {
+  // Delete images from storage first
+  try {
+    const artwork = await getArtwork(id);
+    if (artwork?.artwork_images?.length) {
+      const fileNames = artwork.artwork_images
+        .map((url: string) => url.split('/').pop())
+        .filter(Boolean);
+      if (fileNames.length) {
+        await supabase.storage.from('obras-images').remove(fileNames);
+      }
+    }
+  } catch {
+    // Storage cleanup failed silently — proceed with record delete
   }
   
   // Remove vínculos com séries e coleções para evitar erro de chave estrangeira
   await supabase.from('artworks_series').delete().eq('artwork_id', id);
   await supabase.from('artworks_collections').delete().eq('artwork_id', id);
   
-  const { error } = await supabase.from('artworks').delete().eq('artwork_id', id);
-  if (error) throw error;
+  // Delete the record
+  const { error } = await supabase
+    .from('artworks').delete().eq('artwork_id', id);
+  
+  return { error };
 }
 
 // ─── COLLECTIONS ─────────────────────────────────────────────────────────────

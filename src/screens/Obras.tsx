@@ -30,6 +30,7 @@ export default function Obras() {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [error, setError] = useState('');
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'artwork' | 'series' | 'collection'; title: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -59,24 +60,35 @@ export default function Obras() {
 
   const executeDelete = async () => {
     if (!itemToDelete) return;
+    
+    // Yield to browser immediately so UI can update
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     const { id, type } = itemToDelete;
     setError('');
+    setDeletingId(id);
+    
     try {
       if (type === 'artwork') {
-        await deleteArtwork(id);
-        setArtworks(artworks.filter(a => a.artwork_id !== id));
-        setSelected(null);
+        const { error } = await deleteArtwork(id);
+        if (error) throw error;
+        setArtworks(prev => prev.filter(a => a.artwork_id !== id));
+        if (selected?.artwork_id === id) {
+          setSelected(null);
+        }
       } else if (type === 'series') {
         await deleteSerie(id);
-        setSeries(series.filter(s => s.series_id !== id));
+        setSeries(prev => prev.filter(s => s.series_id !== id));
       } else if (type === 'collection') {
         await deleteCollection(id);
-        setCollections(collections.filter(c => c.collection_id !== id));
+        setCollections(prev => prev.filter(c => c.collection_id !== id));
       }
       setItemToDelete(null);
     } catch (e) {
       setError('Erro ao deletar: ' + (e as Error).message);
       setItemToDelete(null);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -153,7 +165,7 @@ export default function Obras() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredArtworks.map(obra => (
                 <div key={obra.artwork_id} onClick={() => { setSelected(obra); setPhotoIdx(0); }}
-                  className="bg-surface rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md group cursor-pointer transition-all">
+                  className={`bg-surface rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md group cursor-pointer transition-all ${deletingId === obra.artwork_id ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="relative aspect-square bg-gray-100 overflow-hidden">
                     {obra.cover_image || (obra.artwork_images?.[0]) ? (
                       <img src={obra.cover_image || obra.artwork_images![0]} alt={obra.artwork_title}
@@ -182,6 +194,7 @@ export default function Obras() {
                         onClick={(e) => { e.stopPropagation(); handleDelete(obra.artwork_id, obra.artwork_title); }}
                         className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                         aria-label={`Excluir obra ${obra.artwork_title}`}
+                        disabled={deletingId === obra.artwork_id}
                       >
                         <Trash2 size={16} />
                       </button>
