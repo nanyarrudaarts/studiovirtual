@@ -316,7 +316,10 @@ export default function Perfil() {
   const [publicacoes, setPublicacoes] = useState<ListItem[]>([]);
 
   useEffect(() => {
-    supabase.from('artista').select('*').single().then(({ data }) => {
+    supabase.from('artista').select('*').single().then(({ data, error }) => {
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao carregar perfil:', error);
+      }
       if (data) {
         setForm(f => ({ ...f, ...data }));
         if (data.foto_url) setPhotoUrl(data.foto_url);
@@ -339,7 +342,9 @@ export default function Perfil() {
     const ext = file.name.split('.').pop();
     const path = `perfil/foto.${ext}`;
     const { error } = await supabase.storage.from('perfil').upload(path, file, { upsert: true });
-    if (!error) {
+    if (error) {
+      alert('Erro ao enviar foto: ' + error.message);
+    } else {
       const { data: { publicUrl } } = supabase.storage.from('perfil').getPublicUrl(path);
       setPhotoUrl(publicUrl);
     }
@@ -363,7 +368,7 @@ export default function Perfil() {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.from('artista').upsert({
+    const { error } = await supabase.from('artista').upsert({
       id: 1,
       ...form,
       foto_url: photoUrl,
@@ -377,6 +382,11 @@ export default function Perfil() {
       publicacoes,
       updated_at: new Date().toISOString(),
     });
+    if (error) {
+      alert('Erro ao salvar perfil: ' + error.message);
+    } else {
+      alert('Perfil salvo com sucesso!');
+    }
     setSaving(false);
   };
 
