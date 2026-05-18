@@ -455,11 +455,12 @@ function AutocompleteInput({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!value.trim()) {
-      setFiltered([]);
+    const safeVal = (value || '').trim();
+    if (!safeVal) {
+      setFiltered(suggestions);
       return;
     }
-    const query = value.toLowerCase();
+    const query = safeVal.toLowerCase();
     const matches = suggestions.filter(item =>
       item.toLowerCase().includes(query) && item.toLowerCase() !== query
     );
@@ -630,7 +631,18 @@ export default function Perfil() {
         console.error('Erro ao carregar perfil:', error);
       }
       if (data) {
-        setForm(f => ({ ...f, ...data }));
+        // Clean null and undefined values from database response before merging
+        const cleanData: any = {};
+        Object.entries(data).forEach(([key, val]) => {
+          if (val !== null && val !== undefined) {
+            const lowerKey = key.toLowerCase();
+            if (lowerKey === 'nomeartistico') cleanData.nomeArtistico = val;
+            else if (lowerKey === 'bioshort') cleanData.bioShort = val;
+            else if (lowerKey === 'biolong') cleanData.bioLong = val;
+            else cleanData[key] = val;
+          }
+        });
+        setForm(f => ({ ...f, ...cleanData }));
         if (data.foto_url) setPhotoUrl(data.foto_url);
         const ensureArray = (v: any) => {
           if (Array.isArray(v)) return v;
