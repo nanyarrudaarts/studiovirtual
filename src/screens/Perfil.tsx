@@ -363,7 +363,159 @@ ${inputText.substring(0, 50000)}`;
 
 
 
+const NACIONALIDADE_SUGGESTIONS = [
+  "Brasileira",
+  "Brasileiro",
+  "Portuguesa",
+  "Português",
+  "Americana",
+  "Americano",
+  "Italiana",
+  "Italiano",
+  "Espanhola",
+  "Espanhol",
+  "Francesa",
+  "Francês",
+  "Alemã",
+  "Alemão",
+  "Inglesa",
+  "Inglês",
+  "Argentina",
+  "Argentino",
+  "Chilena",
+  "Chileno",
+  "Uruguaia",
+  "Uruguaio",
+  "Canadense",
+  "Japonesa",
+  "Japonês",
+  "Chinesa",
+  "Chinês",
+  "Mexicana",
+  "Mexicano",
+  "Colombiana",
+  "Colombiano"
+];
+
+const RESIDENCIA_SUGGESTIONS = [
+  "Rio de Janeiro, RJ, Brasil",
+  "São Paulo, SP, Brasil",
+  "Belo Horizonte, MG, Brasil",
+  "Porto Alegre, RS, Brasil",
+  "Curitiba, PR, Brasil",
+  "Salvador, BA, Brasil",
+  "Recife, PE, Brasil",
+  "Fortaleza, CE, Brasil",
+  "Brasília, DF, Brasil",
+  "Florianópolis, SC, Brasil",
+  "Vitória, ES, Brasil",
+  "Goiânia, GO, Brasil",
+  "Manaus, AM, Brasil",
+  "Belém, PA, Brasil",
+  "Lisboa, Portugal",
+  "Porto, Portugal",
+  "Coimbra, Portugal",
+  "Braga, Portugal",
+  "Faro, Portugal",
+  "Funchal, Madeira, Portugal",
+  "Ponta Delgada, Açores, Portugal",
+  "Madrid, Espanha",
+  "Barcelona, Espanha",
+  "Paris, França",
+  "Berlim, Alemanha",
+  "Londres, Reino Unido",
+  "Roma, Itália",
+  "Milão, Itália",
+  "Nova York, NY, EUA",
+  "Miami, FL, EUA",
+  "Los Angeles, CA, EUA",
+  "Tóquio, Japão",
+  "Buenos Aires, Argentina"
+];
+
+function AutocompleteInput({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  suggestions,
+  className = ""
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  suggestions: string[];
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filtered, setFiltered] = useState<string[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!value.trim()) {
+      setFiltered([]);
+      return;
+    }
+    const query = value.toLowerCase();
+    const matches = suggestions.filter(item =>
+      item.toLowerCase().includes(query) && item.toLowerCase() !== query
+    );
+    setFiltered(matches);
+  }, [value, suggestions]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <label htmlFor={id} className="block text-sm font-bold text-text-muted mb-1">{label}</label>
+      <input
+        id={id}
+        aria-label={label}
+        value={value}
+        onChange={e => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder={placeholder}
+        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main"
+        autoComplete="off"
+      />
+      {isOpen && filtered.length > 0 && (
+        <ul className="absolute z-[999] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-50">
+          {filtered.map((item, idx) => (
+            <li key={idx}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(item);
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-white transition-colors"
+              >
+                {item}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 interface ListItem {
+
   id: string;
   [key: string]: string;
 }
@@ -458,7 +610,10 @@ export default function Perfil() {
     bioShort: '',
     bioLong: '',
     tags: '',
+    telefone: '',
+    whatsapp: '',
   });
+
 
   const [instagrams, setInstagrams] = useState(['@nany_arruda', '@nanyarrudaart']);
   const [socialLinks, setSocialLinks] = useState<{id:string; label:string; url:string}[]>([]);
@@ -547,20 +702,19 @@ export default function Perfil() {
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from('artista').upsert(payload);
+    let { error } = await supabase.from('artista').upsert(payload);
     
     if (error) {
-      const isMissingEmailColumn = error.message?.includes('email') || error.code === '42703' || error.hint?.includes('email');
-      
-      if (isMissingEmailColumn) {
-        console.warn('Coluna "email" não encontrada. Tentando salvar sem o campo de e-mail...');
-        const { email, ...payloadWithoutEmail } = payload;
-        const { error: retryError } = await supabase.from('artista').upsert(payloadWithoutEmail);
+      const isMissingColumn = error.code === '42703' || error.message?.toLowerCase().includes('column') || error.hint?.toLowerCase().includes('column');
+      if (isMissingColumn) {
+        console.warn('Alguma coluna nova não existe no banco. Tentando salvar sem e-mail, telefone e whatsapp...');
+        const { email, telefone, whatsapp, ...safePayload } = payload;
+        const { error: retryError } = await supabase.from('artista').upsert(safePayload);
         
         if (retryError) {
           alert('Erro ao salvar perfil: ' + retryError.message);
         } else {
-          alert('Perfil salvo com sucesso! (Nota: O campo "E-mail" não pôde ser salvo no banco. Execute o script SQL exibido no aviso de e-mail no seu painel Supabase para ativá-lo).');
+          alert('Perfil salvo com sucesso! (Nota: O campo de e-mail, telefone ou whatsapp não pôde ser gravado no banco. Execute a instrução SQL no final do painel de controle do perfil no Supabase para ativá-los definitivamente).');
         }
       } else {
         alert('Erro ao salvar perfil: ' + error.message);
@@ -577,7 +731,7 @@ export default function Perfil() {
   const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
   const handleImport = (data: ImportedData) => {
-    const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'email', 'bioShort', 'bioLong', 'website'] as const;
+    const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'email', 'bioShort', 'bioLong', 'website', 'telefone', 'whatsapp'] as const;
     strKeys.forEach(k => { if (data[k]) setForm(f => ({ ...f, [k]: String(data[k]) })); });
     if (Array.isArray(data.instagrams)) {
       setInstagrams(prev => Array.from(new Set([...prev, ...(data.instagrams as string[])])));
@@ -662,32 +816,51 @@ export default function Perfil() {
                     <div>
                       <label htmlFor="perfil-nome" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
                       <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} onChange={e => set('nome', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                     </div>
                     
                     <div>
                       <label htmlFor="perfil-email" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.email', 'E-mail Profissional')}</label>
                       <input id="perfil-email" aria-label={t('perfil.email')} type="email" placeholder="email@exemplo.com" value={form.email} onChange={e => set('email', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="perfil-nacionalidade" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nacionalidade')}</label>
-                        <input id="perfil-nacionalidade" aria-label={t('perfil.nacionalidade')} value={form.nacionalidade} onChange={e => set('nacionalidade', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                        <label htmlFor="perfil-telefone" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.telefone', 'Telefone')}</label>
+                        <input id="perfil-telefone" aria-label={t('perfil.telefone')} placeholder="+55 21 99999-9999" value={form.telefone} onChange={e => set('telefone', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                       </div>
                       <div>
-                        <label htmlFor="perfil-cidade" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.cidade_estado')}</label>
-                        <input id="perfil-cidade" aria-label={t('perfil.cidade_estado')} value={form.cidade} onChange={e => set('cidade', e.target.value)}
-                          placeholder="Rio de Janeiro, RJ"
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                        <label htmlFor="perfil-whatsapp" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.whatsapp', 'WhatsApp')}</label>
+                        <input id="perfil-whatsapp" aria-label={t('perfil.whatsapp')} placeholder="+55 21 99999-9999" value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <AutocompleteInput
+                        id="perfil-nacionalidade"
+                        label={t('perfil.nacionalidade')}
+                        value={form.nacionalidade}
+                        onChange={val => set('nacionalidade', val)}
+                        placeholder="Ex: Brasileira"
+                        suggestions={NACIONALIDADE_SUGGESTIONS}
+                      />
+                      <AutocompleteInput
+                        id="perfil-cidade"
+                        label="Residência: (Cidade / Estado / País)"
+                        value={form.cidade}
+                        onChange={val => set('cidade', val)}
+                        placeholder="Ex: Rio de Janeiro, RJ, Brasil"
+                        suggestions={RESIDENCIA_SUGGESTIONS}
+                      />
+                    </div>
+
                     <div>
                       <label htmlFor="perfil-nascimento" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
                       <input id="perfil-nascimento" aria-label={t('perfil.nascimento')} type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                     </div>
                   </div>
                 </div>
@@ -697,7 +870,7 @@ export default function Perfil() {
                   <div>
                     <label htmlFor="perfil-website" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
                     <input id="perfil-website" aria-label={t('perfil.website')} value={form.website} onChange={e => set('website', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                   </div>
 
                   <div>
@@ -713,7 +886,7 @@ export default function Perfil() {
                         <div key={i} className="flex gap-2">
                           <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} onChange={e => {
                             const n = [...instagrams]; n[i] = e.target.value; setInstagrams(n);
-                          }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                          }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                           <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
                             aria-label="Remover Instagram"
                             className="text-gray-400 hover:text-red-500 px-2">
@@ -737,10 +910,10 @@ export default function Perfil() {
                         <div key={link.id} className="flex gap-2">
                           <input aria-label="Nome do link (ex: LinkedIn)" placeholder="LinkedIn" value={link.label}
                             onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, label: e.target.value} : l))}
-                            className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                            className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                           <input aria-label="URL do link" placeholder="https://..." value={link.url}
                             onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
-                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
                           <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
                             aria-label="Remover link"
                             className="text-gray-400 hover:text-red-500 px-2">
@@ -759,13 +932,60 @@ export default function Perfil() {
                   <div className="bg-amber-100 p-2 rounded-lg text-amber-800 shrink-0">
                     <Database size={20} />
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-bold text-amber-900">Integração do Campo "E-mail" no Supabase</h3>
+                  <div className="space-y-2 w-full">
+                    <h3 className="text-sm font-bold text-amber-900">Integração de Campos no Supabase</h3>
                     <p className="text-xs text-amber-800 leading-relaxed">
-                      Se você encontrar um erro ao salvar, o seu banco de dados Supabase pode não ter a coluna <strong>email</strong> na tabela <strong>artista</strong>. Para ativá-lo definitivamente, execute o seguinte comando no seu painel do Supabase (SQL Editor):
+                      Se você encontrar algum erro de coluna ao salvar, o seu banco de dados Supabase pode precisar das novas colunas de biografia, identificação e contatos na tabela <strong>artista</strong>. Execute o seguinte comando SQL completo no SQL Editor do seu painel do Supabase:
                     </p>
-                    <pre className="bg-amber-900/5 text-amber-950 p-3 rounded-lg text-xs font-mono select-all overflow-x-auto">
-                      ALTER TABLE artista ADD COLUMN IF NOT EXISTS email text DEFAULT '';
+                    <pre className="bg-amber-900/5 text-amber-950 p-3 rounded-lg text-xs font-mono select-all overflow-x-auto block w-full whitespace-pre-wrap break-all leading-normal">
+{`-- Criar ou atualizar a tabela 'artista' para suportar todos os dados do perfil
+CREATE TABLE IF NOT EXISTS artista (
+    id bigint PRIMARY KEY DEFAULT 1,
+    nome text DEFAULT '',
+    "nomeArtistico" text DEFAULT '',
+    nacionalidade text DEFAULT '',
+    cidade text DEFAULT '',
+    nascimento text DEFAULT '',
+    email text DEFAULT '',
+    website text DEFAULT '',
+    "bioShort" text DEFAULT '',
+    "bioLong" text DEFAULT '',
+    tags text DEFAULT '',
+    telefone text DEFAULT '',
+    whatsapp text DEFAULT '',
+    foto_url text DEFAULT '',
+    instagrams jsonb DEFAULT '[]'::jsonb,
+    social_links jsonb DEFAULT '[]'::jsonb,
+    formacao jsonb DEFAULT '[]'::jsonb,
+    premios jsonb DEFAULT '[]'::jsonb,
+    residencias jsonb DEFAULT '[]'::jsonb,
+    expos_individuais jsonb DEFAULT '[]'::jsonb,
+    expos_coletivas jsonb DEFAULT '[]'::jsonb,
+    publicacoes jsonb DEFAULT '[]'::jsonb,
+    updated_at timestamptz DEFAULT now()
+);
+
+-- Garantir que todos os campos existam se a tabela já existia
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS "nomeArtistico" text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS nacionalidade text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS cidade text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS nascimento text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS email text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS website text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS "bioShort" text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS "bioLong" text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS tags text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS telefone text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS whatsapp text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS foto_url text DEFAULT '';
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS instagrams jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS social_links jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS formacao jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS premios jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS residencias jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS expos_individuais jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS expos_coletivas jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE artista ADD COLUMN IF NOT EXISTS publicacoes jsonb DEFAULT '[]'::jsonb;`}
                     </pre>
                   </div>
                 </div>

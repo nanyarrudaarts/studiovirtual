@@ -59,6 +59,12 @@ export default function Upload() {
     tecnicas: '', materiais: '', suportes: '', linguagens: '',
     codigoInterno: '', tagsCuratoriais: '',
     direitosAutorais: '', certificados: '', documentosAnexos: '', historicoExpositivo: '',
+    // Recursos interdisciplinares, blockchain e certificados
+    recursosHibridos: '',
+    suporteDigital: '',
+    hashBlockchain: '',
+    redeBlockchain: 'Ethereum',
+    registroCertificado: '',
   });
 
   const [photos, setPhotos] = useState<PhotoSlot[]>(Array.from({length:5},()=>({file:null,url:'',label:'',w:0,h:0})));
@@ -129,6 +135,11 @@ export default function Upload() {
               possuiTermo: extraData.possuiTermo || false,
               possuiCOA: extraData.possuiCOA || false,
               possuiCessao: extraData.possuiCessao || false,
+              recursosHibridos: extraData.recursosHibridos || '',
+              suporteDigital: extraData.suporteDigital || '',
+              hashBlockchain: extraData.hashBlockchain || '',
+              redeBlockchain: extraData.redeBlockchain || 'Ethereum',
+              registroCertificado: extraData.registroCertificado || '',
             }));
             
             if (artwork.artwork_images && artwork.artwork_images.length > 0) {
@@ -161,9 +172,21 @@ export default function Upload() {
     setAiLoading(true);
     try {
       setAiPhase('Extraindo dados com IA...');
-      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'groq');
+      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":"","recursosHibridos":"","suporteDigital":"","registroCertificado":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'groq');
       const d = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
-      setFormData(f => ({ ...f, titulo: d.titulo||f.titulo, ano: d.ano||f.ano, tecnica: d.tecnica||f.tecnica, suporte: d.suporte||f.suporte, narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial, sentencaResumo: d.sentencaResumo||f.sentencaResumo, autoria: d.autoria||f.autoria }));
+      setFormData(f => ({
+        ...f,
+        titulo: d.titulo||f.titulo,
+        ano: d.ano||f.ano,
+        tecnica: d.tecnica||f.tecnica,
+        suporte: d.suporte||f.suporte,
+        narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial,
+        sentencaResumo: d.sentencaResumo||f.sentencaResumo,
+        autoria: d.autoria||f.autoria,
+        recursosHibridos: d.recursosHibridos||f.recursosHibridos,
+        suporteDigital: d.suporteDigital||f.suporteDigital,
+        registroCertificado: d.registroCertificado||f.registroCertificado,
+      }));
       setIaMode(false); setAiInput('');
     } catch (e: unknown) { alert('Erro IA: ' + ((e as Error).message)); }
     finally { setAiLoading(false); setAiPhase(''); }
@@ -204,6 +227,11 @@ export default function Upload() {
         possuiTermo: formData.possuiTermo,
         possuiCOA: formData.possuiCOA,
         possuiCessao: formData.possuiCessao,
+        recursosHibridos: formData.recursosHibridos,
+        suporteDigital: formData.suporteDigital,
+        hashBlockchain: formData.hashBlockchain,
+        redeBlockchain: formData.redeBlockchain,
+        registroCertificado: formData.registroCertificado,
       };
 
       await saveArtwork({
@@ -450,6 +478,65 @@ export default function Upload() {
                         <label htmlFor="possuiCessao" className="text-sm font-medium">Cessão de Direitos de Imagem/Voz</label>
                       </div>
                     </div>)}
+
+                    {/* Recursos Interdisciplinares e Blockchain */}
+                    {sec('V', 'Recursos Interdisciplinares & Autenticação Digital (Blockchain)', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {inp('Recursos Híbridos / Multimídia (ex: Instalação sonora)', 'recursosHibridos')}
+                      {inp('Suporte Digital / Mídia (ex: NFT, Custom Software)', 'suporteDigital')}
+                      {inp('Registro / Hash do Smart Contract (Blockchain)', 'hashBlockchain')}
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="inp-redeBlockchain" className="block text-xs font-bold text-text-muted mb-1">Rede Blockchain</label>
+                        <select id="inp-redeBlockchain" value={formData.redeBlockchain} onChange={e=>setFormData({...formData, redeBlockchain: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                          <option value="Ethereum">Ethereum</option>
+                          <option value="Tezos">Tezos</option>
+                          <option value="Solana">Solana</option>
+                          <option value="Polygon">Polygon</option>
+                          <option value="Outra / L2">Outra / L2</option>
+                        </select>
+                      </div>
+                      {inp('Código do Certificado (COA ID)', 'registroCertificado', {span2: true})}
+                    </div>)}
+
+                    {/* Wall Label Preview Section */}
+                    <section className="border-t border-gray-100 pt-8 mt-8">
+                      <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4">Etiqueta de Parede (Museum Standard Label)</p>
+                      <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="space-y-2 max-w-md font-serif text-text-main bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group overflow-hidden">
+                          <div className="absolute top-0 right-0 bg-accent/10 text-accent text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-bl">
+                            WALL LABEL PREVIEW
+                          </div>
+                          <p className="font-bold text-base">{formData.autoria || 'Nany Arruda'}</p>
+                          <p className="text-sm italic font-medium">
+                            {formData.titulo || 'Sem Título'}
+                            <span className="not-italic font-normal">{formData.ano ? `, ${formData.ano}` : ''}</span>
+                          </p>
+                          <p className="text-xs font-sans text-text-muted">
+                            {formData.tecnica || 'Técnica Mista'}
+                            {formData.suporte ? ` sobre ${formData.suporte}` : ''}
+                          </p>
+                          {[formData.dimensaoH, formData.dimensaoW, formData.dimensaoD].filter(Boolean).length > 0 && (
+                            <p className="text-xs font-sans text-text-muted">
+                              {[formData.dimensaoH, formData.dimensaoW, formData.dimensaoD].filter(Boolean).join(' × ')} {formData.dimensaoUnidade || 'cm'}
+                            </p>
+                          )}
+                          {formData.numeroRegistro && (
+                            <p className="text-[10px] font-sans text-text-muted mt-2 bg-gray-100 px-1.5 py-0.5 rounded inline-block">
+                              Inv. Reg: {formData.numeroRegistro}
+                            </p>
+                          )}
+                          {formData.hashBlockchain && (
+                            <p className="text-[10px] font-sans text-accent mt-2 bg-accent/5 px-1.5 py-0.5 rounded inline-block ml-2">
+                              ⛓️ {formData.redeBlockchain}: {formData.hashBlockchain.slice(0, 8)}...
+                            </p>
+                          )}
+                        </div>
+                        <div className="max-w-xs space-y-2 text-sm text-text-muted">
+                          <p className="font-bold text-text-main">Ficha Curatorial Dinâmica</p>
+                          <p>Esta etiqueta é gerada em tempo real seguindo o padrão internacional de identificação de acervo (Object ID).</p>
+                          <p>Ela reflete exatamente as informações que serão geradas no Dossiê PDF da obra.</p>
+                        </div>
+                      </div>
+                    </section>
                   </div>
                 )}
 

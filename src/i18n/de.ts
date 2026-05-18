@@ -165,7 +165,7 @@ const de = {
       nome_completo: 'Vollständiger Name',
       nome_artistico: 'Künstlername',
       nacionalidade: 'Nationalität',
-      cidade_estado: 'Stadt / Bundesland',
+      cidade_estado: 'Wohnort: (Stadt / Bundesland / Land)',
       nascimento: 'Geburtsdatum',
       website: 'Website',
       instagram: 'Instagram',
