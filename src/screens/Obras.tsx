@@ -29,6 +29,7 @@ export default function Obras() {
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [error, setError] = useState('');
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'artwork' | 'series' | 'collection'; title: string } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -44,37 +45,38 @@ export default function Obras() {
     }).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja deletar esta obra? Esta ação não pode ser desfeita.')) return;
-    try {
-      await deleteArtwork(id);
-      setArtworks(artworks.filter(a => a.artwork_id !== id));
-      setSelected(null);
-      alert('✅ Obra deletada com sucesso!');
-    } catch (e) {
-      alert('Erro ao deletar: ' + (e as Error).message);
-    }
+  const handleDelete = (id: string, title: string) => {
+    setItemToDelete({ id, type: 'artwork', title });
   };
 
-  const handleDeleteSerie = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja deletar esta série? Esta ação não pode ser desfeita.')) return;
-    try {
-      await deleteSerie(id);
-      setSeries(series.filter(s => s.series_id !== id));
-      alert('✅ Série deletada com sucesso!');
-    } catch (e) {
-      alert('Erro ao deletar: ' + (e as Error).message);
-    }
+  const handleDeleteSerie = (id: string, title: string) => {
+    setItemToDelete({ id, type: 'series', title });
   };
 
-  const handleDeleteCollection = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja deletar esta coleção? Esta ação não pode ser desfeita.')) return;
+  const handleDeleteCollection = (id: string, title: string) => {
+    setItemToDelete({ id, type: 'collection', title });
+  };
+
+  const executeDelete = async () => {
+    if (!itemToDelete) return;
+    const { id, type } = itemToDelete;
+    setError('');
     try {
-      await deleteCollection(id);
-      setCollections(collections.filter(c => c.collection_id !== id));
-      alert('✅ Coleção deletada com sucesso!');
+      if (type === 'artwork') {
+        await deleteArtwork(id);
+        setArtworks(artworks.filter(a => a.artwork_id !== id));
+        setSelected(null);
+      } else if (type === 'series') {
+        await deleteSerie(id);
+        setSeries(series.filter(s => s.series_id !== id));
+      } else if (type === 'collection') {
+        await deleteCollection(id);
+        setCollections(collections.filter(c => c.collection_id !== id));
+      }
+      setItemToDelete(null);
     } catch (e) {
-      alert('Erro ao deletar: ' + (e as Error).message);
+      setError('Erro ao deletar: ' + (e as Error).message);
+      setItemToDelete(null);
     }
   };
 
@@ -177,8 +179,9 @@ export default function Obras() {
                         <h3 className="font-serif text-lg text-text-main leading-snug">{obra.artwork_title}</h3>
                       </div>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(obra.artwork_id); }}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(obra.artwork_id, obra.artwork_title); }}
                         className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label={`Excluir obra ${obra.artwork_title}`}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -214,14 +217,19 @@ export default function Obras() {
               {filteredSeries.map(s => (
                 <div key={s.series_id}
                   className="bg-surface rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                  <div className="h-2" style={{ background: s.cor }} />
+                  <style>{`
+                    #series-bar-${s.series_id} { background-color: ${s.cor}; }
+                    #series-bg-${s.series_id} { background-color: ${s.cor}15; }
+                    #series-icon-${s.series_id} { color: ${s.cor}; }
+                  `}</style>
+                  <div id={`series-bar-${s.series_id}`} className="h-2" />
                   <div className="aspect-video bg-gray-100 overflow-hidden relative">
                     {s.cover_image ? (
                       <img src={s.cover_image} alt={s.series_title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ background: s.cor + '15' }}>
-                        <Layers size={40} style={{ color: s.cor }} />
+                      <div id={`series-bg-${s.series_id}`} className="w-full h-full flex items-center justify-center">
+                        <Layers size={40} id={`series-icon-${s.series_id}`} />
                       </div>
                     )}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
@@ -236,8 +244,9 @@ export default function Obras() {
                           <span className="text-xs font-mono text-text-muted mt-1">#{s.series_number}</span>
                         )}
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteSerie(s.series_id); }}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSerie(s.series_id, s.series_title); }}
                           className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                          aria-label={`Excluir série ${s.series_title}`}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -291,8 +300,9 @@ export default function Obras() {
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-serif text-xl text-text-main">{c.collection_name}</h3>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.collection_id); }}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.collection_id, c.collection_name); }}
                         className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label={`Excluir coleção ${c.collection_name}`}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -335,7 +345,7 @@ export default function Obras() {
                 <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${STATUS_COLOR[selected.sale_status] ?? ''}`}>
                   {STATUS_LABEL[selected.sale_status]}
                 </span>
-                <button aria-label="Deletar" onClick={() => handleDelete(selected.artwork_id)} className="p-2 rounded-xl hover:bg-red-100 text-red-600"><Trash2 size={20} /></button>
+                <button aria-label="Deletar" onClick={() => handleDelete(selected.artwork_id, selected.artwork_title)} className="p-2 rounded-xl hover:bg-red-100 text-red-600"><Trash2 size={20} /></button>
                 <button aria-label="Fechar" onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-gray-100"><X size={20} /></button>
               </div>
             </div>
@@ -415,6 +425,35 @@ export default function Obras() {
               </button>
               <button className="flex-1 py-2.5 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent/90 transition-all">
                 Exportar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl text-text-main">Deletar {itemToDelete.type === 'artwork' ? 'Obra' : itemToDelete.type === 'series' ? 'Série' : 'Coleção'}</h3>
+                <p className="text-sm text-text-muted mt-1">
+                  Tem certeza que deseja deletar <strong>{itemToDelete.title}</strong>? Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setItemToDelete(null)}
+                className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={executeDelete}
+                className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">
+                Confirmar
               </button>
             </div>
           </div>

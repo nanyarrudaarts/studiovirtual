@@ -239,27 +239,30 @@ export default function Upload() {
     setStep(step - 1);
   };
 
-  const inp = (label: string, field: string, opts?: {span2?: boolean; rows?: number; font?: string}) => (
-    <div className={opts?.span2 ? 'md:col-span-2' : ''}>
-      <label className="block text-xs font-bold text-text-muted mb-1">{label}</label>
-      {opts?.rows ? (
-        <textarea value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
-      ) : (
-        <input type="text" value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.font || ''}`} />
-      )}
-    </div>
-  );
+  const inp = (label: string, field: string, opts?: {span2?: boolean; rows?: number; font?: string}) => {
+    const id = `inp-${field}`;
+    return (
+      <div className={opts?.span2 ? 'md:col-span-2' : ''}>
+        <label htmlFor={id} className="block text-xs font-bold text-text-muted mb-1">{label}</label>
+        {opts?.rows ? (
+          <textarea id={id} value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
+        ) : (
+          <input id={id} type="text" value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.font || ''}`} />
+        )}
+      </div>
+    );
+  };
 
   const dimInput = () => (
     <div>
       <label className="block text-xs font-bold text-text-muted mb-1">Dimensões (H × L × P)</label>
       <div className="flex gap-1 items-center">
-        <input type="text" placeholder="H" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <input type="text" placeholder="H" aria-label="Altura" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
         <span className="text-gray-400">×</span>
-        <input type="text" placeholder="L" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <input type="text" placeholder="L" aria-label="Largura" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
         <span className="text-gray-400">×</span>
-        <input type="text" placeholder="P" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-        <select value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg"><option>cm</option><option>in</option></select>
+        <input type="text" placeholder="P" aria-label="Profundidade" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <select aria-label="Unidade de medida" value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg"><option>cm</option><option>in</option></select>
       </div>
     </div>
   );
@@ -342,14 +345,14 @@ export default function Upload() {
 
             {!formData.isNewHierarchy && (
               <div className="mt-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
-                <label className="block text-sm font-bold text-text-main mb-2">Selecione</label>
+                <label htmlFor="parent-selector" className="block text-sm font-bold text-text-main mb-2">Selecione</label>
                 {formData.classificacao === 'serie' ? (
-                  <select value={formData.parentSeriesId} onChange={e => setFormData({...formData, parentSeriesId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
+                  <select id="parent-selector" value={formData.parentSeriesId} onChange={e => setFormData({...formData, parentSeriesId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
                     <option value="">Selecione uma série...</option>
                     {seriesList.map(s => <option key={s.id} value={s.id}>{s.series_title}</option>)}
                   </select>
                 ) : (
-                  <select value={formData.parentCollectionId} onChange={e => setFormData({...formData, parentCollectionId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
+                  <select id="parent-selector" value={formData.parentCollectionId} onChange={e => setFormData({...formData, parentCollectionId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
                     <option value="">Selecione uma coleção...</option>
                     {collections.map(c => <option key={c.id} value={c.id}>{c.collection_name}</option>)}
                   </select>
@@ -377,7 +380,7 @@ export default function Upload() {
                 <h3 className="text-lg font-serif mb-4">Imagem Principal</h3>
                 <div className="space-y-3">
                   <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-white hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
-                    <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} />
+                    <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" aria-label="Upload imagem principal" onChange={e=>handlePhotoSlot(0,e)} />
                     {photos[0].url ? (
                       <div className="relative w-full h-full">
                         <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
@@ -392,7 +395,7 @@ export default function Upload() {
                   <div className="grid grid-cols-4 gap-3">
                     {[1,2,3,4].map(i=>(
                       <div key={i} className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-white hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
-                        <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(i,e)} />
+                        <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" aria-label={`Upload imagem ${i+1}`} onChange={e=>handlePhotoSlot(i,e)} />
                         {photos[i].url ? <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /> : <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>}
                       </div>
                     ))}
@@ -427,16 +430,16 @@ export default function Upload() {
                     {/* Documentação Jurídica */}
                     {sec('IV', 'Documentação Jurídica Associada', <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={formData.possuiTermo} onChange={e=>setFormData({...formData, possuiTermo: e.target.checked})} className="rounded text-accent focus:ring-accent" />
-                        <label className="text-sm font-medium">Termo de Doação/Compra assinado</label>
+                        <input id="possuiTermo" type="checkbox" checked={formData.possuiTermo} onChange={e=>setFormData({...formData, possuiTermo: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label htmlFor="possuiTermo" className="text-sm font-medium">Termo de Doação/Compra assinado</label>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={formData.possuiCOA} onChange={e=>setFormData({...formData, possuiCOA: e.target.checked})} className="rounded text-accent focus:ring-accent" />
-                        <label className="text-sm font-medium">Certificado de Autenticidade (COA)</label>
+                        <input id="possuiCOA" type="checkbox" checked={formData.possuiCOA} onChange={e=>setFormData({...formData, possuiCOA: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label htmlFor="possuiCOA" className="text-sm font-medium">Certificado de Autenticidade (COA)</label>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={formData.possuiCessao} onChange={e=>setFormData({...formData, possuiCessao: e.target.checked})} className="rounded text-accent focus:ring-accent" />
-                        <label className="text-sm font-medium">Cessão de Direitos de Imagem/Voz</label>
+                        <input id="possuiCessao" type="checkbox" checked={formData.possuiCessao} onChange={e=>setFormData({...formData, possuiCessao: e.target.checked})} className="rounded text-accent focus:ring-accent" />
+                        <label htmlFor="possuiCessao" className="text-sm font-medium">Cessão de Direitos de Imagem/Voz</label>
                       </div>
                     </div>)}
                   </div>
@@ -448,8 +451,9 @@ export default function Upload() {
                     {sec('I', 'Ficha de Série', 
                       <div className="grid grid-cols-1 gap-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-sm font-medium">Nome da Coleção ou Fundo</label>
+                          <label htmlFor="series-parent-collection" className="text-sm font-medium">Nome da Coleção ou Fundo</label>
                           <select 
+                            id="series-parent-collection"
                             value={formData.parentCollectionId} 
                             onChange={e => setFormData({...formData, parentCollectionId: e.target.value})}
                             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all text-sm"
