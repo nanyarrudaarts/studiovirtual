@@ -765,40 +765,36 @@ export default function Perfil() {
 
   const handleSave = async () => {
     setSaving(true);
-    const payload: Record<string, unknown> = {
+    
+    const payload = {
       id: 1,
-      ...form,
+      nome: form.nome,
+      nacionalidade: form.nacionalidade,
+      cidade: form.cidade,
+      nascimento: form.nascimento,
+      email: form.email,
+      website: form.website,
+      nomeartistico: form.nomeArtistico,
+      bioshort: form.bioShort,
+      biolong: form.bioLong,
+      tags: form.tags,
+      telefone: form.telefone,
+      whatsapp: form.whatsapp,
       foto_url: photoUrl,
-      instagrams,
+      instagrams: instagrams,
       social_links: socialLinks,
-      formacao,
-      premios,
-      residencias,
+      formacao: formacao,
+      premios: premios,
+      residencias: residencias,
       expos_individuais: exposIndividuais,
       expos_coletivas: exposColetivas,
-      publicacoes,
+      publicacoes: publicacoes,
       updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase.from('artista').upsert(payload);
-    
     if (error) {
-      const isMissingColumn = error.code === '42703' || error.message?.toLowerCase().includes('column') || error.hint?.toLowerCase().includes('column');
-      if (isMissingColumn) {
-        const safePayload = { ...payload };
-        delete safePayload.email;
-        delete safePayload.telefone;
-        delete safePayload.whatsapp;
-        const { error: retryError } = await supabase.from('artista').upsert(safePayload);
-        
-        if (retryError) {
-          alert('Erro ao salvar perfil: ' + retryError.message);
-        } else {
-          alert('Perfil salvo com sucesso! (Nota: O campo de e-mail, telefone ou whatsapp não pôde ser gravado no banco. Execute a instrução SQL no final do painel de controle do perfil no Supabase para ativá-los definitivamente).');
-        }
-      } else {
-        alert('Erro ao salvar perfil: ' + error.message);
-      }
+      alert('Erro ao salvar perfil: ' + error.message);
     } else {
       alert('Perfil salvo com sucesso!');
     }
