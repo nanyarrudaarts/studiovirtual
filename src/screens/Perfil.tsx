@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Database } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
@@ -42,18 +42,19 @@ function DiffPreview({ current, imported, onApply, t }: {
   current: Record<string, unknown>;
   imported: ImportedData;
   onApply: (selected: ImportedData) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: string) => string;
 }) {
+  const [prevImported, setPrevImported] = useState<ImportedData | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const keys = Object.keys(imported).filter(k => imported[k] !== undefined && imported[k] !== null && imported[k] !== '');
 
-  useEffect(() => {
+  if (imported !== prevImported) {
+    setPrevImported(imported);
     const initial: Record<string, boolean> = {};
     keys.forEach(k => { initial[k] = true; });
     setChecked(initial);
-  }, [imported]);
+  }
 
   const toggle = (k: string) => setChecked(c => ({ ...c, [k]: !c[k] }));
 
@@ -181,7 +182,7 @@ async function extractTextFromPDF(base64Data: string) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    const pageText = textContent.items.map((item: unknown) => (item as { str: string }).str).join(' ');
     fullText += pageText + '\n';
   }
   return fullText;
@@ -191,7 +192,6 @@ async function extractTextFromPDF(base64Data: string) {
 function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
   onImport: (data: ImportedData) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: string) => string;
 }) {
   const [tab, setTab] = useState<'text' | 'pdf'>('text');
@@ -289,8 +289,9 @@ ${inputText.substring(0, 50000)}`;
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-text-muted whitespace-nowrap">Seção para preencher:</span>
+            <label htmlFor="section-select" className="text-xs font-bold text-text-muted whitespace-nowrap">Seção para preencher:</label>
             <select
+              id="section-select"
               value={targetSection}
               onChange={(e) => { setTargetSection(e.target.value); setImportedData(null); setError(''); }}
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:border-accent outline-none bg-white font-bold text-text-main cursor-pointer"
@@ -324,7 +325,7 @@ ${inputText.substring(0, 50000)}`;
         {tab === 'pdf' && (
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-bg hover:border-accent transition-colors relative cursor-pointer"
             onClick={() => pdfRef.current?.click()}>
-            <input type="file" ref={pdfRef} onChange={importFromPdf} accept="application/pdf" className="hidden" />
+            <input type="file" ref={pdfRef} onChange={importFromPdf} accept="application/pdf" className="hidden" aria-label="Upload de arquivo PDF" />
             <div className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent">
                 <FileUp size={24} />
@@ -451,21 +452,18 @@ function AutocompleteInput({
   className?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [filtered, setFiltered] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const safeVal = (value || '').trim();
+  const safeVal = (value || '').trim();
+  const filtered = useMemo(() => {
     if (!safeVal) {
-      setFiltered(suggestions);
-      return;
+      return suggestions;
     }
     const query = safeVal.toLowerCase();
-    const matches = suggestions.filter(item =>
+    return suggestions.filter(item =>
       item.toLowerCase().includes(query) && item.toLowerCase() !== query
     );
-    setFiltered(matches);
-  }, [value, suggestions]);
+  }, [safeVal, suggestions]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -528,7 +526,6 @@ function AddList({ title, fields, items, onChange, t }: {
   fields: { key: string; label: string; type?: string; options?: string[]; className?: string }[];
   items: ListItem[];
   onChange: (items: ListItem[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: (k: string) => string;
 }) {
   const add = () => {
@@ -632,7 +629,7 @@ export default function Perfil() {
       }
       if (data) {
         // Clean null and undefined values from database response before merging
-        const cleanData: any = {};
+        const cleanData: Record<string, unknown> = {};
         Object.entries(data).forEach(([key, val]) => {
           if (val !== null && val !== undefined) {
             const lowerKey = key.toLowerCase();
@@ -644,7 +641,7 @@ export default function Perfil() {
         });
         setForm(f => ({ ...f, ...cleanData }));
         if (data.foto_url) setPhotoUrl(data.foto_url);
-        const ensureArray = (v: any) => {
+        const ensureArray = (v: unknown) => {
           if (Array.isArray(v)) return v;
           if (typeof v === 'string' && v.trim().startsWith('[')) {
             try {
@@ -699,7 +696,7 @@ export default function Perfil() {
 
   const handleSave = async () => {
     setSaving(true);
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       id: 1,
       ...form,
       foto_url: photoUrl,
@@ -714,13 +711,16 @@ export default function Perfil() {
       updated_at: new Date().toISOString(),
     };
 
-    let { error } = await supabase.from('artista').upsert(payload);
+    const { error } = await supabase.from('artista').upsert(payload);
     
     if (error) {
       const isMissingColumn = error.code === '42703' || error.message?.toLowerCase().includes('column') || error.hint?.toLowerCase().includes('column');
       if (isMissingColumn) {
         console.warn('Alguma coluna nova não existe no banco. Tentando salvar sem e-mail, telefone e whatsapp...');
-        const { email, telefone, whatsapp, ...safePayload } = payload;
+        const safePayload = { ...payload };
+        delete safePayload.email;
+        delete safePayload.telefone;
+        delete safePayload.whatsapp;
         const { error: retryError } = await supabase.from('artista').upsert(safePayload);
         
         if (retryError) {

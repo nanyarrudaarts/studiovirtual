@@ -130,7 +130,11 @@ export default function Dossie() {
       <div className="space-y-3 avoid-break">
         <h3 className="text-sm font-bold tracking-[0.15em] text-accent uppercase border-b border-gray-100 pb-1 font-sans">{title}</h3>
         <ul className="space-y-2 list-none pl-0">
-          {list.map((item, idx) => renderer(item, idx))}
+          {list.map((item, idx) => (
+            <li key={idx}>
+              {renderer(item, idx)}
+            </li>
+          ))}
         </ul>
       </div>
     );
@@ -466,42 +470,42 @@ export default function Dossie() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-xs">
                       
                       {/* Formacao */}
-                      {renderCVSection("Formação Acadêmica", artist.formacao, (item, idx) => (
-                        <li key={idx} className="text-text-main leading-snug">
+                      {renderCVSection("Formação Acadêmica", artist.formacao, (item) => (
+                        <div className="text-text-main leading-snug">
                           <span className="font-bold text-accent">{item.anoInicio}{item.anoFim ? `–${item.anoFim}` : ''}</span>: {item.curso} — <span className="text-text-muted">{item.instituicao}</span>{item.cidade ? `, ${item.cidade}` : ''}
-                        </li>
+                        </div>
                       ))}
 
                       {/* Premios */}
-                      {renderCVSection("Prêmios & Distinções", artist.premios, (item, idx) => (
-                        <li key={idx} className="text-text-main leading-snug">
+                      {renderCVSection("Prêmios & Distinções", artist.premios, (item) => (
+                        <div className="text-text-main leading-snug">
                           <span className="font-bold text-accent">{item.ano}</span>: {item.nome} — <span className="text-text-muted">{item.instituicao}</span>
-                        </li>
+                        </div>
                       ))}
 
                       {/* Residencias */}
-                      {renderCVSection("Residências Artísticas", artist.residencias, (item, idx) => (
-                        <li key={idx} className="text-text-main leading-snug">
+                      {renderCVSection("Residências Artísticas", artist.residencias, (item) => (
+                        <div className="text-text-main leading-snug">
                           <span className="font-bold text-accent">{item.ano}</span>: {item.nome} — <span className="text-text-muted">{item.local}</span>
-                        </li>
+                        </div>
                       ))}
 
                       {/* Expos Individuais */}
-                      {renderCVSection("Exposições Individuais", artist.expos_individuais, (item, idx) => (
-                        <li key={idx} className="text-text-main leading-snug">
+                      {renderCVSection("Exposições Individuais", artist.expos_individuais, (item) => (
+                        <div className="text-text-main leading-snug">
                           <span className="font-bold text-accent">{item.ano}</span>: <span className="italic font-serif font-medium">"{item.titulo}"</span> — <span className="text-text-muted">{item.local}</span>{item.curador ? ` (Curadoria: ${item.curador})` : ''}
-                        </li>
+                        </div>
                       ))}
 
                       {/* Expos Coletivas */}
-                      {renderCVSection("Exposições Coletivas", artist.expos_coletivas, (item, idx) => (
-                        <li key={idx} className="text-text-main leading-snug">
+                      {renderCVSection("Exposições Coletivas", artist.expos_coletivas, (item) => (
+                        <div className="text-text-main leading-snug">
                           <span className="font-bold text-accent">{item.ano}</span>: <span className="italic font-serif font-medium">"{item.titulo}"</span> — <span className="text-text-muted">{item.local}</span>{item.curador ? ` (Curadoria: ${item.curador})` : ''}
-                        </li>
+                        </div>
                       ))}
 
                       {/* Publicacoes */}
-                      {renderCVSection("Publicações & Catálogos", artist.publicacoes, (item, idx) => {
+                      {renderCVSection("Publicações & Catálogos", artist.publicacoes, (item) => {
                         const parts = [];
                         if (item.autor) parts.push(item.autor);
                         if (item.tituloLivro) parts.push(`"${item.tituloLivro}"`);
@@ -510,9 +514,9 @@ export default function Dossie() {
                         if (item.isbn) parts.push(`ISBN: ${item.isbn}`);
                         if (item.contribuicao) parts.push(`Artistas: ${item.contribuicao}`);
                         return (
-                          <li key={idx} className="text-text-main leading-snug border-l-2 border-accent/20 pl-2 py-0.5">
+                          <div className="text-text-main leading-snug border-l-2 border-accent/20 pl-2 py-0.5">
                             {parts.join(', ')}.
-                          </li>
+                          </div>
                         );
                       })}
                     </div>
