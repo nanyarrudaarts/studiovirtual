@@ -52,6 +52,13 @@ export default function Upload() {
     status: 'Disponível',
     protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
     possuiTermo: false, possuiCOA: false, possuiCessao: false,
+    // Novos campos para Série (Estrutura Curatorial)
+    subtitle: '', statusSerie: 'Em andamento',
+    resumoConceitual: '', logicaUnidade: '', temas: '', referencias: '', palavrasChave: '',
+    anoInicial: '', anoFinal: '', periodoProducao: '', locaisCriacao: '',
+    tecnicas: '', materiais: '', suportes: '', linguagens: '',
+    codigoInterno: '', tagsCuratoriais: '',
+    direitosAutorais: '', certificados: '', documentosAnexos: '', historicoExpositivo: '',
   });
 
   const [photos, setPhotos] = useState<PhotoSlot[]>(Array.from({length:5},()=>({file:null,url:'',label:'',w:0,h:0})));
@@ -80,7 +87,8 @@ export default function Upload() {
               try { extraData = JSON.parse(artwork.intent_note); } catch (e) {}
             }
             
-            setFormData({
+            setFormData(prev => ({
+              ...prev,
               classificacao: artwork.classification || 'singular',
               parentCollectionId: artwork.collection_reference || '',
               parentSeriesId: artwork.series_reference || '',
@@ -121,7 +129,7 @@ export default function Upload() {
               possuiTermo: extraData.possuiTermo || false,
               possuiCOA: extraData.possuiCOA || false,
               possuiCessao: extraData.possuiCessao || false,
-            });
+            }));
             
             if (artwork.artwork_images && artwork.artwork_images.length > 0) {
               const newPhotos = [...photos];
@@ -448,9 +456,9 @@ export default function Upload() {
                 {/* SÉRIE — Nova Série */}
                 {formData.classificacao === 'serie' && formData.isNewHierarchy && (
                   <div className="space-y-8">
-                    {sec('I', 'Ficha de Série', 
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="flex flex-col gap-1">
+                    {sec('I', 'Identificação Principal', 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1 md:col-span-2">
                           <label htmlFor="series-parent-collection" className="text-sm font-medium">Nome da Coleção ou Fundo</label>
                           <select 
                             id="series-parent-collection"
@@ -465,10 +473,65 @@ export default function Upload() {
                           </select>
                         </div>
                         {inp('Título da Série *','titulo',{font:'font-serif text-lg'})}
-                        {inp('Lógica de Unidade (20 a 75 palavras)','narrativaCuratorial',{rows:4})}
-                        <div className="grid grid-cols-2 gap-4">
-                          {inp('Número de Série/Edição (ex: 2/10)','numeroEdicao')}
+                        {inp('Subtítulo','subtitle')}
+                        {inp('Artista/Autoria *','autoria')}
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="statusSerie" className="text-sm font-medium">Status</label>
+                          <select id="statusSerie" value={formData.statusSerie} onChange={e=>setFormData({...formData, statusSerie: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all text-sm">
+                            <option value="Em andamento">Em andamento</option>
+                            <option value="Finalizada">Finalizada</option>
+                            <option value="Arquivada">Arquivada</option>
+                          </select>
                         </div>
+                      </div>
+                    )}
+                    
+                    {sec('II', 'Contexto Conceitual',
+                      <div className="grid grid-cols-1 gap-4">
+                        {inp('Resumo Conceitual / Poética *','resumoConceitual',{rows:3})}
+                        {inp('Lógica de Unidade *','logicaUnidade',{rows:3})}
+                        {inp('Temas principais','temas')}
+                        {inp('Referências','referencias',{rows:2})}
+                        {inp('Palavras-chave','palavrasChave')}
+                      </div>
+                    )}
+
+                    {sec('III', 'Temporalidade',
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {inp('Ano inicial *','anoInicial')}
+                        {inp('Ano final','anoFinal')}
+                        {inp('Período de produção','periodoProducao')}
+                        {inp('Locais de criação','locaisCriacao')}
+                      </div>
+                    )}
+
+                    {sec('IV', 'Estrutura Técnica',
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {inp('Técnicas utilizadas','tecnicas')}
+                        {inp('Materiais','materiais')}
+                        {inp('Suportes','suportes')}
+                        {inp('Linguagens artísticas','linguagens')}
+                      </div>
+                    )}
+
+                    {sec('V', 'Organização Interna',
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {inp('Código interno','codigoInterno')}
+                        {inp('Tags curatoriais','tagsCuratoriais')}
+                      </div>
+                    )}
+
+                    {sec('VI', 'Direitos e Documentação',
+                      <div className="grid grid-cols-1 gap-4">
+                        {inp('Direitos autorais','direitosAutorais')}
+                        {inp('Certificados','certificados')}
+                        {inp('Histórico expositivo','historicoExpositivo',{rows:3})}
+                      </div>
+                    )}
+
+                    {sec('VII', 'Estrutura Relacional',
+                      <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-500">
+                        Obras vinculadas serão listadas aqui. (Funcionalidade em desenvolvimento)
                       </div>
                     )}
                   </div>
