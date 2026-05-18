@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Globe } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Globe, PenLine } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 import { callAI, readURLWithJina } from '../services/ai';
@@ -493,7 +493,8 @@ function AutocompleteInput({
   onChange,
   placeholder,
   suggestions,
-  className = ""
+  className = "",
+  disabled = false
 }: {
   id: string;
   label: string;
@@ -502,6 +503,7 @@ function AutocompleteInput({
   placeholder?: string;
   suggestions: string[];
   className?: string;
+  disabled?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -534,16 +536,17 @@ function AutocompleteInput({
         id={id}
         aria-label={label}
         value={value}
+        disabled={disabled}
         onChange={e => {
           onChange(e.target.value);
           setIsOpen(true);
         }}
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main"
+        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed"
         autoComplete="off"
       />
-      {isOpen && filtered.length > 0 && (
+      {isOpen && !disabled && filtered.length > 0 && (
         <ul className="absolute z-[999] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-50">
           {filtered.map((item, idx) => (
             <li key={idx}>
@@ -573,37 +576,48 @@ interface ListItem {
 
 const uid = () => Math.random().toString(36).slice(2);
 
-function AddList({ title, fields, items, onChange, t }: {
+function AddList({ title, fields, items, onChange, t, disabled }: {
   title: string;
   fields: { key: string; label: string; type?: string; options?: string[]; className?: string }[];
   items: ListItem[];
   onChange: (items: ListItem[]) => void;
   t: (k: string) => string;
+  disabled?: boolean;
 }) {
   const add = () => {
+    if (disabled) return;
     const empty: ListItem = { id: uid() };
     fields.forEach(f => { empty[f.key] = ''; });
     onChange([...items, empty]);
   };
-  const remove = (id: string) => onChange(items.filter(i => i.id !== id));
-  const update = (id: string, key: string, value: string) =>
+  const remove = (id: string) => {
+    if (disabled) return;
+    onChange(items.filter(i => i.id !== id));
+  };
+  const update = (id: string, key: string, value: string) => {
+    if (disabled) return;
     onChange(items.map(i => i.id === id ? { ...i, [key]: value } : i));
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-text-muted">{title}</h4>
-        <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
-          <Plus size={14} /> {t('perfil.adicionar')}
-        </button>
+        {!disabled && (
+          <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
+            <Plus size={14} /> {t('perfil.adicionar')}
+          </button>
+        )}
       </div>
       {items.map(item => (
         <div key={item.id} className="bg-bg rounded-xl p-4 relative">
-          <button onClick={() => remove(item.id)}
-            aria-label="Remover item"
-            className="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition-colors">
-            <X size={16} />
-          </button>
+          {!disabled && (
+            <button onClick={() => remove(item.id)}
+              aria-label="Remover item"
+              className="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition-colors">
+              <X size={16} />
+            </button>
+          )}
           <div className="grid grid-cols-2 gap-3 pr-6">
             {fields.map(f => (
               <div key={f.key} className={f.className || (f.key === fields[0].key ? 'col-span-2' : '')}>
@@ -613,8 +627,9 @@ function AddList({ title, fields, items, onChange, t }: {
                     id={`${item.id}-${f.key}`}
                     aria-label={f.label}
                     value={item[f.key] || ''}
+                    disabled={disabled}
                     onChange={e => update(item.id, f.key, e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white font-medium text-text-main cursor-pointer"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white font-medium text-text-main cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
                   >
                     <option value="">{t('perfil.selecione') || 'Selecione...'}</option>
                     {f.options.map(opt => (
@@ -627,8 +642,9 @@ function AddList({ title, fields, items, onChange, t }: {
                     aria-label={f.label}
                     type={f.type || 'text'}
                     value={item[f.key] || ''}
+                    disabled={disabled}
                     onChange={e => update(item.id, f.key, e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white disabled:opacity-75 disabled:cursor-not-allowed"
                   />
                 )}
               </div>
@@ -648,6 +664,7 @@ export default function Perfil() {
   const [saving, setSaving] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
   const [profileTab, setProfileTab] = useState<'pessoal' | 'artistico'>('pessoal');
+  const [isEditing, setIsEditing] = useState(false);
 
   const [form, setForm] = useState({
     nome: 'Nany Arruda',
@@ -817,7 +834,9 @@ export default function Perfil() {
         <p className="text-text-muted">{t('perfil.subtitle')}</p>
       </div>
 
-      <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
+      {isEditing && (
+        <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
+      )}
 
       {/* Modern Premium Tabs */}
       <div className="flex border-b border-gray-200">
@@ -864,40 +883,42 @@ export default function Perfil() {
                         ) : (
                           <Camera size={32} className="text-gray-400" />
                         )}
+                        {isEditing && (
+                          <button onClick={() => fileRef.current?.click()}
+                            aria-label="Alterar foto de perfil"
+                            className="absolute bottom-1 right-1 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center shadow hover:bg-accent/90 transition-colors">
+                            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                          </button>
+                        )}
                       </div>
-                      <button onClick={() => fileRef.current?.click()}
-                        aria-label="Alterar foto de perfil"
-                        className="absolute bottom-1 right-1 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center shadow hover:bg-accent/90 transition-colors">
-                        {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
-                      </button>
                       <input ref={fileRef} type="file" accept="image/*" aria-label="Selecionar foto de perfil" className="hidden" onChange={handlePhotoUpload} />
                     </div>
-                    <p className="text-xs text-text-muted">{t('perfil.clique_alterar_foto')}</p>
+                    {isEditing && <p className="text-xs text-text-muted">{t('perfil.clique_alterar_foto')}</p>}
                   </div>
 
                   <div className="w-full space-y-3">
                     <div>
                       <label htmlFor="perfil-nome" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_completo')}</label>
-                      <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} onChange={e => set('nome', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                      <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} disabled={!isEditing} onChange={e => set('nome', e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     
                     <div>
                       <label htmlFor="perfil-email" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.email', 'E-mail Profissional')}</label>
-                      <input id="perfil-email" aria-label={t('perfil.email')} type="email" placeholder="email@exemplo.com" value={form.email} onChange={e => set('email', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                      <input id="perfil-email" aria-label={t('perfil.email')} type="email" placeholder="email@exemplo.com" value={form.email} disabled={!isEditing} onChange={e => set('email', e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label htmlFor="perfil-telefone" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.telefone', 'Telefone')}</label>
-                        <input id="perfil-telefone" aria-label={t('perfil.telefone')} placeholder="+55 21 99999-9999" value={form.telefone} onChange={e => set('telefone', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                        <input id="perfil-telefone" aria-label={t('perfil.telefone')} placeholder="+55 21 99999-9999" value={form.telefone} disabled={!isEditing} onChange={e => set('telefone', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                       </div>
                       <div>
                         <label htmlFor="perfil-whatsapp" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.whatsapp', 'WhatsApp')}</label>
-                        <input id="perfil-whatsapp" aria-label={t('perfil.whatsapp')} placeholder="+55 21 99999-9999" value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                        <input id="perfil-whatsapp" aria-label={t('perfil.whatsapp')} placeholder="+55 21 99999-9999" value={form.whatsapp} disabled={!isEditing} onChange={e => set('whatsapp', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                       </div>
                     </div>
 
@@ -906,6 +927,7 @@ export default function Perfil() {
                         id="perfil-nacionalidade"
                         label={t('perfil.nacionalidade')}
                         value={form.nacionalidade}
+                        disabled={!isEditing}
                         onChange={val => set('nacionalidade', val)}
                         placeholder="Ex: Brasileira"
                         suggestions={NACIONALIDADE_SUGGESTIONS}
@@ -914,6 +936,7 @@ export default function Perfil() {
                         id="perfil-cidade"
                         label="Residência: (Cidade / Estado / País)"
                         value={form.cidade}
+                        disabled={!isEditing}
                         onChange={val => set('cidade', val)}
                         placeholder="Ex: Rio de Janeiro, RJ, Brasil"
                         suggestions={RESIDENCIA_SUGGESTIONS}
@@ -922,8 +945,8 @@ export default function Perfil() {
 
                     <div>
                       <label htmlFor="perfil-nascimento" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nascimento')}</label>
-                      <input id="perfil-nascimento" aria-label={t('perfil.nascimento')} type="date" value={form.nascimento} onChange={e => set('nascimento', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                      <input id="perfil-nascimento" aria-label={t('perfil.nascimento')} type="date" value={form.nascimento} disabled={!isEditing} onChange={e => set('nascimento', e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                   </div>
                 </div>
@@ -932,29 +955,33 @@ export default function Perfil() {
                 <div className="md:w-1/2 space-y-4">
                   <div>
                     <label htmlFor="perfil-website" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.website')}</label>
-                    <input id="perfil-website" aria-label={t('perfil.website')} value={form.website} onChange={e => set('website', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                    <input id="perfil-website" aria-label={t('perfil.website')} value={form.website} disabled={!isEditing} onChange={e => set('website', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-sm font-bold text-text-muted">{t('perfil.instagram')}</label>
-                      <button onClick={() => setInstagrams(ig => [...ig, ''])}
-                        className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                        <Plus size={12} /> {t('perfil.adicionar')}
-                      </button>
+                      {isEditing && (
+                        <button onClick={() => setInstagrams(ig => [...ig, ''])}
+                          className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
+                          <Plus size={12} /> {t('perfil.adicionar')}
+                        </button>
+                      )}
                     </div>
                     <div className="space-y-2">
                       {instagrams.map((ig, i) => (
                         <div key={i} className="flex gap-2">
-                          <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} onChange={e => {
+                          <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} disabled={!isEditing} onChange={e => {
                             const n = [...instagrams]; n[i] = e.target.value; setInstagrams(n);
-                          }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
-                          <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
-                            aria-label="Remover Instagram"
-                            className="text-gray-400 hover:text-red-500 px-2">
-                            <X size={16} />
-                          </button>
+                          }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          {isEditing && (
+                            <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
+                              aria-label="Remover Instagram"
+                              className="text-gray-400 hover:text-red-500 px-2">
+                              <X size={16} />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -963,25 +990,31 @@ export default function Perfil() {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-sm font-bold text-text-muted">{t('perfil.outros_links')}</label>
-                      <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
-                        className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
-                        <Plus size={12} /> {t('perfil.adicionar_campo')}
-                      </button>
+                      {isEditing && (
+                        <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
+                          className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
+                          <Plus size={12} /> {t('perfil.adicionar_campo')}
+                        </button>
+                      )}
                     </div>
                     <div className="space-y-2">
                       {socialLinks.map(link => (
                         <div key={link.id} className="flex gap-2">
                           <input aria-label="Nome do link (ex: LinkedIn)" placeholder="LinkedIn" value={link.label}
+                            disabled={!isEditing}
                             onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, label: e.target.value} : l))}
-                            className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
+                            className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
                           <input aria-label="URL do link" placeholder="https://..." value={link.url}
+                            disabled={!isEditing}
                             onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
-                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main" />
-                          <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
-                            aria-label="Remover link"
-                            className="text-gray-400 hover:text-red-500 px-2">
-                            <X size={16} />
-                          </button>
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          {isEditing && (
+                            <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
+                              aria-label="Remover link"
+                              className="text-gray-400 hover:text-red-500 px-2">
+                              <X size={16} />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1000,8 +1033,8 @@ export default function Perfil() {
           <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden p-7">
             <div>
               <label htmlFor="perfil-nomeArtistico" className="block text-sm font-bold text-text-muted mb-1">{t('perfil.nome_artistico', 'Nome Artístico / Profissional')}</label>
-              <input id="perfil-nomeArtistico" aria-label={t('perfil.nome_artistico')} value={form.nomeArtistico} onChange={e => set('nomeArtistico', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
+              <input id="perfil-nomeArtistico" aria-label={t('perfil.nome_artistico')} value={form.nomeArtistico} disabled={!isEditing} onChange={e => set('nomeArtistico', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
             </div>
           </section>
 
@@ -1009,11 +1042,13 @@ export default function Perfil() {
           <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
             <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-serif">{t('perfil.biografia')}</h2>
-              <button onClick={handleGenerateBio}
-                className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-sm font-bold rounded-lg hover:bg-accent/20 transition-colors">
-                {generatingBio ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {t('perfil.gerar_bio')}
-              </button>
+              {isEditing && (
+                <button onClick={handleGenerateBio}
+                  className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-sm font-bold rounded-lg hover:bg-accent/20 transition-colors">
+                  {generatingBio ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {t('perfil.gerar_bio')}
+                </button>
+              )}
             </div>
             <div className="p-7 space-y-5">
               <div>
@@ -1023,18 +1058,18 @@ export default function Perfil() {
                     {wordCount(form.bioShort)}/120 {t('perfil.palavras')}
                   </span>
                 </div>
-                <textarea value={form.bioShort} onChange={e => set('bioShort', e.target.value)}
+                <textarea value={form.bioShort} disabled={!isEditing} onChange={e => set('bioShort', e.target.value)}
                   placeholder={t('perfil.usada_capa')}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-28 resize-none" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-28 resize-none disabled:opacity-75 disabled:cursor-not-allowed" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-sm font-bold text-text-muted">{t('perfil.bio_longa')}</label>
                   <span className="text-xs text-gray-400">{wordCount(form.bioLong)} {t('perfil.palavras')}</span>
                 </div>
-                <textarea value={form.bioLong} onChange={e => set('bioLong', e.target.value)}
+                <textarea value={form.bioLong} disabled={!isEditing} onChange={e => set('bioLong', e.target.value)}
                   placeholder={t('perfil.usada_portfolio')}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none" />
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none disabled:opacity-75 disabled:cursor-not-allowed" />
               </div>
             </div>
           </section>
@@ -1045,21 +1080,21 @@ export default function Perfil() {
               <h2 className="text-lg font-serif">{t('perfil.formacao_traj')}</h2>
             </div>
             <div className="p-7 space-y-7">
-              <AddList title={t('perfil.educacao')} items={formacao} onChange={setFormacao} t={t} fields={[
+              <AddList title={t('perfil.educacao')} items={formacao} disabled={!isEditing} onChange={setFormacao} t={t} fields={[
                 { key: 'curso', label: t('perfil.curso') },
                 { key: 'instituicao', label: t('perfil.instituicao') },
                 { key: 'anoInicio', label: t('perfil.ano_inicio') },
                 { key: 'anoFim', label: t('perfil.ano_fim') },
               ]} />
               <div className="border-t border-gray-100 pt-6">
-                <AddList title={t('perfil.premios_distincoes')} items={premios} onChange={setPremios} t={t} fields={[
+                <AddList title={t('perfil.premios_distincoes')} items={premios} disabled={!isEditing} onChange={setPremios} t={t} fields={[
                   { key: 'nome', label: t('perfil.nome_premio') },
                   { key: 'instituicao', label: t('perfil.instituicao') },
                   { key: 'ano', label: t('ano') },
                 ]} />
               </div>
               <div className="border-t border-gray-100 pt-6">
-                <AddList title={t('perfil.residencias_artisticas')} items={residencias} onChange={setResidencias} t={t} fields={[
+                <AddList title={t('perfil.residencias_artisticas')} items={residencias} disabled={!isEditing} onChange={setResidencias} t={t} fields={[
                   { key: 'nome', label: t('nome') },
                   { key: 'local', label: t('perfil.local') },
                   { key: 'ano', label: t('ano') },
@@ -1074,7 +1109,7 @@ export default function Perfil() {
               <h2 className="text-lg font-serif">{t('exposicoes')}</h2>
             </div>
             <div className="p-7 space-y-7">
-              <AddList title={t('perfil.individuais')} items={exposIndividuais} onChange={setExposIndividuais} t={t} fields={[
+              <AddList title={t('perfil.individuais')} items={exposIndividuais} disabled={!isEditing} onChange={setExposIndividuais} t={t} fields={[
                 { key: 'titulo', label: t('titulo') },
                 { key: 'local', label: t('perfil.galeria_museu') },
                 { key: 'cidade', label: t('perfil.cidade') },
@@ -1082,7 +1117,7 @@ export default function Perfil() {
                 { key: 'ano', label: t('ano') },
               ]} />
               <div className="border-t border-gray-100 pt-6">
-                <AddList title={t('perfil.coletivas')} items={exposColetivas} onChange={setExposColetivas} t={t} fields={[
+                <AddList title={t('perfil.coletivas')} items={exposColetivas} disabled={!isEditing} onChange={setExposColetivas} t={t} fields={[
                   { key: 'titulo', label: t('titulo') },
                   { key: 'local', label: t('perfil.galeria_museu') },
                   { key: 'cidade', label: t('perfil.cidade') },
@@ -1099,7 +1134,7 @@ export default function Perfil() {
               <h2 className="text-lg font-serif">{t('perfil.publicacoes')}</h2>
             </div>
             <div className="p-7">
-              <AddList title={t('perfil.publicacoes')} items={publicacoes} onChange={setPublicacoes} t={t} fields={[
+              <AddList title={t('perfil.publicacoes')} items={publicacoes} disabled={!isEditing} onChange={setPublicacoes} t={t} fields={[
                 { key: 'titulo', label: t('titulo') },
                 { key: 'editora', label: t('perfil.editora_veiculo') },
                 { key: 'ano', label: t('ano') },
@@ -1112,10 +1147,29 @@ export default function Perfil() {
 
       {/* Fixed Save Button */}
       <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
-        <button onClick={handleSave}
-          className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
-          {saving ? <><Loader2 size={18} className="animate-spin" /> {t('perfil.salvando')}...</> : t('perfil.salvar_perfil')}
-        </button>
+        {!isEditing ? (
+          <button onClick={() => setIsEditing(true)}
+            className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
+            <PenLine size={18} /> {t('perfil.editar_perfil', 'Editar Perfil')}
+          </button>
+        ) : (
+          <div className="flex gap-3 w-full md:w-auto">
+            <button onClick={() => {
+              setIsEditing(false);
+              window.location.reload();
+            }}
+              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-6 py-3 bg-gray-100 text-text-muted hover:text-text-main font-bold rounded-xl transition-all">
+              {t('cancelar', 'Cancelar')}
+            </button>
+            <button onClick={async () => {
+              await handleSave();
+              setIsEditing(false);
+            }}
+              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
+              {saving ? <><Loader2 size={18} className="animate-spin" /> {t('perfil.salvando')}...</> : t('perfil.salvar_perfil')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
