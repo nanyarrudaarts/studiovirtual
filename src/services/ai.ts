@@ -8,7 +8,7 @@ export async function readURLWithJina(url: string): Promise<string> {
 
 export async function readPDFWithGemini(file: File, prompt: string): Promise<string> {
   const base64 = await fileToBase64(file);
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -52,7 +52,7 @@ async function fileToBase64(file: File): Promise<string> {
 
 export async function callAI(prompt: string, provider: 'gemini' | 'openai' | 'anthropic' = 'gemini'): Promise<string> {
   if (provider === 'gemini') {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
