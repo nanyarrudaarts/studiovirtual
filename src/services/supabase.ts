@@ -77,11 +77,14 @@ export async function saveArtwork(artwork: Partial<Artwork>, imageFiles: File[] 
   if (!payload.accession_number) {
     payload.accession_number = await generateAccessionNumber();
   }
-  if (!payload.artist_name) payload.artist_name = 'Nany Arruda';
+  const { data: { user } } = await supabase.auth.getUser();
+  const defaultName = user?.user_metadata?.full_name || 'Artista';
+
+  if (!payload.artist_name) payload.artist_name = defaultName;
   if (!payload.dimensions_unit) payload.dimensions_unit = 'cm';
   if (!payload.classification) payload.classification = 'singular';
   if (!payload.sale_status) payload.sale_status = 'available';
-  if (payload.copyright_holder === undefined) payload.copyright_holder = 'Nany Arruda';
+  if (payload.copyright_holder === undefined) payload.copyright_holder = defaultName;
   if (payload.certificate_of_authenticity === undefined) payload.certificate_of_authenticity = false;
   if (payload.exposed === undefined) payload.exposed = false;
   if (payload.sustainable_materials === undefined) payload.sustainable_materials = false;

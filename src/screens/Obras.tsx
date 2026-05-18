@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { getArtworks, getSeriesList, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2 } from 'lucide-react';
 import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
@@ -29,6 +31,16 @@ export default function Obras() {
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [error, setError] = useState('');
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'obra' | 'serie' | 'colecao' } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'artwork' | 'series' | 'collection'; title: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -45,6 +57,29 @@ export default function Obras() {
     }).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
 
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    setDeleting(true);
+    try {
+      if (itemToDelete.type === 'obra') {
+        await deleteArtwork(itemToDelete.id);
+        setArtworks(artworks.filter(a => a.artwork_id !== itemToDelete.id));
+        if (selected?.artwork_id === itemToDelete.id) setSelected(null);
+        setToast({ message: 'Obra deletada com sucesso!', type: 'success' });
+      } else if (itemToDelete.type === 'serie') {
+        await deleteSerie(itemToDelete.id);
+        setSeries(series.filter(s => s.series_id !== itemToDelete.id));
+        setToast({ message: 'Série deletada com sucesso!', type: 'success' });
+      } else if (itemToDelete.type === 'colecao') {
+        await deleteCollection(itemToDelete.id);
+        setCollections(collections.filter(c => c.collection_id !== itemToDelete.id));
+        setToast({ message: 'Coleção deletada com sucesso!', type: 'success' });
+      }
+    } catch (e) {
+      setToast({ message: 'Erro ao deletar: ' + (e as Error).message, type: 'error' });
+    } finally {
+      setDeleting(false);
+      setItemToDelete(null);
   const handleDelete = (id: string, title: string) => {
     setItemToDelete({ id, type: 'artwork', title });
   };
@@ -190,6 +225,7 @@ export default function Obras() {
                         <h3 className="font-serif text-lg text-text-main leading-snug">{obra.artwork_title}</h3>
                       </div>
                       <button 
+                        onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: obra.artwork_id, type: 'obra' }); }}
                         onClick={(e) => { e.stopPropagation(); handleDelete(obra.artwork_id, obra.artwork_title); }}
                         className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                         aria-label={`Excluir obra ${obra.artwork_title}`}
@@ -256,6 +292,7 @@ export default function Obras() {
                           <span className="text-xs font-mono text-text-muted mt-1">#{s.series_number}</span>
                         )}
                         <button 
+                          onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: s.series_id, type: 'serie' }); }}
                           onClick={(e) => { e.stopPropagation(); handleDeleteSerie(s.series_id, s.series_title); }}
                           className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                           aria-label={`Excluir série ${s.series_title}`}
@@ -312,6 +349,7 @@ export default function Obras() {
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-serif text-xl text-text-main">{c.collection_name}</h3>
                       <button 
+                        onClick={(e) => { e.stopPropagation(); setItemToDelete({ id: c.collection_id, type: 'colecao' }); }}
                         onClick={(e) => { e.stopPropagation(); handleDeleteCollection(c.collection_id, c.collection_name); }}
                         className="p-1.5 hover:bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                         aria-label={`Excluir coleção ${c.collection_name}`}
@@ -357,6 +395,7 @@ export default function Obras() {
                 <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${STATUS_COLOR[selected.sale_status] ?? ''}`}>
                   {STATUS_LABEL[selected.sale_status]}
                 </span>
+                <button aria-label="Deletar" onClick={() => setItemToDelete({ id: selected.artwork_id, type: 'obra' })} className="p-2 rounded-xl hover:bg-red-100 text-red-600"><Trash2 size={20} /></button>
                 <button aria-label="Deletar" onClick={() => handleDelete(selected.artwork_id, selected.artwork_title)} className="p-2 rounded-xl hover:bg-red-100 text-red-600"><Trash2 size={20} /></button>
                 <button aria-label="Fechar" onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-gray-100"><X size={20} /></button>
               </div>
@@ -442,6 +481,39 @@ export default function Obras() {
           </div>
         </div>
       )}
+      {/* ── CONFIRMATION MODAL ── */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => !deleting && setItemToDelete(null)} />
+          <div className="relative z-10 bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-serif text-text-main mb-2">Confirmar Exclusão</h3>
+              <p className="text-sm text-text-muted">
+                Tem certeza que deseja deletar esta {itemToDelete.type}? Esta ação não pode ser desfeita e removerá permanentemente todos os dados associados.
+              </p>
+            </div>
+            <div className="flex border-t border-gray-100">
+              <button
+                disabled={deleting}
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 px-4 py-4 text-sm font-medium text-text-muted hover:bg-gray-50 transition-colors border-r border-gray-100 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={deleting}
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-4 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deleting ? (
+                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                {deleting ? 'Deletando...' : 'Sim, Deletar'}
 
       {/* Delete Confirmation Modal */}
       {itemToDelete && (
@@ -469,6 +541,19 @@ export default function Obras() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── TOAST ── */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border animate-in slide-in-from-bottom-4 duration-300 ${
+          toast.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-red-50 border-red-100 text-red-800'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          <p className="text-sm font-medium">{toast.message}</p>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70 transition-opacity">
+            <X size={16} />
+          </button>
         </div>
       )}
     </div>

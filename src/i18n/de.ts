@@ -14,7 +14,7 @@ const de = {
       sair: 'Abmelden',
     },
     dashboard: {
-      welcome: 'Willkommen zurück, Nany.',
+      welcome: 'Willkommen zurück in Ihrem Studio.',
       total_obras: 'Kunstwerke gesamt',
       health_score: 'Portfolio-Gesundheit',
       alertas: 'Materialwarnungen',
@@ -29,7 +29,7 @@ const de = {
       nota_curadoria: 'KI-Kuratorennotiz',
       expandir_insights: 'Erkenntnisse erweitern',
       insight_tag: 'Zeitgenössischer lyrischer Abstraktionismus',
-      insight_p1: 'Neuere Arbeiten zeigen eine vertiefte Auseinandersetzung mit Licht auf dichten Texturen. Die Verwendung erdigerer Paletten gekreuzt mit dem "Accent Rose" zeigt eine Reifung darin, wie Nany die Spannung zwischen dem Organischen und dem Konstruierten angeht.',
+      insight_p1: 'Neuere Arbeiten zeigen eine vertiefte Auseinandersetzung mit Licht auf dichten Texturen. Die Verwendung erdigerer Paletten gekreuzt mit dem "Accent Rose" zeigt eine Reifung darin, wie Sie die Spannung zwischen dem Organischen und dem Konstruierten angeht.',
       insight_p2: 'Erkenntnis generiert durch Analyse der letzten 4 hochgeladenen Kunstwerke, verglichen mit dem kuratorischen Manifest von 2025.',
       sem_imagem: 'Kein Bild',
     },
@@ -259,7 +259,7 @@ const de = {
     },
     auth: {
       title: 'studio virtual',
-      subtitle: 'Nany Arruda · Artist Management',
+      subtitle: 'Gestão de Acervo para Artistas',
       email: 'E-Mail',
       senha: 'Passwort',
       entrar: 'Anmelden',
