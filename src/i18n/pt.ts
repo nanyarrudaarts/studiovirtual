@@ -14,7 +14,7 @@ const pt = {
       sair: 'Sair',
     },
     dashboard: {
-      welcome: 'Bem-vinda de volta, Nany.',
+      welcome: 'Bem-vinda de volta ao seu estúdio.',
       total_obras: 'Total de Obras',
       health_score: 'Saúde do Portfólio',
       alertas: 'Alertas de Materiais',
@@ -29,7 +29,7 @@ const pt = {
       nota_curadoria: 'Nota da Curadoria AI',
       expandir_insights: 'Expandir Insights',
       insight_tag: 'Abstracionismo Lírico Contemporâneo',
-      insight_p1: 'As obras recentes demonstram um aprofundamento na exploração da luz sobre texturas densas. O uso de paletas mais terrosas cruzadas com o "Accent Rose" evidencia uma maturação na forma como Nany aborda a tensão entre o orgânico e o construído.',
+      insight_p1: 'As obras recentes demonstram um aprofundamento na exploração da luz sobre texturas densas. O uso de paletas mais terrosas cruzadas com o "Accent Rose" evidencia uma maturação na forma como você aborda a tensão entre o orgânico e o construído.',
       insight_p2: 'Insight gerado analisando as últimas 4 obras carregadas, comparadas ao manifesto curatorial de 2025.',
       sem_imagem: 'Sem Imagem',
     },
@@ -260,7 +260,7 @@ const pt = {
     },
     auth: {
       title: 'studio virtual',
-      subtitle: 'Nany Arruda · Artist Management',
+      subtitle: 'Gestão de Acervo para Artistas',
       email: 'E-mail',
       senha: 'Senha',
       entrar: 'Entrar',

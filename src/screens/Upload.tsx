@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool, Plus } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool, Plus, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { saveArtwork, createCollection, createSerie, supabase } from '../services/supabase';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -38,15 +38,14 @@ export default function Upload() {
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [collections, setCollections] = useState<{id: string, collection_name: string}[]>([]);
   const [seriesList, setSeriesList] = useState<{id: string, series_title: string}[]>([]);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const { data: cols } = await supabase.from('collections').select('id, collection_name');
-      if (cols) setCollections(cols);
-      const { data: sers } = await supabase.from('series').select('id, series_title');
-      if (sers) setSeriesList(sers);
-    })();
-  }, []);
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const [formData, setFormData] = useState({
     classificacao: 'singular',
@@ -65,6 +64,19 @@ export default function Upload() {
     protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
     possuiTermo: false, possuiCOA: false, possuiCessao: false,
   });
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setFormData(prev => ({ ...prev, autoria: user.user_metadata?.full_name || '' }));
+      }
+      const { data: cols } = await supabase.from('collections').select('id, collection_name');
+      if (cols) setCollections(cols);
+      const { data: sers } = await supabase.from('series').select('id, series_title');
+      if (sers) setSeriesList(sers);
+    })();
+  }, []);
 
   const [photos, setPhotos] = useState<PhotoSlot[]>(Array.from({length:5},()=>({file:null,url:'',label:'',w:0,h:0})));
   const photoRefs = useRef<(HTMLInputElement|null)[]>([]);
@@ -99,7 +111,7 @@ export default function Upload() {
               isNewHierarchy: false,
               titulo: artwork.artwork_title || '',
               tipoObjeto: 'Pintura',
-              autoria: artwork.artist_name || 'Nany Arruda',
+              autoria: artwork.artist_name || '',
               ano: artwork.creation_year?.toString() || artwork.creation_date || '',
               tecnica: artwork.medium || '',
               suporte: artwork.support || '',
@@ -144,7 +156,7 @@ export default function Upload() {
             }
           }
         } catch (e) {
-          alert('Erro ao carregar obra: ' + (e as Error).message);
+          setToast({ message: 'Erro ao carregar obra: ' + (e as Error).message, type: 'error' });
         } finally {
           setLoadingEdit(false);
         }
@@ -167,14 +179,17 @@ export default function Upload() {
       setAiPhase('Extraindo dados com Groq...');
       const raw = await callGroqJSON(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`);
       const d = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
-      setFormData(f => ({ ...f, titulo: d.titulo||f.titulo, ano: d.ano||f.ano, tecnica: d.tecnica||f.tecnica, suporte: d.suporte||f.suporte, narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial, sentencaResumo: d.sentencaResumo||f.sentencaResumo, autoria: d.autoria||f.autoria }));
+      setFormData(f => ({ ...f, titulo: d.titulo||f.titulo, ano: d.ano||f.ano, tecnica: d.tecnica||f.tecnica, suporte: d.suporte||f.suporte, narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial, sentencaResumo: d.sentencaResumo||f.sentencaResumo, autoria: d.autoria||f.autoria || f.autoria }));
       setIaMode(false); setAiInput('');
-    } catch (e: unknown) { alert('Erro IA: ' + ((e as Error).message)); }
+    } catch (e: unknown) { setToast({ message: 'Erro IA: ' + ((e as Error).message), type: 'error' }); }
     finally { setAiLoading(false); setAiPhase(''); }
   };
 
   const handleSave = async () => {
-    if (!formData.titulo.trim()) { alert('Preencha o título/nome.'); return; }
+    if (!formData.titulo.trim()) {
+      setToast({ message: 'Preencha o título/nome.', type: 'error' });
+      return;
+    }
     setSaving(true);
     try {
       // Criar Nova Coleção (sem obra)
@@ -185,7 +200,9 @@ export default function Upload() {
           artistic_theme: formData.criterioInclusao || undefined,
           start_date: formData.ano || undefined,
         });
-        alert('✅ Coleção criada com sucesso!'); navigate('/obras'); return;
+        setToast({ message: '✅ Coleção criada com sucesso!', type: 'success' });
+        setTimeout(() => navigate('/obras'), 1000);
+        return;
       }
       // Criar Nova Série (sem obra)
       if (formData.classificacao === 'serie' && formData.isNewHierarchy) {
@@ -195,7 +212,9 @@ export default function Upload() {
           print_run_total: parseInt(formData.quantidadePrevista) || undefined,
           edition_type: (formData.estruturaEdicao as any) || undefined,
         });
-        alert('✅ Série criada com sucesso!'); navigate('/obras'); return;
+        setToast({ message: '✅ Série criada com sucesso!', type: 'success' });
+        setTimeout(() => navigate('/obras'), 1000);
+        return;
       }
       // Salvar Obra (singular ou vinculada)
       const dimF = [formData.dimensaoW, formData.dimensaoH, formData.dimensaoD].filter(Boolean).join(' × ') + (formData.dimensaoUnidade ? ' ' + formData.dimensaoUnidade : '');
@@ -234,9 +253,13 @@ export default function Upload() {
         classification: 'singular',
         intent_note: JSON.stringify(extraData),
       }, imgs);
-      alert('✅ Obra salva com sucesso!'); navigate('/obras');
-    } catch (err: unknown) { alert('Erro ao salvar: ' + (err as Error).message); }
-    finally { setSaving(false); }
+      setToast({ message: '✅ Obra salva com sucesso!', type: 'success' });
+      setTimeout(() => navigate('/obras'), 1000);
+    } catch (err: unknown) {
+      setToast({ message: 'Erro ao salvar: ' + (err as Error).message, type: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Obra singular: step 1 (fotos) -> step 3 (ficha)
@@ -529,6 +552,19 @@ export default function Upload() {
         )}
         </div>
         </>
+      )}
+
+      {/* ── TOAST ── */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border animate-in slide-in-from-bottom-4 duration-300 ${
+          toast.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-red-50 border-red-100 text-red-800'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          <p className="text-sm font-medium">{toast.message}</p>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70 transition-opacity">
+            <X size={16} />
+          </button>
+        </div>
       )}
     </div>
   );

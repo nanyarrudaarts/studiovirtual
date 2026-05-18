@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
+import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 
 
@@ -32,7 +33,7 @@ const defaultConfig: Config = {
   pdfQuality: '300',
   pdfFormat: 'A4',
   watermark: true,
-  watermarkText: 'Nany Arruda — nanyarruda.com',
+  watermarkText: '© Studio Virtual',
 };
 
 function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
@@ -71,10 +72,17 @@ function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
 export default function Configuracoes() {
   const { t } = useTranslation();
   const [config, setConfig] = useState<Config>(defaultConfig);
+  const [userEmail, setUserEmail] = useState('');
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [showDangerModal, setShowDangerModal] = useState(false);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserEmail(user.email || '');
+      }
+    });
+
     const stored = localStorage.getItem('sv_config');
     const directGroqKey = localStorage.getItem('groq_api_key');
     let loaded = { ...defaultConfig };
@@ -292,7 +300,7 @@ export default function Configuracoes() {
               <input id="watermark-text" type="text" value={config.watermarkText}
                 onChange={e => set('watermarkText', e.target.value)}
                 aria-label={t('configuracoes.texto_marca_dagua')}
-                placeholder="© Nany Arruda"
+                placeholder="© Studio Virtual"
                 className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg" />
             </div>
           )}
@@ -311,7 +319,7 @@ export default function Configuracoes() {
         <div className="p-7 space-y-4">
           <div>
             <label htmlFor="input-email-conta" className="block text-sm font-bold text-text-muted mb-1">{t('configuracoes.email_conta')}</label>
-            <input id="input-email-conta" type="email" value="contato@nanyarruda.com" readOnly
+            <input id="input-email-conta" type="email" value={userEmail} readOnly
               aria-label={t('configuracoes.email_conta')}
               className="w-full border border-gray-100 rounded-lg px-4 py-2 text-sm bg-bg text-text-muted cursor-not-allowed" />
           </div>
