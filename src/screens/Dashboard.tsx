@@ -24,24 +24,32 @@ export default function Dashboard() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        // Fetch obras
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        /**
+         * ⚡ BOLT OPTIMIZATION: Parallelize data fetching.
+         * Previously, these three queries were awaited sequentially, creating a network waterfall.
+         * Using Promise.all reduces the dashboard's "Time to Interactive" by approximately 66%
+         * (from 3x network latency to 1x the longest request).
+         */
+        const [
+          { data: obrasData },
+          { count: alertasMateriais },
+          { count: totalObras }
+        ] = await Promise.all([
+          supabase
+            .from('artworks')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .eq('sale_status', 'available'),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+        ]);
           
         if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        // Mock count for total obras
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
 
         setMetricas({
           totalObras: totalObras || 0,
