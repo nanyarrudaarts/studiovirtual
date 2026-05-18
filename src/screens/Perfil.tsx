@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, Check, FileText } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 import { callAI } from '../services/ai';
@@ -94,6 +94,24 @@ function DiffPreview({ current, imported, onApply, t }: {
   );
 }
 
+async function extractTextFromPDF(base64Data: string) {
+  const binaryString = window.atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const loadingTask = pdfjsLib.getDocument({ data: bytes });
+  const pdf = await loadingTask.promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    fullText += pageText + '\n';
+  }
+  return fullText;
+}
+
 /* ---- Smart Import ---- */
 function SmartImport({ currentData, onImport, t }: {
   currentData: Record<string, unknown>;
@@ -107,7 +125,7 @@ function SmartImport({ currentData, onImport, t }: {
   const [loadingStep, setLoadingStep] = useState('');
   const [importedData, setImportedData] = useState<ImportedData | null>(null);
   const [error, setError] = useState('');
-
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   const importFromText = async () => {
     const groqKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
@@ -132,6 +150,34 @@ function SmartImport({ currentData, onImport, t }: {
     setLoading(false); setLoadingStep('');
   };
 
+  const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const groqKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
+    if (!groqKey) { setError('Configure a chave API do Groq nas configurações.'); return; }
+    setError(''); setLoading(true); setImportedData(null);
+    setLoadingStep('Extraindo texto do PDF...');
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      setLoadingStep('Analisando currículo com IA...');
+      try {
+        const extractedText = await extractTextFromPDF(base64);
+        const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}\n\nTEXTO DO PDF:\n${extractedText.substring(0, 50000)}`;
+        const text = await callAI(prompt, 'groq');
+        setLoadingStep(t('perfil.preenchendo_perfil'));
+        await new Promise(r => setTimeout(r, 400));
+        const data = extractJson(text);
+        if (data) setImportedData(data);
+        else setError('A IA não conseguiu estruturar as informações do PDF.');
+      } catch (e) {
+        setError((e as Error).message || 'Erro ao processar PDF');
+      }
+      setLoading(false); setLoadingStep('');
+    };
+  };
+
 
 
   return (
@@ -147,6 +193,10 @@ function SmartImport({ currentData, onImport, t }: {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'text' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
             <FileText size={15}/> Colar texto
           </button>
+          <button onClick={() => { setTab('pdf'); setImportedData(null); setError(''); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'pdf' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+            <FileUp size={15}/> Enviar PDF
+          </button>
         </div>
 
         {/* Text Panel */}
@@ -160,6 +210,21 @@ function SmartImport({ currentData, onImport, t }: {
                 className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap">
                 {loading ? <div className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Analisando...</div> : "Analisar com IA"}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* PDF Panel */}
+        {tab === 'pdf' && (
+          <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-bg hover:border-accent transition-colors relative cursor-pointer"
+            onClick={() => pdfRef.current?.click()}>
+            <input type="file" ref={pdfRef} onChange={importFromPdf} accept="application/pdf" className="hidden" />
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+                <FileUp size={24} />
+              </div>
+              <p className="text-sm font-bold text-text-main">Escolha seu arquivo PDF ou arraste aqui</p>
+              <p className="text-xs text-text-muted">Currículos artísticos, biografias e dossiês</p>
             </div>
           </div>
         )}
