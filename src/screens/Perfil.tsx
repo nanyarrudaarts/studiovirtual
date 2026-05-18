@@ -48,6 +48,12 @@ function DiffPreview({ current, imported, onApply, t }: {
 
   const keys = Object.keys(imported).filter(k => imported[k] !== undefined && imported[k] !== null && imported[k] !== '');
 
+  useEffect(() => {
+    const initial: Record<string, boolean> = {};
+    keys.forEach(k => { initial[k] = true; });
+    setChecked(initial);
+  }, [imported]);
+
   const toggle = (k: string) => setChecked(c => ({ ...c, [k]: !c[k] }));
 
   const apply = () => {
@@ -94,6 +100,62 @@ function DiffPreview({ current, imported, onApply, t }: {
   );
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  all: 'Geral (Auto-detectar tudo)',
+  identidade: 'Identidade (Nome, Nacionalidade, Cidade, Website)',
+  biografia: 'Biografia (Bio Curta, Bio Longa)',
+  formacao: 'Formação e Trajetória',
+  premios: 'Prêmios e Distinções',
+  residencias: 'Residências Artísticas',
+  exposIndividuais: 'Exposições Individuais',
+  exposColetivas: 'Exposições Coletivas',
+  publicacoes: 'Publicações'
+};
+
+function getSectionSchema(section: string): string {
+  switch (section) {
+    case 'identidade':
+      return `{
+        "nome": "string",
+        "nomeArtistico": "string",
+        "nacionalidade": "string",
+        "cidade": "string",
+        "website": "string"
+      }`;
+    case 'biografia':
+      return `{
+        "bioShort": "string (máx 120 palavras)",
+        "bioLong": "string (3-4 parágrafos)"
+      }`;
+    case 'formacao':
+      return `{
+        "formacao": [{"curso":"string","instituicao":"string","anoInicio":"string","anoFim":"string"}]
+      }`;
+    case 'premios':
+      return `{
+        "premios": [{"nome":"string","instituicao":"string","ano":"string"}]
+      }`;
+    case 'residencias':
+      return `{
+        "residencias": [{"nome":"string","local":"string","ano":"string"}]
+      }`;
+    case 'exposIndividuais':
+      return `{
+        "exposIndividuais": [{"titulo":"string","local":"string","cidade":"string","pais":"string","ano":"string"}]
+      }`;
+    case 'exposColetivas':
+      return `{
+        "exposColetivas": [{"titulo":"string","local":"string","cidade":"string","pais":"string","ano":"string"}]
+      }`;
+    case 'publicacoes':
+      return `{
+        "publicacoes": [{"titulo":"string","editora":"string","ano":"string","link":"string"}]
+      }`;
+    default:
+      return '{}';
+  }
+}
+
 async function extractTextFromPDF(base64Data: string) {
   const binaryString = window.atob(base64Data);
   const bytes = new Uint8Array(binaryString.length);
@@ -120,6 +182,7 @@ function SmartImport({ currentData, onImport, t }: {
   t: (k: string) => string;
 }) {
   const [tab, setTab] = useState<'text' | 'pdf'>('text');
+  const [targetSection, setTargetSection] = useState<string>('all');
   const [textInput, setTextInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
@@ -127,14 +190,28 @@ function SmartImport({ currentData, onImport, t }: {
   const [error, setError] = useState('');
   const pdfRef = useRef<HTMLInputElement>(null);
 
+  const getPrompt = (inputText: string) => {
+    if (targetSection === 'all') {
+      return `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${inputText.substring(0, 50000)}`;
+    }
+    return `Você é um curador de arte especialista e assistente pessoal de IA. Analise o texto fornecido e extraia informações com foco total e absoluto na seção específica: "${SECTION_LABELS[targetSection]}".
+Se o texto descrever participações, livros contendo obras do artista, exposições ou qualquer prêmio/formação do artista no contexto do texto, capture e retorne corretamente estruturado.
+Retorne APENAS um JSON válido em português brasileiro contendo esses dados mapeados exatamente para este schema (seja extremamente preciso e não perca nenhum detalhe de ano, local ou editora):
+
+${getSectionSchema(targetSection)}
+
+CONTEÚDO DO TEXTO:
+${inputText.substring(0, 50000)}`;
+  };
+
   const importFromText = async () => {
     const groqKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
     if (!groqKey) { setError('Configure a chave API do Groq nas configurações.'); return; }
-    if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
+    if (!textInput.trim() || textInput.trim().length < 5) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
-      setLoadingStep('Analisando informações com IA...');
-      const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${textInput.substring(0, 50000)}`;
+      setLoadingStep(`Extraindo dados de ${SECTION_LABELS[targetSection]} com IA...`);
+      const prompt = getPrompt(textInput);
       const text = await callAI(prompt, 'groq');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
@@ -161,10 +238,10 @@ function SmartImport({ currentData, onImport, t }: {
     reader.readAsDataURL(file);
     reader.onload = async () => {
       const base64 = (reader.result as string).split(',')[1];
-      setLoadingStep('Analisando currículo com IA...');
+      setLoadingStep(`Analisando currículo com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
       try {
         const extractedText = await extractTextFromPDF(base64);
-        const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}\n\nTEXTO DO PDF:\n${extractedText.substring(0, 50000)}`;
+        const prompt = getPrompt(extractedText);
         const text = await callAI(prompt, 'groq');
         setLoadingStep(t('perfil.preenchendo_perfil'));
         await new Promise(r => setTimeout(r, 400));
@@ -178,8 +255,6 @@ function SmartImport({ currentData, onImport, t }: {
     };
   };
 
-
-
   return (
     <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
       <div className="px-7 py-5 border-b border-gray-100">
@@ -187,23 +262,41 @@ function SmartImport({ currentData, onImport, t }: {
         <p className="text-sm text-text-muted">{t('perfil.importar_subtitle')}</p>
       </div>
       <div className="p-7 space-y-5">
-        {/* Tabs */}
-        <div className="flex gap-2">
-          <button onClick={() => { setTab('text'); setImportedData(null); setError(''); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'text' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-            <FileText size={15}/> Colar texto
-          </button>
-          <button onClick={() => { setTab('pdf'); setImportedData(null); setError(''); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'pdf' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-            <FileUp size={15}/> Enviar PDF
-          </button>
+        {/* Tabs & Section Target */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+          <div className="flex gap-2">
+            <button onClick={() => { setTab('text'); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'text' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              <FileText size={15}/> Colar texto
+            </button>
+            <button onClick={() => { setTab('pdf'); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'pdf' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              <FileUp size={15}/> Enviar PDF
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-text-muted whitespace-nowrap">Seção para preencher:</span>
+            <select
+              value={targetSection}
+              onChange={(e) => { setTargetSection(e.target.value); setImportedData(null); setError(''); }}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:border-accent outline-none bg-white font-bold text-text-main cursor-pointer"
+            >
+              {Object.entries(SECTION_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Text Panel */}
         {tab === 'text' && (
           <div className="space-y-3">
             <textarea value={textInput} onChange={e => setTextInput(e.target.value)}
-              placeholder="Cole aqui a biografia do seu site, um currículo copiado, perfil do Instagram, etc..."
+              placeholder={targetSection === 'all' 
+                ? "Cole aqui a biografia do seu site, um currículo copiado, perfil do Instagram, etc..."
+                : `Cole aqui as informações correspondentes a: ${SECTION_LABELS[targetSection]}...`
+              }
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-32 resize-none" />
             <div className="flex justify-end">
               <button onClick={importFromText} disabled={loading || !textInput.trim()}
@@ -228,7 +321,6 @@ function SmartImport({ currentData, onImport, t }: {
             </div>
           </div>
         )}
-
 
         {/* Loading */}
         {loading && (
@@ -440,14 +532,16 @@ export default function Perfil() {
   const handleImport = (data: ImportedData) => {
     const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'bioShort', 'bioLong', 'website'] as const;
     strKeys.forEach(k => { if (data[k]) setForm(f => ({ ...f, [k]: String(data[k]) })); });
-    if (Array.isArray(data.instagrams)) setInstagrams(data.instagrams as string[]);
+    if (Array.isArray(data.instagrams)) {
+      setInstagrams(prev => Array.from(new Set([...prev, ...(data.instagrams as string[])])));
+    }
     const toList = (arr: unknown[]) => arr.map(i => ({ id: uid(), ...(i as object) }));
-    if (Array.isArray(data.formacao)) setFormacao(toList(data.formacao));
-    if (Array.isArray(data.premios)) setPremios(toList(data.premios));
-    if (Array.isArray(data.residencias)) setResidencias(toList(data.residencias));
-    if (Array.isArray(data.exposIndividuais)) setExposIndividuais(toList(data.exposIndividuais));
-    if (Array.isArray(data.exposColetivas)) setExposColetivas(toList(data.exposColetivas));
-    if (Array.isArray(data.publicacoes)) setPublicacoes(toList(data.publicacoes));
+    if (Array.isArray(data.formacao)) setFormacao(prev => [...prev, ...toList(data.formacao as unknown[])]);
+    if (Array.isArray(data.premios)) setPremios(prev => [...prev, ...toList(data.premios as unknown[])]);
+    if (Array.isArray(data.residencias)) setResidencias(prev => [...prev, ...toList(data.residencias as unknown[])]);
+    if (Array.isArray(data.exposIndividuais)) setExposIndividuais(prev => [...prev, ...toList(data.exposIndividuais as unknown[])]);
+    if (Array.isArray(data.exposColetivas)) setExposColetivas(prev => [...prev, ...toList(data.exposColetivas as unknown[])]);
+    if (Array.isArray(data.publicacoes)) setPublicacoes(prev => [...prev, ...toList(data.publicacoes as unknown[])]);
   };
 
   const currentFormAsRecord: Record<string, unknown> = { ...form, instagrams, formacao, premios, residencias, exposIndividuais, exposColetivas, publicacoes };
