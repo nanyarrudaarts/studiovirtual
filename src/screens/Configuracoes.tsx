@@ -3,11 +3,12 @@ import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 
-type AIProvider = 'groq';
+type AIProvider = 'groq' | 'gemini';
 
 interface Config {
   aiProvider: AIProvider;
   groqKey: string;
+  geminiKey: string;
   notebooklmId: string;
   notebooklmActive: boolean;
   language: string;
@@ -23,6 +24,7 @@ interface Config {
 const defaultConfig: Config = {
   aiProvider: 'groq',
   groqKey: '',
+  geminiKey: '',
   notebooklmId: 'c31055a1-8a15-4e16-b5cf-1b45b44bb828',
   notebooklmActive: false,
   language: 'pt-BR',
@@ -77,12 +79,16 @@ export default function Configuracoes() {
   useEffect(() => {
     const stored = localStorage.getItem('sv_config');
     const directGroqKey = localStorage.getItem('groq_api_key');
+    const directGeminiKey = localStorage.getItem('gemini_api_key');
     let loaded = { ...defaultConfig };
     if (stored) {
       loaded = { ...loaded, ...JSON.parse(stored) };
     }
     if (directGroqKey) {
       loaded.groqKey = directGroqKey;
+    }
+    if (directGeminiKey) {
+      loaded.geminiKey = directGeminiKey;
     }
     setConfig(loaded);
   }, []);
@@ -94,6 +100,10 @@ export default function Configuracoes() {
     if (keys.includes('groqKey')) {
       localStorage.setItem('groq_api_key', updated.groqKey);
       console.log('[Configuracoes] groq_api_key saved to localStorage:', updated.groqKey.slice(0, 10) + '...');
+    }
+    if (keys.includes('geminiKey')) {
+      localStorage.setItem('gemini_api_key', updated.geminiKey);
+      console.log('[Configuracoes] gemini_api_key saved to localStorage:', updated.geminiKey.slice(0, 10) + '...');
     }
     const newSaved: Record<string, boolean> = {};
     keys.forEach(k => { newSaved[k] = true; });
@@ -108,7 +118,8 @@ export default function Configuracoes() {
   };
 
   const aiProviders = [
-    { id: 'groq', label: 'Groq', sub: 'Llama 3 · Ultra Rápido', tag: '✓' }
+    { id: 'groq', label: 'Groq', sub: 'Llama 3 · Ultra Rápido', tag: '✓' },
+    { id: 'gemini', label: 'Gemini', sub: 'Gemini 1.5 Flash', tag: '✓' }
   ] as const;
 
   return (
@@ -151,6 +162,9 @@ export default function Configuracoes() {
             <KeyInput label="Chave API Groq" value={config.groqKey}
               onChange={v => set('groqKey', v)} placeholder="gsk_..."
               onSave={() => save(['groqKey'])} isSaved={saved['groqKey']} t={t} />
+            <KeyInput label="Chave API Gemini" value={config.geminiKey}
+              onChange={v => set('geminiKey', v)} placeholder="AIzaSy..."
+              onSave={() => save(['geminiKey'])} isSaved={saved['geminiKey']} t={t} />
           </div>
 
           {/* NotebookLM */}
