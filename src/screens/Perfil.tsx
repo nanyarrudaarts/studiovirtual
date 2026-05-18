@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
 import { callAI } from '../services/ai';
@@ -107,7 +107,6 @@ function SmartImport({ currentData, onImport, t }: {
   const [loadingStep, setLoadingStep] = useState('');
   const [importedData, setImportedData] = useState<ImportedData | null>(null);
   const [error, setError] = useState('');
-  const pdfRef = useRef<HTMLInputElement>(null);
 
 
   const importFromText = async () => {

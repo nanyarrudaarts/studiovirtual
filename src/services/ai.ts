@@ -2,21 +2,6 @@ export async function readURLWithJina(url: string): Promise<string> {
   const response = await fetch(`https://r.jina.ai/${url}`);
   if (!response.ok) throw new Error('Falha ao ler URL com Jina AI');
   return await response.text();
-}
-
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = error => reject(error);
-  });
-}
-
 export async function callAI(prompt: string, provider: 'groq' | 'gemini' | 'openai' | 'anthropic' = 'groq'): Promise<string> {
   if (provider === 'gemini' || provider === 'groq') {
     const GROQ_API_KEY = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
