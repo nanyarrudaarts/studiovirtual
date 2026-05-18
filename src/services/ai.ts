@@ -59,7 +59,10 @@ export async function callAI(prompt: string, provider: 'gemini' | 'openai' | 'an
         contents: [{ parts: [{ text: prompt }] }]
       })
     });
-    if (!response.ok) throw new Error(`Erro no Gemini: ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Erro no Gemini: ${errorData.error?.message || response.statusText}`);
+    }
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
