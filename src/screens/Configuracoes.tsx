@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-
-type AIProvider = 'groq' | 'gemini' | 'openai' | 'anthropic';
+type AIProvider = 'groq';
 
 interface Config {
   aiProvider: AIProvider;
   groqKey: string;
-  geminiKey: string;
-  openaiKey: string;
-  anthropicKey: string;
   notebooklmId: string;
   notebooklmActive: boolean;
   language: string;
@@ -26,9 +22,6 @@ interface Config {
 const defaultConfig: Config = {
   aiProvider: 'groq',
   groqKey: '',
-  geminiKey: '',
-  openaiKey: '',
-  anthropicKey: '',
   notebooklmId: 'c31055a1-8a15-4e16-b5cf-1b45b44bb828',
   notebooklmActive: false,
   language: 'pt-BR',
@@ -77,10 +70,6 @@ export default function Configuracoes() {
   const [config, setConfig] = useState<Config>(() => {
     const stored = localStorage.getItem('sv_config');
     const directGroqKey = localStorage.getItem('groq_api_key');
-    const directGeminiKey = localStorage.getItem('gemini_api_key');
-    const directOpenaiKey = localStorage.getItem('openai_api_key');
-    const directAnthropicKey = localStorage.getItem('anthropic_api_key');
-    const storedProvider = localStorage.getItem('ai_provider') as AIProvider | null;
 
     let loaded = { ...defaultConfig };
     if (stored) {
@@ -91,12 +80,7 @@ export default function Configuracoes() {
       }
     }
     if (directGroqKey) loaded.groqKey = directGroqKey;
-    if (directGeminiKey) loaded.geminiKey = directGeminiKey;
-    if (directOpenaiKey) loaded.openaiKey = directOpenaiKey;
-    if (directAnthropicKey) loaded.anthropicKey = directAnthropicKey;
-    if (storedProvider && ['groq', 'gemini', 'openai', 'anthropic'].includes(storedProvider)) {
-      loaded.aiProvider = storedProvider;
-    }
+    loaded.aiProvider = 'groq';
     return loaded;
   });
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -105,11 +89,8 @@ export default function Configuracoes() {
   const save = (keys: (keyof Config)[]) => {
     const updated = { ...config };
     localStorage.setItem('sv_config', JSON.stringify(updated));
-    localStorage.setItem('ai_provider', updated.aiProvider);
+    localStorage.setItem('ai_provider', 'groq');
     if (keys.includes('groqKey')) localStorage.setItem('groq_api_key', updated.groqKey);
-    if (keys.includes('geminiKey')) localStorage.setItem('gemini_api_key', updated.geminiKey);
-    if (keys.includes('openaiKey')) localStorage.setItem('openai_api_key', updated.openaiKey);
-    if (keys.includes('anthropicKey')) localStorage.setItem('anthropic_api_key', updated.anthropicKey);
 
     const newSaved: Record<string, boolean> = {};
     keys.forEach(k => { newSaved[k] = true; });
@@ -123,18 +104,11 @@ export default function Configuracoes() {
     setConfig(c => {
       const updated = { ...c, [key]: value };
       if (key === 'aiProvider') {
-        localStorage.setItem('ai_provider', value as string);
+        localStorage.setItem('ai_provider', 'groq');
       }
       return updated;
     });
   };
-
-  const aiProviders = [
-    { id: 'groq', label: 'Groq', sub: 'Llama 3 · Ultra Rápido', tag: '✓' },
-    { id: 'gemini', label: 'Google Gemini', sub: 'Gemini 2.5 Flash · Multimodal', tag: '✓' },
-    { id: 'openai', label: 'OpenAI', sub: 'GPT-4o Mini · Rápido', tag: '✓' },
-    { id: 'anthropic', label: 'Anthropic Claude', sub: 'Claude 3.5 Sonnet · Alta Precisão', tag: '✓' }
-  ] as const;
 
   return (
     <div className="max-w-[800px] mx-auto pb-16 space-y-8">
@@ -149,57 +123,22 @@ export default function Configuracoes() {
           <h2 className="text-lg font-serif">{t('configuracoes.provedores_ia')}</h2>
         </div>
         <div className="p-7 space-y-7">
-          {/* Provider Selector */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {aiProviders.map(p => (
-              <button key={p.id} onClick={() => set('aiProvider', p.id)}
-                className={`border-2 rounded-xl p-4 text-left transition-all ${
-                  config.aiProvider === p.id
-                    ? 'border-accent bg-accent/5'
-                    : 'border-gray-200 hover:border-accent/30'
-                }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-sm">{p.label}</span>
-                  {config.aiProvider === p.id && (
-                    <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-                      <Check size={10} className="text-white" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-text-muted">{p.sub}</p>
-              </button>
-            ))}
+          {/* Provider Selector Info */}
+          <div className="border border-accent/20 bg-accent/5 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-sm text-text-main flex items-center gap-2">
+                Groq Ativo
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+              </h3>
+              <p className="text-xs text-text-muted mt-1">Llama 3.3-70b-versatile · Ultra Rápido</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+              <Check size={16} className="text-accent" />
+            </div>
           </div>
 
           {/* API Keys */}
           <div className="space-y-4">
-            <KeyInput 
-              label="Chave API Google Gemini" 
-              value={config.geminiKey}
-              onChange={v => set('geminiKey', v)} 
-              placeholder="AIzaSy..."
-              onSave={() => save(['geminiKey'])} 
-              isSaved={saved['geminiKey']} 
-              t={t} 
-            />
-            <KeyInput 
-              label="Chave API OpenAI" 
-              value={config.openaiKey}
-              onChange={v => set('openaiKey', v)} 
-              placeholder="sk-proj-..."
-              onSave={() => save(['openaiKey'])} 
-              isSaved={saved['openaiKey']} 
-              t={t} 
-            />
-            <KeyInput 
-              label="Chave API Anthropic Claude" 
-              value={config.anthropicKey}
-              onChange={v => set('anthropicKey', v)} 
-              placeholder="sk-ant-..."
-              onSave={() => save(['anthropicKey'])} 
-              isSaved={saved['anthropicKey']} 
-              t={t} 
-            />
             <KeyInput 
               label="Chave API Groq" 
               value={config.groqKey}

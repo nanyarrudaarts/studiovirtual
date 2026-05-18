@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Database, Globe } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
-import { callAI, readURLWithJina, readPDFWithGemini } from '../services/ai';
+import { callAI, readURLWithJina } from '../services/ai';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -219,13 +219,12 @@ ${inputText.substring(0, 50000)}`;
   };
 
   const importFromText = async () => {
-    const provider = localStorage.getItem('ai_provider') || 'gemini';
     if (!textInput.trim() || textInput.trim().length < 5) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep(`Extraindo dados de ${SECTION_LABELS[targetSection]} com IA...`);
       const prompt = getPrompt(textInput);
-      const text = await callAI(prompt, provider);
+      const text = await callAI(prompt, 'groq');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -243,29 +242,21 @@ ${inputText.substring(0, 50000)}`;
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const provider = localStorage.getItem('ai_provider') || 'gemini';
-    const apiKey = localStorage.getItem(`${provider}_api_key`) || '';
     setError(''); setLoading(true); setImportedData(null);
     try {
-      let extractedText = '';
-      if (provider === 'gemini' && apiKey) {
-        setLoadingStep('Extraindo e interpretando PDF via Gemini...');
-        extractedText = await readPDFWithGemini(file, apiKey, 'Extraia todo o texto e informações estruturadas deste currículo/portfolio em PDF em português.');
-      } else {
-        setLoadingStep('Extraindo texto do PDF localmente...');
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const base64 = await base64Promise;
-        extractedText = await extractTextFromPDF(base64);
-      }
+      setLoadingStep('Extraindo texto do PDF localmente...');
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const base64 = await base64Promise;
+      const extractedText = await extractTextFromPDF(base64);
 
       setLoadingStep(`Analisando currículo com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
       const prompt = getPrompt(extractedText);
-      const text = await callAI(prompt, provider);
+      const text = await callAI(prompt, 'groq');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -279,14 +270,13 @@ ${inputText.substring(0, 50000)}`;
 
   const importFromUrl = async () => {
     if (!urlInput.trim()) { setError('Insira uma URL válida.'); return; }
-    const provider = localStorage.getItem('ai_provider') || 'gemini';
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep('Extraindo conteúdo da página via Jina Reader...');
       const webText = await readURLWithJina(urlInput);
       setLoadingStep(`Analisando dados do site com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
       const prompt = getPrompt(webText);
-      const text = await callAI(prompt, provider);
+      const text = await callAI(prompt, 'groq');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -745,8 +735,7 @@ export default function Perfil() {
     setGeneratingBio(true);
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const activeProvider = localStorage.getItem('ai_provider') || 'groq';
-      const text = await callAI(prompt, activeProvider);
+      const text = await callAI(prompt, 'groq');
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));

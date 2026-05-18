@@ -187,8 +187,7 @@ export default function Upload() {
     setAiLoading(true);
     try {
       setAiPhase('Extraindo dados com IA...');
-      const activeProvider = localStorage.getItem('ai_provider') || 'groq';
-      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":"","recursosHibridos":"","suporteDigital":"","registroCertificado":""}\nTexto:\n${aiInput.slice(0,12000)}`, activeProvider);
+      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":"","recursosHibridos":"","suporteDigital":"","registroCertificado":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'groq');
       const d = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
       setFormData(f => ({
         ...f,
