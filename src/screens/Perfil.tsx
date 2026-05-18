@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Database } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Camera, Check, FileText, FileUp, Database, Globe } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
-import { callAI } from '../services/ai';
+import { callAI, readURLWithJina, readPDFWithGemini } from '../services/ai';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -194,9 +194,10 @@ function SmartImport({ currentData, onImport, t }: {
   onImport: (data: ImportedData) => void;
   t: (k: string) => string;
 }) {
-  const [tab, setTab] = useState<'text' | 'pdf'>('text');
+  const [tab, setTab] = useState<'text' | 'pdf' | 'url'>('text');
   const [targetSection, setTargetSection] = useState<string>('all');
   const [textInput, setTextInput] = useState('');
+  const [urlInput, setUrlInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [importedData, setImportedData] = useState<ImportedData | null>(null);
@@ -218,14 +219,13 @@ ${inputText.substring(0, 50000)}`;
   };
 
   const importFromText = async () => {
-    const groqKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
-    if (!groqKey) { setError('Configure a chave API do Groq nas configurações.'); return; }
+    const provider = localStorage.getItem('ai_provider') || 'gemini';
     if (!textInput.trim() || textInput.trim().length < 5) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep(`Extraindo dados de ${SECTION_LABELS[targetSection]} com IA...`);
       const prompt = getPrompt(textInput);
-      const text = await callAI(prompt, 'groq');
+      const text = await callAI(prompt, provider);
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -234,8 +234,8 @@ ${inputText.substring(0, 50000)}`;
       } else {
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
-    } catch (e: unknown) {
-      setError((e as Error).message || 'Erro de comunicação com Groq');
+    } catch (e: any) {
+      setError(e.message || 'Erro de comunicação com IA');
     }
     setLoading(false); setLoadingStep('');
   };
@@ -243,29 +243,62 @@ ${inputText.substring(0, 50000)}`;
   const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const groqKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
-    if (!groqKey) { setError('Configure a chave API do Groq nas configurações.'); return; }
+    const provider = localStorage.getItem('ai_provider') || 'gemini';
+    const apiKey = localStorage.getItem(`${provider}_api_key`) || '';
     setError(''); setLoading(true); setImportedData(null);
-    setLoadingStep('Extraindo texto do PDF...');
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      setLoadingStep(`Analisando currículo com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
-      try {
-        const extractedText = await extractTextFromPDF(base64);
-        const prompt = getPrompt(extractedText);
-        const text = await callAI(prompt, 'groq');
-        setLoadingStep(t('perfil.preenchendo_perfil'));
-        await new Promise(r => setTimeout(r, 400));
-        const data = extractJson(text);
-        if (data) setImportedData(data);
-        else setError('A IA não conseguiu estruturar as informações do PDF.');
-      } catch (e) {
-        setError((e as Error).message || 'Erro ao processar PDF');
+    try {
+      let extractedText = '';
+      if (provider === 'gemini' && apiKey) {
+        setLoadingStep('Extraindo e interpretando PDF via Gemini...');
+        extractedText = await readPDFWithGemini(file, apiKey, 'Extraia todo o texto e informações estruturadas deste currículo/portfolio em PDF em português.');
+      } else {
+        setLoadingStep('Extraindo texto do PDF localmente...');
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const base64 = await base64Promise;
+        extractedText = await extractTextFromPDF(base64);
       }
-      setLoading(false); setLoadingStep('');
-    };
+
+      setLoadingStep(`Analisando currículo com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
+      const prompt = getPrompt(extractedText);
+      const text = await callAI(prompt, provider);
+      setLoadingStep(t('perfil.preenchendo_perfil'));
+      await new Promise(r => setTimeout(r, 400));
+      const data = extractJson(text);
+      if (data) setImportedData(data);
+      else setError('A IA não conseguiu estruturar as informações do PDF.');
+    } catch (e: any) {
+      setError(e.message || 'Erro ao processar PDF');
+    }
+    setLoading(false); setLoadingStep('');
+  };
+
+  const importFromUrl = async () => {
+    if (!urlInput.trim()) { setError('Insira uma URL válida.'); return; }
+    const provider = localStorage.getItem('ai_provider') || 'gemini';
+    setError(''); setLoading(true); setImportedData(null);
+    try {
+      setLoadingStep('Extraindo conteúdo da página via Jina Reader...');
+      const webText = await readURLWithJina(urlInput);
+      setLoadingStep(`Analisando dados do site com IA (Foco: ${SECTION_LABELS[targetSection]})...`);
+      const prompt = getPrompt(webText);
+      const text = await callAI(prompt, provider);
+      setLoadingStep(t('perfil.preenchendo_perfil'));
+      await new Promise(r => setTimeout(r, 400));
+      const data = extractJson(text);
+      if (data) {
+        setImportedData(data);
+      } else {
+        setError('A IA não conseguiu estruturar as informações da página.');
+      }
+    } catch (e: any) {
+      setError(e.message || 'Erro ao importar da URL');
+    }
+    setLoading(false); setLoadingStep('');
   };
 
   return (
@@ -285,6 +318,10 @@ ${inputText.substring(0, 50000)}`;
             <button onClick={() => { setTab('pdf'); setImportedData(null); setError(''); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'pdf' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
               <FileUp size={15}/> Enviar PDF
+            </button>
+            <button onClick={() => { setTab('url'); setImportedData(null); setError(''); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'url' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              <Globe size={15}/> Importar de URL
             </button>
           </div>
           
@@ -336,6 +373,30 @@ ${inputText.substring(0, 50000)}`;
           </div>
         )}
 
+        {/* URL Panel */}
+        {tab === 'url' && (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={urlInput}
+                onChange={e => setUrlInput(e.target.value)}
+                placeholder="https://seu-site.com/biografia ou link do portfolio"
+                aria-label="URL para importação"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:border-accent outline-none bg-bg"
+              />
+              <button
+                onClick={importFromUrl}
+                disabled={loading || !urlInput.trim()}
+                className="px-5 py-2 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : "Importar"}
+              </button>
+            </div>
+            <p className="text-xs text-text-muted">Busca e extrai automaticamente o conteúdo visível de qualquer página pública utilizando o Jina Reader.</p>
+          </div>
+        )}
+
         {/* Loading */}
         {loading && (
           <div className="flex items-center gap-3 py-3 text-accent">
@@ -353,11 +414,12 @@ ${inputText.substring(0, 50000)}`;
         {importedData && !loading && (
           <div className="space-y-3">
             <p className="text-sm font-bold text-emerald-600">✓ {t('dados_extraidos')}</p>
-            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); setTextInput(''); }} t={t} />
+            <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); setTextInput(''); setUrlInput(''); }} t={t} />
           </div>
         )}
       </div>
     </section>
+
   );
 }
 
@@ -683,7 +745,8 @@ export default function Perfil() {
     setGeneratingBio(true);
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const text = await callAI(prompt, 'groq');
+      const activeProvider = localStorage.getItem('ai_provider') || 'groq';
+      const text = await callAI(prompt, activeProvider);
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));

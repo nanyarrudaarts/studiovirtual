@@ -171,6 +171,16 @@ export async function getCollections(): Promise<Collection[]> {
   return (data ?? []) as Collection[];
 }
 
+export async function getCollection(id: string): Promise<Collection | null> {
+  const { data, error } = await supabase
+    .from('collections')
+    .select('*')
+    .eq('collection_id', id)
+    .single();
+  if (error) throw error;
+  return data as Collection;
+}
+
 export async function createCollection(data: Partial<Collection>): Promise<Collection> {
   const payload = { total_items: 0, visibility_status: 'private', ...data };
   const { data: created, error } = await supabase
@@ -236,6 +246,16 @@ export async function getSeries(): Promise<Series[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Series[];
+}
+
+export async function getSerie(id: string): Promise<Series | null> {
+  const { data, error } = await supabase
+    .from('series')
+    .select('*')
+    .eq('series_id', id)
+    .single();
+  if (error) throw error;
+  return data as Series;
 }
 
 export async function createSerie(data: Partial<Series>): Promise<Series> {
