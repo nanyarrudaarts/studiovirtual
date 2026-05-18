@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +43,6 @@ const defaultConfig: Config = {
 
 function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
   label: string; value: string; onChange: (v: string) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   placeholder: string; onSave: () => void; isSaved?: boolean; t: (k: string) => string;
 }) {
   const [show, setShow] = useState(false);
@@ -55,7 +54,6 @@ function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
           <input
             type={show ? 'text' : 'password'}
             value={value}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
             placeholder={placeholder}
             className="w-full border border-gray-200 rounded-lg pl-4 pr-10 py-2 text-sm focus:border-accent outline-none bg-bg"
@@ -76,30 +74,33 @@ function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
 
 export default function Configuracoes() {
   const { t } = useTranslation();
-  const [config, setConfig] = useState<Config>(defaultConfig);
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [showDangerModal, setShowDangerModal] = useState(false);
-
-  useEffect(() => {
+  const [config, setConfig] = useState<Config>(() => {
     const stored = localStorage.getItem('sv_config');
     const directGroqKey = localStorage.getItem('groq_api_key');
     const directGeminiKey = localStorage.getItem('gemini_api_key');
     const directOpenaiKey = localStorage.getItem('openai_api_key');
     const directAnthropicKey = localStorage.getItem('anthropic_api_key');
-    const storedProvider = localStorage.getItem('ai_provider') as any;
+    const storedProvider = localStorage.getItem('ai_provider') as AIProvider | null;
 
     let loaded = { ...defaultConfig };
     if (stored) {
-      loaded = { ...loaded, ...JSON.parse(stored) };
+      try {
+        loaded = { ...loaded, ...JSON.parse(stored) };
+      } catch {
+        // Ignorar erro de parse
+      }
     }
     if (directGroqKey) loaded.groqKey = directGroqKey;
     if (directGeminiKey) loaded.geminiKey = directGeminiKey;
     if (directOpenaiKey) loaded.openaiKey = directOpenaiKey;
     if (directAnthropicKey) loaded.anthropicKey = directAnthropicKey;
-    if (storedProvider) loaded.aiProvider = storedProvider;
-
-    setConfig(loaded);
-  }, []);
+    if (storedProvider && ['groq', 'gemini', 'openai', 'anthropic'].includes(storedProvider)) {
+      loaded.aiProvider = storedProvider;
+    }
+    return loaded;
+  });
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [showDangerModal, setShowDangerModal] = useState(false);
 
   const save = (keys: (keyof Config)[]) => {
     const updated = { ...config };
@@ -118,7 +119,7 @@ export default function Configuracoes() {
     }), 2000);
   };
 
-  const set = (key: keyof Config, value: any) => {
+  const set = <K extends keyof Config>(key: K, value: Config[K]) => {
     setConfig(c => {
       const updated = { ...c, [key]: value };
       if (key === 'aiProvider') {

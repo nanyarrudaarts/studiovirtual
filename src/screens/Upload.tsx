@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Camera, Sparkles, Bot, PenTool, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { saveArtwork, createCollection, createSerie, supabase } from '../services/supabase';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Artwork } from '../types';
 import { callAI } from '../services/ai';
 
@@ -12,7 +12,6 @@ interface PhotoSlot { file: File | null; url: string; label: string; w: number; 
 
 export default function Upload() {
   const { t } = useTranslation();
-  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
@@ -36,44 +35,43 @@ export default function Upload() {
     })();
   }, []);
 
-  const [formData, setFormData] = useState({
-    classificacao: 'singular',
-    parentCollectionId: '', parentSeriesId: '', isNewHierarchy: false,
-    titulo: '', tipoObjeto: 'Pintura', autoria: '',
-    ano: new Date().getFullYear().toString(),
-    tecnica: '', suporte: '',
-    dimensaoW: '', dimensaoH: '', dimensaoD: '', dimensaoUnidade: 'cm',
-    inscricoes: '', sentencaResumo: '', narrativaCuratorial: '',
-    numeroRegistro: '', formaAquisicao: '', procedencia: '',
-    estadoConservacao: 'Excelente', valor: '', seguro: '', localizacao: '',
-    numeroEdicao: '', variacaoSerie: '',
-    quantidadePrevista: '', estruturaEdicao: '',
-    periodoColecao: '', artistasEnvolvidos: '', criterioInclusao: '', instituicaoAssociada: '',
-    status: 'Disponível',
-    protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
-    possuiTermo: false, possuiCOA: false, possuiCessao: false,
-    // Novos campos para Série (Estrutura Curatorial)
-    subtitle: '', statusSerie: 'Em andamento',
-    resumoConceitual: '', logicaUnidade: '', temas: '', referencias: '', palavrasChave: '',
-    anoInicial: '', anoFinal: '', periodoProducao: '', locaisCriacao: '',
-    tecnicas: '', materiais: '', suportes: '', linguagens: '',
-    codigoInterno: '', tagsCuratoriais: '',
-    direitosAutorais: '', certificados: '', documentosAnexos: '', historicoExpositivo: '',
-    // Recursos interdisciplinares, blockchain e certificados
-    recursosHibridos: '',
-    suporteDigital: '',
-    hashBlockchain: '',
-    redeBlockchain: 'Ethereum',
-    registroCertificado: '',
+  const [formData, setFormData] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('type');
+    const classification = (p === 'singular' || p === 'serie' || p === 'colecao') ? p : 'singular';
+    return {
+      classificacao: classification,
+      parentCollectionId: '', parentSeriesId: '', isNewHierarchy: false,
+      titulo: '', tipoObjeto: 'Pintura', autoria: '',
+      ano: new Date().getFullYear().toString(),
+      tecnica: '', suporte: '',
+      dimensaoW: '', dimensaoH: '', dimensaoD: '', dimensaoUnidade: 'cm',
+      inscricoes: '', sentencaResumo: '', narrativaCuratorial: '',
+      numeroRegistro: '', formaAquisicao: '', procedencia: '',
+      estadoConservacao: 'Excelente', valor: '', seguro: '', localizacao: '',
+      numeroEdicao: '', variacaoSerie: '',
+      quantidadePrevista: '', estruturaEdicao: '',
+      periodoColecao: '', artistasEnvolvidos: '', criterioInclusao: '', instituicaoAssociada: '',
+      status: 'Disponível',
+      protocoloAtivacao: '', perfilPerformer: '', duracao: '', elementosInegociveis: '',
+      possuiTermo: false, possuiCOA: false, possuiCessao: false,
+      // Novos campos para Série (Estrutura Curatorial)
+      subtitle: '', statusSerie: 'Em andamento',
+      resumoConceitual: '', logicaUnidade: '', temas: '', referencias: '', palavrasChave: '',
+      anoInicial: '', anoFinal: '', periodoProducao: '', locaisCriacao: '',
+      tecnicas: '', materiais: '', suportes: '', linguagens: '',
+      codigoInterno: '', tagsCuratoriais: '',
+      direitosAutorais: '', certificados: '', documentosAnexos: '', historicoExpositivo: '',
+      // Recursos interdisciplinares, blockchain e certificados
+      recursosHibridos: '',
+      suporteDigital: '',
+      hashBlockchain: '',
+      redeBlockchain: 'Ethereum',
+      registroCertificado: '',
+    };
   });
 
   const [photos, setPhotos] = useState<PhotoSlot[]>(Array.from({length:5},()=>({file:null,url:'',label:'',w:0,h:0})));
   const photoRefs = useRef<(HTMLInputElement|null)[]>([]);
-
-  useEffect(() => {
-    const p = new URLSearchParams(location.search).get('type');
-    if (p === 'singular' || p === 'serie' || p === 'colecao') setFormData(prev => ({ ...prev, classificacao: p }));
-  }, [location.search]);
 
   useEffect(() => {
     if (editId) {
@@ -88,9 +86,23 @@ export default function Upload() {
           if (error) throw error;
           if (data) {
             const artwork = data as Artwork;
-            let extraData: Record<string, any> = {};
+            interface ExtraData {
+              protocoloAtivacao?: string;
+              perfilPerformer?: string;
+              duracao?: string;
+              elementosInegociveis?: string;
+              possuiTermo?: boolean;
+              possuiCOA?: boolean;
+              possuiCessao?: boolean;
+              recursosHibridos?: string;
+              suporteDigital?: string;
+              hashBlockchain?: string;
+              redeBlockchain?: string;
+              registroCertificado?: string;
+            }
+            let extraData: ExtraData = {};
             if (artwork.intent_note) {
-              try { extraData = JSON.parse(artwork.intent_note); } catch (e) {}
+              try { extraData = JSON.parse(artwork.intent_note) as ExtraData; } catch { }
             }
             
             setFormData(prev => ({
@@ -142,12 +154,15 @@ export default function Upload() {
               registroCertificado: extraData.registroCertificado || '',
             }));
             
-            if (artwork.artwork_images && artwork.artwork_images.length > 0) {
-              const newPhotos = [...photos];
-              artwork.artwork_images.forEach((url, i) => {
-                if (i < 5) newPhotos[i] = { file: null, url, label: '', w: 0, h: 0 };
+            const imgs = artwork.artwork_images;
+            if (imgs && imgs.length > 0) {
+              setPhotos(prev => {
+                const newPhotos = [...prev];
+                imgs.forEach((url, i) => {
+                  if (i < 5) newPhotos[i] = { file: null, url, label: '', w: 0, h: 0 };
+                });
+                return newPhotos;
               });
-              setPhotos(newPhotos);
             }
           }
         } catch (e) {
@@ -213,7 +228,7 @@ export default function Upload() {
           series_title: formData.titulo,
           conceptual_statement: formData.narrativaCuratorial || undefined,
           print_run_total: parseInt(formData.quantidadePrevista) || undefined,
-          edition_type: (formData.estruturaEdicao as any) || undefined,
+          edition_type: (formData.estruturaEdicao as 'unique' | 'limited' | 'open' | 'artist_proof') || undefined,
         });
         alert('✅ Série criada com sucesso!'); navigate('/obras'); return;
       }
@@ -249,7 +264,7 @@ export default function Upload() {
         width: parseFloat(formData.dimensaoW) || undefined,
         depth: parseFloat(formData.dimensaoD) || undefined,
         dimensions_unit: formData.dimensaoUnidade,
-        sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string,string>)[formData.status] as any ?? 'available',
+        sale_status: ({'Disponível':'available','Vendida':'sold','Reservada':'reserved','Coleção Privada':'private_collection','Não à venda':'not_for_sale'} as Record<string, 'available' | 'sold' | 'reserved' | 'private_collection' | 'not_for_sale'>)[formData.status] ?? 'available',
         price: parseFloat(formData.valor) || undefined,
         physical_location: formData.localizacao || undefined,
         summary_sentence: formData.sentencaResumo || undefined,
@@ -282,9 +297,9 @@ export default function Upload() {
       <div className={opts?.span2 ? 'md:col-span-2' : ''}>
         <label htmlFor={id} className="block text-xs font-bold text-text-muted mb-1">{label}</label>
         {opts?.rows ? (
-          <textarea id={id} value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
+          <textarea id={id} value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
         ) : (
-          <input id={id} type="text" value={(formData as any)[field]} onChange={e => setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.font || ''}`} />
+          <input id={id} type="text" value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.font || ''}`} />
         )}
       </div>
     );

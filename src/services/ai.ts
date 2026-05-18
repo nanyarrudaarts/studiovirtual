@@ -3,8 +3,9 @@ export async function readURLWithJina(url: string): Promise<string> {
     const response = await fetch(`https://r.jina.ai/${encodeURIComponent(url)}`);
     if (!response.ok) throw new Error('Não foi possível acessar esta página.');
     return await response.text();
-  } catch (error: any) {
-    throw new Error(`Erro de conexão. Verifique sua internet. (${error.message})`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Erro de conexão. Verifique sua internet. (${message})`, { cause: error });
   }
 }
 
@@ -48,8 +49,9 @@ export async function readPDFWithGemini(file: File, apiKey: string, prompt: stri
 
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  } catch (error: any) {
-    throw new Error(`Erro ao ler o PDF. O arquivo pode estar protegido. (${error.message})`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Erro ao ler o PDF. O arquivo pode estar protegido. (${message})`, { cause: error });
   }
 }
 
@@ -63,8 +65,8 @@ export async function callAI(
   let provider: string;
   let apiKey: string;
   let prompt: string;
-  let imageBase64: string | undefined = arg4;
-  let mediaType: string | undefined = arg5;
+  const imageBase64 = arg4;
+  const mediaType = arg5;
 
   if (arg3 !== undefined) {
     provider = arg1;
@@ -77,9 +79,10 @@ export async function callAI(
   }
 
   if (!apiKey) {
+    const envKey = (import.meta.env as Record<string, string>)[`VITE_${provider.toUpperCase()}_API_KEY`] || '';
     const fallbackKey = localStorage.getItem(`${provider}_api_key`) || 
                         localStorage.getItem('groq_api_key') ||
-                        (import.meta.env as any)[`VITE_${provider.toUpperCase()}_API_KEY` as any];
+                        envKey;
     apiKey = fallbackKey || '';
   }
 

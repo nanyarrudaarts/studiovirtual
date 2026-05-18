@@ -234,8 +234,8 @@ ${inputText.substring(0, 50000)}`;
       } else {
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
-    } catch (e: any) {
-      setError(e.message || 'Erro de comunicação com IA');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro de comunicação com IA');
     }
     setLoading(false); setLoadingStep('');
   };
@@ -271,8 +271,8 @@ ${inputText.substring(0, 50000)}`;
       const data = extractJson(text);
       if (data) setImportedData(data);
       else setError('A IA não conseguiu estruturar as informações do PDF.');
-    } catch (e: any) {
-      setError(e.message || 'Erro ao processar PDF');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao processar PDF');
     }
     setLoading(false); setLoadingStep('');
   };
@@ -295,8 +295,8 @@ ${inputText.substring(0, 50000)}`;
       } else {
         setError('A IA não conseguiu estruturar as informações da página.');
       }
-    } catch (e: any) {
-      setError(e.message || 'Erro ao importar da URL');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao importar da URL');
     }
     setLoading(false); setLoadingStep('');
   };
@@ -709,7 +709,7 @@ export default function Perfil() {
             try {
               const parsed = JSON.parse(v);
               if (Array.isArray(parsed)) return parsed;
-            } catch (e) { /* ignore */ }
+            } catch { /* ignore */ }
           }
           return [];
         };
