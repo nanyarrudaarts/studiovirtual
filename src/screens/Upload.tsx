@@ -160,8 +160,8 @@ export default function Upload() {
     if (!aiInput.trim()) return;
     setAiLoading(true);
     try {
-      setAiPhase('Extraindo dados com Gemini...');
-      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'gemini');
+      setAiPhase('Extraindo dados com IA...');
+      const raw = await callAI(`Curador de arte. Extraia JSON: {"titulo":"","ano":"","tecnica":"","suporte":"","sentencaResumo":"","narrativaCuratorial":"","autoria":"","tipoObjeto":""}\nTexto:\n${aiInput.slice(0,12000)}`, 'groq');
       const d = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
       setFormData(f => ({ ...f, titulo: d.titulo||f.titulo, ano: d.ano||f.ano, tecnica: d.tecnica||f.tecnica, suporte: d.suporte||f.suporte, narrativaCuratorial: d.narrativaCuratorial||f.narrativaCuratorial, sentencaResumo: d.sentencaResumo||f.sentencaResumo, autoria: d.autoria||f.autoria }));
       setIaMode(false); setAiInput('');

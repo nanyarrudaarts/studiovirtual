@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Sparkles, Loader2, Camera, FileUp, Check, FileText } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
-import { callAI, readPDFWithGemini } from '../services/ai';
+import { callAI } from '../services/ai';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -111,13 +111,14 @@ function SmartImport({ currentData, onImport, t }: {
 
 
   const importFromText = async () => {
-    if (!import.meta.env.VITE_GEMINI_API_KEY) { setError('Configure VITE_GEMINI_API_KEY no .env'); return; }
+    const groqKey = localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY;
+    if (!groqKey) { setError('Configure a chave API do Groq nas configurações.'); return; }
     if (!textInput.trim() || textInput.trim().length < 20) { setError('O texto inserido é muito curto ou inválido.'); return; }
     setError(''); setLoading(true); setImportedData(null);
     try {
       setLoadingStep('Analisando informações com IA...');
       const prompt = `Analise o texto abaixo. Extraia todas as informações do artista e retorne APENAS JSON válido em português brasileiro com este schema exato:\n${PROFILE_JSON_SCHEMA}\n\nCONTEÚDO DO TEXTO:\n${textInput.substring(0, 50000)}`;
-      const text = await callAI(prompt, 'gemini');
+      const text = await callAI(prompt, 'groq');
       setLoadingStep(t('perfil.preenchendo_perfil'));
       await new Promise(r => setTimeout(r, 400));
       const data = extractJson(text);
@@ -127,31 +128,12 @@ function SmartImport({ currentData, onImport, t }: {
         setError('A IA não conseguiu encontrar os dados ou gerou um formato inválido.');
       }
     } catch (e: unknown) {
-      setError((e as Error).message || 'Erro de comunicação com Gemini');
+      setError((e as Error).message || 'Erro de comunicação com Groq');
     }
     setLoading(false); setLoadingStep('');
   };
 
 
-  const importFromPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!import.meta.env.VITE_GEMINI_API_KEY) { setError('Configure VITE_GEMINI_API_KEY no .env'); return; }
-    setError(''); setLoading(true); setImportedData(null);
-    setLoadingStep(t('perfil.identificando_informacoes'));
-    try {
-      const prompt = `Leia este currículo de artista e extraia todas as informações. Retorne APENAS JSON válido em português brasileiro com este schema:\n${PROFILE_JSON_SCHEMA}`;
-      const text = await readPDFWithGemini(file, prompt);
-      setLoadingStep(t('perfil.preenchendo_perfil'));
-      await new Promise(r => setTimeout(r, 400));
-      const data = extractJson(text);
-      if (data) setImportedData(data);
-      else setError(t('perfil.erro_pdf'));
-    } catch (e) {
-      setError((e as Error).message || 'Erro ao processar PDF com Gemini');
-    }
-    setLoading(false); setLoadingStep('');
-  };
 
   return (
     <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
@@ -162,12 +144,10 @@ function SmartImport({ currentData, onImport, t }: {
       <div className="p-7 space-y-5">
         {/* Tabs */}
         <div className="flex gap-2">
-          {(['text', 'pdf'] as const).map(type => (
-            <button key={type} onClick={() => { setTab(type); setImportedData(null); setError(''); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === type ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
-              {type === 'text' ? <><FileText size={15}/> Colar texto</> : <><FileUp size={15}/> {t('perfil.importar_pdf')}</>}
-            </button>
-          ))}
+          <button onClick={() => { setTab('text'); setImportedData(null); setError(''); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'text' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+            <FileText size={15}/> Colar texto
+          </button>
         </div>
 
         {/* Text Panel */}
@@ -185,18 +165,6 @@ function SmartImport({ currentData, onImport, t }: {
           </div>
         )}
 
-        {/* PDF Panel */}
-        {tab === 'pdf' && (
-          <div>
-            <input ref={pdfRef} type="file" accept=".pdf" aria-label="Selecionar PDF do currículo" className="hidden" onChange={importFromPdf} />
-            <button onClick={() => pdfRef.current?.click()} disabled={loading}
-              className="w-full border-2 border-dashed border-accent/30 rounded-2xl py-10 flex flex-col items-center gap-2 hover:bg-accent/5 transition-colors disabled:opacity-60">
-              <FileUp size={36} className="text-accent" />
-              <span className="font-bold text-sm">{t('arraste_curriculo')}</span>
-              <span className="text-xs text-text-muted">{t('pdf_max')}</span>
-            </button>
-          </div>
-        )}
 
         {/* Loading */}
         {loading && (
@@ -323,7 +291,16 @@ export default function Perfil() {
       if (data) {
         setForm(f => ({ ...f, ...data }));
         if (data.foto_url) setPhotoUrl(data.foto_url);
-        const ensureArray = (v: any) => Array.isArray(v) ? v : [];
+        const ensureArray = (v: any) => {
+          if (Array.isArray(v)) return v;
+          if (typeof v === 'string' && v.trim().startsWith('[')) {
+            try {
+              const parsed = JSON.parse(v);
+              if (Array.isArray(parsed)) return parsed;
+            } catch (e) { /* ignore */ }
+          }
+          return [];
+        };
         if (data.instagrams) setInstagrams(ensureArray(data.instagrams));
         if (data.social_links) setSocialLinks(ensureArray(data.social_links));
         if (data.formacao) setFormacao(ensureArray(data.formacao));
@@ -356,7 +333,7 @@ export default function Perfil() {
     setGeneratingBio(true);
     try {
       const prompt = `Você é um curador de arte. Gere duas bios para a artista ${form.nome}, de ${form.nacionalidade}, cidade ${form.cidade}. Bio curta (até 120 palavras) e bio longa (3 parágrafos). Retorne APENAS JSON: {"short":"...", "long":"..."}`;
-      const text = await callAI(prompt, 'gemini');
+      const text = await callAI(prompt, 'groq');
       const data = extractJson(text);
       if (data) {
         setForm(f => ({ ...f, bioShort: data.short || f.bioShort, bioLong: data.long || f.bioLong }));
