@@ -149,10 +149,15 @@ export async function deleteArtwork(id: string) {
   await supabase.from('artworks_collections').delete().eq('artwork_id', id);
   
   // Delete the record
-  const { error } = await supabase
-    .from('artworks').delete().eq('artwork_id', id);
+  const { data, error } = await supabase
+    .from('artworks').delete().eq('artwork_id', id).select();
   
-  return { error };
+  if (error) return { error };
+  if (!data || data.length === 0) {
+    return { error: new Error('Nenhuma obra foi deletada. Verifique as permissões de RLS no Supabase.') };
+  }
+  
+  return { error: null };
 }
 
 // ─── COLLECTIONS ─────────────────────────────────────────────────────────────
@@ -189,8 +194,9 @@ export async function updateCollection(id: string, data: Partial<Collection>): P
 }
 
 export async function deleteCollection(id: string): Promise<void> {
-  const { error } = await supabase.from('collections').delete().eq('collection_id', id);
+  const { data, error } = await supabase.from('collections').delete().eq('collection_id', id).select();
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Nenhuma coleção foi deletada. Verifique as permissões de RLS no Supabase.');
 }
 
 export async function getArtworksInCollection(collectionId: string): Promise<Artwork[]> {
@@ -255,8 +261,9 @@ export async function updateSerie(id: string, data: Partial<Series>): Promise<Se
 }
 
 export async function deleteSerie(id: string): Promise<void> {
-  const { error } = await supabase.from('series').delete().eq('series_id', id);
+  const { data, error } = await supabase.from('series').delete().eq('series_id', id).select();
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Nenhuma série foi deletada. Verifique as permissões de RLS no Supabase.');
 }
 
 export async function getArtworksInSerie(serieId: string): Promise<Artwork[]> {
