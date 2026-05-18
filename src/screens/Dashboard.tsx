@@ -60,7 +60,7 @@ export default function Dashboard() {
           alertasMateriais: alertasMateriais || 0,
         });
       } catch (err) {
-        console.error('Error loading dashboard:', err);
+        alert('Erro ao carregar dashboard: ' + (err as Error).message);
       } finally {
         setLoading(false);
       }

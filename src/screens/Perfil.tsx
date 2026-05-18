@@ -625,7 +625,7 @@ export default function Perfil() {
   useEffect(() => {
     supabase.from('artista').select('*').single().then(({ data, error }) => {
       if (error && error.code !== 'PGRST116') {
-        console.error('Erro ao carregar perfil:', error);
+        alert('Erro ao carregar perfil: ' + error.message);
       }
       if (data) {
         // Clean null and undefined values from database response before merging
@@ -716,7 +716,6 @@ export default function Perfil() {
     if (error) {
       const isMissingColumn = error.code === '42703' || error.message?.toLowerCase().includes('column') || error.hint?.toLowerCase().includes('column');
       if (isMissingColumn) {
-        console.warn('Alguma coluna nova não existe no banco. Tentando salvar sem e-mail, telefone e whatsapp...');
         const safePayload = { ...payload };
         delete safePayload.email;
         delete safePayload.telefone;

@@ -6,6 +6,8 @@ import { Shell } from './components/layout/Shell';
 import { supabase } from './services/supabase';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
+import type { Session } from '@supabase/supabase-js';
+
 // Lazy load screens
 const Dashboard = lazy(() => import('./screens/Dashboard'));
 const Upload = lazy(() => import('./screens/Upload'));
@@ -28,8 +30,7 @@ const LoadingScreen = () => (
 );
 
 export default function App() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

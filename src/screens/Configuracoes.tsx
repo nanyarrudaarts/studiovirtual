@@ -89,11 +89,9 @@ export default function Configuracoes() {
 
   const save = (keys: (keyof Config)[]) => {
     const updated = { ...config };
-    console.log('[Configuracoes] Saving keys:', keys, 'values:', keys.map(k => `${k}=${String(updated[k]).slice(0,10)}`));
     localStorage.setItem('sv_config', JSON.stringify(updated));
     if (keys.includes('groqKey')) {
       localStorage.setItem('groq_api_key', updated.groqKey);
-      console.log('[Configuracoes] groq_api_key saved to localStorage:', updated.groqKey.slice(0, 10) + '...');
     }
     const newSaved: Record<string, boolean> = {};
     keys.forEach(k => { newSaved[k] = true; });

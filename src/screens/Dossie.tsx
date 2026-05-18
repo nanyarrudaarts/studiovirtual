@@ -55,7 +55,7 @@ export default function Dossie() {
         // Initially select all artworks
         setSelectedArtworkIds(artList.map(a => a.artwork_id));
       } catch (e) {
-        console.error('Erro ao buscar obras:', e);
+        alert('Erro ao carregar obras: ' + (e as Error).message);
       } finally {
         setLoadingArtworks(false);
       }
@@ -63,7 +63,7 @@ export default function Dossie() {
 
     supabase.from('artista').select('*').single().then(({ data, error }) => {
       if (error && error.code !== 'PGRST116') {
-        console.error('Erro ao carregar perfil do artista:', error);
+        alert('Erro ao carregar perfil do artista: ' + error.message);
       }
       if (data) {
         const ensureArray = (v: any) => {
