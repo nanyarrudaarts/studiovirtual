@@ -17,10 +17,10 @@ async function uploadImage(file: File, folder: string): Promise<string> {
   return data.publicUrl;
 }
 
-async function deleteImage(url: string) {
-  const path = url.split('/obras-images/')[1];
-  if (path) await supabase.storage.from('obras-images').remove([path]);
-}
+// async function deleteImage(url: string) {
+//   const path = url.split('/obras-images/')[1];
+//   if (path) await supabase.storage.from('obras-images').remove([path]);
+// }
 
 async function generateAccessionNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -135,7 +135,7 @@ export async function deleteArtwork(id: string) {
     if (artwork?.artwork_images?.length) {
       const fileNames = artwork.artwork_images
         .map((url: string) => url.split('/').pop())
-        .filter(Boolean);
+        .filter((name): name is string => !!name);
       if (fileNames.length) {
         await supabase.storage.from('obras-images').remove(fileNames);
       }
