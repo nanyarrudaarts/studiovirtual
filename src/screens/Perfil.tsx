@@ -683,7 +683,7 @@ export default function Perfil() {
   });
 
 
-  const [instagrams, setInstagrams] = useState(['@nany_arruda', '@nanyarrudaart']);
+  const [instagrams, setInstagrams] = useState<string[]>(['@nany_arruda', '@nanyarrudaart']);
   const [socialLinks, setSocialLinks] = useState<{id:string; label:string; url:string}[]>([]);
   const [formacao, setFormacao] = useState<ListItem[]>([]);
   const [premios, setPremios] = useState<ListItem[]>([]);
@@ -700,21 +700,9 @@ export default function Perfil() {
           nome: user.user_metadata?.full_name || f.nome,
           nomeArtistico: user.user_metadata?.full_name || f.nomeArtistico
         }));
+      }
+    });
 
-        supabase.from('artista').select('*').eq('id', user.id).maybeSingle().then(({ data }) => {
-          if (data) {
-            setForm(f => ({ ...f, ...data }));
-            if (data.foto_url) setPhotoUrl(data.foto_url);
-            if (data.instagrams) setInstagrams(data.instagrams);
-            if (data.social_links) setSocialLinks(data.social_links);
-            if (data.formacao) setFormacao(data.formacao);
-            if (data.premios) setPremios(data.premios);
-            if (data.residencias) setResidencias(data.residencias);
-            if (data.expos_individuais) setExposIndividuais(data.expos_individuais);
-            if (data.expos_coletivas) setExposColetivas(data.expos_coletivas);
-            if (data.publicacoes) setPublicacoes(data.publicacoes);
-          }
-        });
     supabase.from('artista').select('*').single().then(({ data, error }) => {
       if (error && error.code !== 'PGRST116') {
         alert('Erro ao carregar perfil: ' + error.message);
@@ -722,14 +710,16 @@ export default function Perfil() {
       if (data) {
         if (data.id) setArtistId(data.id);
         // Clean null and undefined values from database response before merging
-        const cleanData: Record<string, unknown> = {};
+        const cleanData: Record<string, string> = {};
         Object.entries(data).forEach(([key, val]) => {
-          if (val !== null && val !== undefined) {
+          if (val !== null && val !== undefined && typeof val === 'string') {
             const lowerKey = key.toLowerCase();
             if (lowerKey === 'nomeartistico') cleanData.nomeArtistico = val;
             else if (lowerKey === 'bioshort') cleanData.bioShort = val;
             else if (lowerKey === 'biolong') cleanData.bioLong = val;
-            else cleanData[key] = val;
+            else if (['nome', 'nacionalidade', 'cidade', 'nascimento', 'email', 'website', 'tags', 'telefone', 'whatsapp'].includes(lowerKey)) {
+              cleanData[lowerKey as keyof typeof form] = val;
+            }
           }
         });
         setForm(f => ({ ...f, ...cleanData }));
@@ -744,14 +734,14 @@ export default function Perfil() {
           }
           return [];
         };
-        if (data.instagrams) setInstagrams(ensureArray(data.instagrams));
-        if (data.social_links) setSocialLinks(ensureArray(data.social_links));
-        if (data.formacao) setFormacao(ensureArray(data.formacao));
-        if (data.premios) setPremios(ensureArray(data.premios));
-        if (data.residencias) setResidencias(ensureArray(data.residencias));
-        if (data.expos_individuais) setExposIndividuais(ensureArray(data.expos_individuais));
-        if (data.expos_coletivas) setExposColetivas(ensureArray(data.expos_coletivas));
-        if (data.publicacoes) setPublicacoes(ensureArray(data.publicacoes));
+        if (data.instagrams) setInstagrams(ensureArray(data.instagrams) as string[]);
+        if (data.social_links) setSocialLinks(ensureArray(data.social_links) as {id:string; label:string; url:string}[]);
+        if (data.formacao) setFormacao(ensureArray(data.formacao) as ListItem[]);
+        if (data.premios) setPremios(ensureArray(data.premios) as ListItem[]);
+        if (data.residencias) setResidencias(ensureArray(data.residencias) as ListItem[]);
+        if (data.expos_individuais) setExposIndividuais(ensureArray(data.expos_individuais) as ListItem[]);
+        if (data.expos_coletivas) setExposColetivas(ensureArray(data.expos_coletivas) as ListItem[]);
+        if (data.publicacoes) setPublicacoes(ensureArray(data.publicacoes) as ListItem[]);
       }
     });
   }, []);
@@ -795,10 +785,6 @@ export default function Perfil() {
       return;
     }
 
-    await supabase.from('artista').upsert({
-      id: user.id,
-      ...form,
-    
     const payload = {
       id: artistId || 1,
       nome: form.nome,
