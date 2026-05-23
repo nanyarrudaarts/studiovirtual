@@ -569,7 +569,6 @@ function AutocompleteInput({
 }
 
 interface ListItem {
-
   id: string;
   [key: string]: string;
 }
@@ -666,7 +665,6 @@ export default function Perfil() {
   const [profileTab, setProfileTab] = useState<'pessoal' | 'artistico'>('pessoal');
   const [isEditing, setIsEditing] = useState(false);
 
-  const [artistId, setArtistId] = useState<number | null>(null);
   const [form, setForm] = useState({
     nome: '',
     nomeArtistico: '',
@@ -701,57 +699,44 @@ export default function Perfil() {
           nomeArtistico: user.user_metadata?.full_name || f.nomeArtistico
         }));
 
-        supabase.from('artista').select('*').eq('id', user.id).maybeSingle().then(({ data }) => {
+        supabase.from('artista').select('*').eq('id', user.id).maybeSingle().then(({ data, error }) => {
+          if (error && error.code !== 'PGRST116') {
+            alert('Erro ao carregar perfil: ' + error.message);
+          }
           if (data) {
-            setForm(f => ({ ...f, ...data }));
+            // Clean null and undefined values from database response before merging
+            const cleanData: Record<string, unknown> = {};
+            Object.entries(data).forEach(([key, val]) => {
+              if (val !== null && val !== undefined) {
+                const lowerKey = key.toLowerCase();
+                if (lowerKey === 'nomeartistico') cleanData.nomeArtistico = val;
+                else if (lowerKey === 'bioshort') cleanData.bioShort = val;
+                else if (lowerKey === 'biolong') cleanData.bioLong = val;
+                else cleanData[key] = val;
+              }
+            });
+            setForm(f => ({ ...f, ...cleanData }));
             if (data.foto_url) setPhotoUrl(data.foto_url);
-            if (data.instagrams) setInstagrams(data.instagrams);
-            if (data.social_links) setSocialLinks(data.social_links);
-            if (data.formacao) setFormacao(data.formacao);
-            if (data.premios) setPremios(data.premios);
-            if (data.residencias) setResidencias(data.residencias);
-            if (data.expos_individuais) setExposIndividuais(data.expos_individuais);
-            if (data.expos_coletivas) setExposColetivas(data.expos_coletivas);
-            if (data.publicacoes) setPublicacoes(data.publicacoes);
+            const ensureArray = (v: unknown) => {
+              if (Array.isArray(v)) return v;
+              if (typeof v === 'string' && v.trim().startsWith('[')) {
+                try {
+                  const parsed = JSON.parse(v);
+                  if (Array.isArray(parsed)) return parsed;
+                } catch { /* ignore */ }
+              }
+              return [];
+            };
+            if (data.instagrams) setInstagrams(ensureArray(data.instagrams));
+            if (data.social_links) setSocialLinks(ensureArray(data.social_links));
+            if (data.formacao) setFormacao(ensureArray(data.formacao));
+            if (data.premios) setPremios(ensureArray(data.premios));
+            if (data.residencias) setResidencias(ensureArray(data.residencias));
+            if (data.expos_individuais) setExposIndividuais(ensureArray(data.expos_individuais));
+            if (data.expos_coletivas) setExposColetivas(ensureArray(data.expos_coletivas));
+            if (data.publicacoes) setPublicacoes(ensureArray(data.publicacoes));
           }
         });
-    supabase.from('artista').select('*').single().then(({ data, error }) => {
-      if (error && error.code !== 'PGRST116') {
-        alert('Erro ao carregar perfil: ' + error.message);
-      }
-      if (data) {
-        if (data.id) setArtistId(data.id);
-        // Clean null and undefined values from database response before merging
-        const cleanData: Record<string, unknown> = {};
-        Object.entries(data).forEach(([key, val]) => {
-          if (val !== null && val !== undefined) {
-            const lowerKey = key.toLowerCase();
-            if (lowerKey === 'nomeartistico') cleanData.nomeArtistico = val;
-            else if (lowerKey === 'bioshort') cleanData.bioShort = val;
-            else if (lowerKey === 'biolong') cleanData.bioLong = val;
-            else cleanData[key] = val;
-          }
-        });
-        setForm(f => ({ ...f, ...cleanData }));
-        if (data.foto_url) setPhotoUrl(data.foto_url);
-        const ensureArray = (v: unknown) => {
-          if (Array.isArray(v)) return v;
-          if (typeof v === 'string' && v.trim().startsWith('[')) {
-            try {
-              const parsed = JSON.parse(v);
-              if (Array.isArray(parsed)) return parsed;
-            } catch { /* ignore */ }
-          }
-          return [];
-        };
-        if (data.instagrams) setInstagrams(ensureArray(data.instagrams));
-        if (data.social_links) setSocialLinks(ensureArray(data.social_links));
-        if (data.formacao) setFormacao(ensureArray(data.formacao));
-        if (data.premios) setPremios(ensureArray(data.premios));
-        if (data.residencias) setResidencias(ensureArray(data.residencias));
-        if (data.expos_individuais) setExposIndividuais(ensureArray(data.expos_individuais));
-        if (data.expos_coletivas) setExposColetivas(ensureArray(data.expos_coletivas));
-        if (data.publicacoes) setPublicacoes(ensureArray(data.publicacoes));
       }
     });
   }, []);
@@ -764,7 +749,7 @@ export default function Perfil() {
     const path = `perfil/foto.${ext}`;
     const { error } = await supabase.storage.from('perfil').upload(path, file, { upsert: true });
     if (error) {
-      alert('Erro ao enviar foto: ' + error.message);
+      alert('Erro ao enviar photo: ' + error.message);
     } else {
       const { data: { publicUrl } } = supabase.storage.from('perfil').getPublicUrl(path);
       setPhotoUrl(publicUrl);
@@ -795,12 +780,8 @@ export default function Perfil() {
       return;
     }
 
-    await supabase.from('artista').upsert({
-      id: user.id,
-      ...form,
-    
     const payload = {
-      id: artistId || 1,
+      id: user.id,
       nome: form.nome,
       nacionalidade: form.nacionalidade,
       cidade: form.cidade,
