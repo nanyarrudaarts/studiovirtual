@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
 import type { Artwork } from '../types';
@@ -13,35 +13,47 @@ export default function Dashboard() {
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
-  const getLocale = () => {
+  // ⚡ BOLT OPTIMIZATION: Memoize locale to prevent recalculation on every render
+  const locale = useMemo(() => {
     if (lang === 'en') return enUS;
     if (lang === 'es') return es;
     if (lang === 'de') return de;
     return ptBR;
-  };
+  }, [lang]);
+
+  // ⚡ BOLT OPTIMIZATION: Memoize formatted date
+  const dataAtual = useMemo(() => {
+    return format(new Date(), "EEEE, d 'de' MMMM", { locale });
+  }, [locale]);
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        // Fetch obras
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ BOLT OPTIMIZATION: Parallelize independent Supabase queries
+        const [
+          { data: obrasData },
+          { count: alertasMateriais },
+          { count: totalObras }
+        ] = await Promise.all([
+          // Fetch obras
+          supabase
+            .from('artworks')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          // Count alerts
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .eq('sale_status', 'available'),
+          // Count total artworks
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+        ]);
           
         if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        // Mock count for total obras
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
 
         const healthScore = (obrasData && obrasData.length > 0) 
           ? Math.round((obrasData.reduce((acc, o) => {
@@ -60,7 +72,8 @@ export default function Dashboard() {
           alertasMateriais: alertasMateriais || 0,
         });
       } catch (err) {
-        alert('Erro ao carregar dashboard: ' + (err as Error).message);
+        // Use non-blocking console log instead of alert for better INP
+        console.error('Erro ao carregar dashboard:', err);
       } finally {
         setLoading(false);
       }
@@ -68,8 +81,6 @@ export default function Dashboard() {
 
     loadDashboardData();
   }, []);
-
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
 
   return (
     <div className="flex flex-col md:flex-row gap-8 max-w-[1400px] mx-auto">
@@ -150,6 +161,7 @@ export default function Dashboard() {
                       <img
                         src={obra.cover_image}
                         alt={obra.artwork_title}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -173,6 +185,7 @@ export default function Dashboard() {
                     <img 
                       src={`https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&h=800&fit=crop&auto=format&q=80`} 
                       alt="Mock" 
+                      loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-md">
