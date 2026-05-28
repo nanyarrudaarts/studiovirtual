@@ -1,0 +1,3 @@
+## 2025-05-14 - [Optimize Dashboard performance and data fetching]
+**Learning:** Sequential await calls in React effects create unnecessary waterfalls that significantly delay the initial paint of critical dashboard metrics. Parallelizing these with Promise.all and memoizing derived UI state (like locales and dates) ensures a snappier user experience even on slower connections.
+**Action:** Always audit useEffect blocks for independent async operations that can be parallelized. Use useMemo for any localized or formatted strings that depend on changing app state (like language) but don't need to be recalculated on every render cycle.
