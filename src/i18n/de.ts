@@ -8,6 +8,7 @@ const de = {
       analise: 'Analyse',
       importar: 'Importieren',
       certificados: 'Zertifikate',
+      portfolio: 'Portfolio',
       materiais: 'Materialien',
       perfil: 'Künstlerprofil',
       configuracoes: 'Einstellungen',

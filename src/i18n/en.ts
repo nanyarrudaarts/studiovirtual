@@ -8,6 +8,7 @@ const en = {
       analise: 'Analysis',
       importar: 'Import',
       certificados: 'Certificates',
+      portfolio: 'Portfolio',
       materiais: 'Materials',
       perfil: 'Artist Profile',
       configuracoes: 'Settings',

@@ -8,6 +8,7 @@ const pt = {
       analise: 'Análise',
       importar: 'Importar',
       certificados: 'Certificados',
+      portfolio: 'Portfólio',
       materiais: 'Materiais',
       perfil: 'Perfil da Artista',
       configuracoes: 'Configurações',

@@ -8,6 +8,7 @@ const es = {
       analise: 'Análisis',
       importar: 'Importar',
       certificados: 'Certificados',
+      portfolio: 'Portafolio',
       materiais: 'Materiales',
       perfil: 'Perfil de la Artista',
       configuracoes: 'Configuración',

@@ -1,6 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Artwork, Collection, Series } from '../types';
 
+// ─── Portfolio Type ────────────────────────────────────────────────────────────
+export interface PortfolioProject {
+  portfolio_id: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  portfolio_title: string;
+  artist_statement: string | null;
+  template_type: 'A' | 'B' | 'C';
+  grid_columns: 2 | 4;
+  include_cover: boolean;
+  include_cv: boolean;
+  selected_artworks: string[];
+  image_scales: Record<string, number>;
+}
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
@@ -311,5 +327,50 @@ export async function removeArtworkFromSerie(artworkId: string, serieId: string)
     .delete()
     .eq('artwork_id', artworkId)
     .eq('series_id', serieId);
+  if (error) throw error;
+}
+
+// ─── PORTFOLIOS ───────────────────────────────────────────────────────────────
+
+export async function getPortfolios(): Promise<PortfolioProject[]> {
+  const { data, error } = await supabase
+    .from('portfolios')
+    .select('*')
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as PortfolioProject[];
+}
+
+export async function savePortfolio(
+  portfolio: Partial<PortfolioProject> & { portfolio_title: string }
+): Promise<PortfolioProject> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const payload = { ...portfolio, user_id: user?.id };
+
+  if (portfolio.portfolio_id) {
+    const { data, error } = await supabase
+      .from('portfolios')
+      .update(payload)
+      .eq('portfolio_id', portfolio.portfolio_id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as PortfolioProject;
+  }
+
+  const { data, error } = await supabase
+    .from('portfolios')
+    .insert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as PortfolioProject;
+}
+
+export async function deletePortfolio(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('portfolios')
+    .delete()
+    .eq('portfolio_id', id);
   if (error) throw error;
 }

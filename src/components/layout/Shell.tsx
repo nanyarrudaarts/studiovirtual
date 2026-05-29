@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, UploadCloud, Image as ImageIcon, FileText, Activity,
   DownloadCloud, Award, Box, Settings, UserCircle, LogOut,
-  Sun, Moon, Globe, Menu, X
+  Sun, Moon, Globe, Menu, X, BookOpen
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n/index';
@@ -25,6 +25,7 @@ const navGroups = [
       { path: '/upload', labelKey: 'nav.upload', icon: UploadCloud },
       { path: '/dossie', labelKey: 'nav.dossie', icon: FileText },
       { path: '/certificados', labelKey: 'nav.certificados', icon: Award },
+      { path: '/portfolio', labelKey: 'nav.portfolio', icon: BookOpen },
     ]
   },
   {
@@ -100,6 +101,7 @@ export function Shell() {
     '/analise': 'Análise Curatorial',
     '/importar': 'Importar Obras',
     '/certificados': 'Certificados',
+    '/portfolio': 'Gerador de Portfólio',
     '/materiais': 'Inventário de Ateliê',
     '/perfil': 'Perfil da Artista',
     '/configuracoes': 'Configurações'
