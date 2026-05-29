@@ -60,17 +60,40 @@ export interface Series {
   parent_collection_id?: string
   series_title: string
   series_number?: number
-  conceptual_statement?: string
+
+  // Curatorial texts
+  conceptual_statement?: string    // legacy
+  conceptual_summary?: string      // new
+  curatorial_narrative?: string    // new
   thematic_connection?: string
   narrative_description?: string
+
+  // Period & geography
+  start_year?: number
+  end_year?: number
+  production_period?: string
+  creation_locations?: string
+
+  // Materials & techniques
+  predominant_materials?: string[]
+  predominant_techniques?: string[]
+
+  // Edition
   edition_type?: 'unique' | 'limited' | 'open' | 'artist_proof'
   edition_fraction?: string
   print_run_total?: number
+
+  // Display
   display_order: number
   group_label?: string
   keywords?: string[]
   cover_image?: string
   cor: string
+
+  // Status
+  series_status?: string
+  visibility_status?: 'public' | 'private' | 'archived'
+
   created_at: string
   updated_at: string
 }

@@ -36,7 +36,7 @@ export default function Login() {
             studio virtual
           </h1>
           <p className="text-sm font-medium text-text-muted tracking-wide">
-            Gestão de Acervo para Artistas
+            Nany Arruda · Artist Management
           </p>
         </div>
 

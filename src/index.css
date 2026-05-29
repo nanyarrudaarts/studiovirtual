@@ -1,4 +1,13 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime&family=Great+Vibes&family=Droid+Serif&display=swap');
+
+@font-face {
+  font-family: 'Russkopis';
+  src: url('/fonts/russkopis.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 @theme {
   --color-bg: #F5F3EE;
@@ -53,6 +62,12 @@
   .hover-float:hover {
     transform: translateY(-6px) rotate(-0.5deg);
     box-shadow: var(--shadow-float);
+  }
+  .animation-delay-200 {
+    animation-delay: 0.2s;
+  }
+  .animation-delay-400 {
+    animation-delay: 0.4s;
   }
 
   /* Semantic color utilities using CSS vars */
@@ -116,3 +131,242 @@
   }
 
 }
+
+/* Certificate of Authenticity (COA) Print/Preview Styles */
+.coa-container {
+  width: 794px;
+  height: 1123px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 3cm;
+  font-family: "Courier Prime", monospace;
+  display: flex;
+  flex-direction: column;
+}
+
+.coa-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.coa-title-main {
+  font-family: "Droid Serif", serif;
+  font-size: 42px;
+  font-weight: bold;
+  color: #000000;
+  letter-spacing: 4px;
+  text-align: center;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.coa-title-sub {
+  font-family: "Great Vibes", cursive;
+  font-size: 68px;
+  color: #c29b57;
+  text-align: center;
+  margin-top: -34px;
+  margin-bottom: -22px;
+  position: relative;
+  z-index: 2;
+}
+
+.coa-title-type {
+  font-family: "Droid Serif", serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: #000000;
+  letter-spacing: 5px;
+  text-align: center;
+  margin: 0;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.coa-artist {
+  font-family: "Droid Serif", serif;
+  font-size: 26px;
+  font-weight: bold;
+  color: #c29b57;
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.coa-image-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+.coa-image-wrapper {
+  width: 270px;
+  height: 370px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.coa-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.coa-image-placeholder {
+  width: 270px;
+  height: 370px;
+  border: 1px dotted #000000;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coa-placeholder-text {
+  font-family: "Courier Prime", monospace;
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.coa-metadata-table {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 14px;
+  gap: 36px;
+  width: 100%;
+}
+
+.coa-metadata-col {
+  width: 48%;
+}
+
+.coa-metadata-row {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 1px dotted #999999;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.coa-label {
+  font-family: "Courier Prime", monospace;
+  font-size: 9px;
+  color: #000000;
+  text-transform: uppercase;
+  font-weight: normal;
+}
+
+.coa-value {
+  font-family: "Courier Prime", monospace;
+  font-size: 9px;
+  font-weight: bold;
+  color: #000000;
+  margin-left: 4px;
+}
+
+.coa-value-ellipsis {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coa-description-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dotted #999999;
+  display: flex;
+  flex-direction: column;
+}
+
+.coa-description-text {
+  font-family: "Droid Serif", serif;
+  font-size: 10px;
+  font-style: italic;
+  color: #000000;
+  text-align: justify;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.coa-description-label {
+  font-family: "Droid Serif", serif;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: bold;
+  color: #000000;
+  margin-right: 6px;
+}
+
+.coa-footer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+}
+
+.coa-footer-block {
+  width: 33.33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coa-signature-line {
+  width: 140px;
+  border-top: 0.5px solid #999999;
+  margin-bottom: 6px;
+}
+
+.coa-signature-label {
+  font-family: "Courier Prime", monospace;
+  font-size: 6px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.coa-signature-date {
+  font-family: "Courier Prime", monospace;
+  font-size: 8px;
+  color: #000000;
+  margin-top: 4px;
+}
+
+.coa-signature-location {
+  font-family: "Courier Prime", monospace;
+  font-size: 8px;
+  color: #000000;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.coa-stamp-image {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  margin-bottom: -15px;
+}
+
+.coa-seal-text {
+  font-family: "Droid Serif", serif;
+  font-size: 10px;
+  color: #b0ada8;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+

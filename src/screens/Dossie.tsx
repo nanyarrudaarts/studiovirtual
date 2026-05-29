@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Printer, CheckSquare, Square, Eye, User, Loader2, BookOpen, Layers } from 'lucide-react';
-import { getArtworks, supabase } from '../services/supabase';
-import type { Artwork } from '../types';
+import { getArtworks, getSeries, supabase } from '../services/supabase';
+import type { Artwork, Series } from '../types';
 
 interface FormacaoItem {
   anoInicio: string;
@@ -64,6 +64,7 @@ interface ArtistProfile {
 
 export default function Dossie() {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
+  const [, setSeriesList] = useState<Series[]>([]);
   const [artist, setArtist] = useState<ArtistProfile | null>(null);
   
   // Loading states
@@ -86,8 +87,9 @@ export default function Dossie() {
   useEffect(() => {
     (async () => {
       try {
-        const artList = await getArtworks();
+        const [artList, serList] = await Promise.all([getArtworks(), getSeries()]);
         setArtworks(artList);
+        setSeriesList(serList);
         // Initially select all artworks
         setSelectedArtworkIds(artList.map(a => a.artwork_id));
       } catch (e) {
@@ -673,7 +675,7 @@ export default function Dossie() {
                             <span className="italic">"{a.artwork_title}" {a.creation_year ? `(${a.creation_year})` : ''}</span>
                           </div>
                         </>
-                      ) : (
+                      ) : activePreviewTab === 'codigo' ? (
                         // TAB: REGISTROS DE DETALHE CODIFICADOS (Fatores ID)
                         <div className="space-y-6 text-sm font-sans">
                           <h2 className="text-xl font-serif text-accent pb-2 border-b border-gray-100 flex items-center justify-between">
@@ -743,7 +745,7 @@ export default function Dossie() {
                             <span>Rede Segura Supabase</span>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })

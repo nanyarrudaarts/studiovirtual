@@ -54,3 +54,39 @@ export async function callAI(
   const resData = await response.json();
   return resData.choices?.[0]?.message?.content || '';
 }
+
+export async function callAIChat(
+  messages: { role: string, content: string }[],
+  apiKeyOverride?: string
+): Promise<string> {
+  let apiKey = apiKeyOverride || localStorage.getItem('groq_api_key') || '';
+
+  if (!apiKey) {
+    const envKey = (import.meta.env as Record<string, string>)['VITE_GROQ_API_KEY'] || '';
+    apiKey = envKey || '';
+  }
+
+  if (!apiKey) {
+    throw new Error('Configure sua chave Groq em Configurações');
+  }
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: messages
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Erro no Groq: ${err?.error?.message || response.statusText}`);
+  }
+
+  const resData = await response.json();
+  return resData.choices?.[0]?.message?.content || '';
+}

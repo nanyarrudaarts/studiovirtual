@@ -17,19 +17,14 @@ async function uploadImage(file: File, folder: string): Promise<string> {
   return data.publicUrl;
 }
 
-// async function deleteImage(url: string) {
-//   const path = url.split('/obras-images/')[1];
-//   if (path) await supabase.storage.from('obras-images').remove([path]);
-// }
 
 async function generateAccessionNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const { count } = await supabase
     .from('artworks')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', `${year}-01-01`);
-  const seq = String((count ?? 0) + 1).padStart(3, '0');
-  return `NA-${year}-${seq}`;
+    .select('*', { count: 'exact', head: true });
+  const sequence = 1000 + (count ?? 0) + 1;
+  return `NA-${year}-${sequence}`;
 }
 
 // ─── ARTWORKS ─────────────────────────────────────────────────────────────────
@@ -74,17 +69,20 @@ export async function saveArtwork(artwork: Partial<Artwork>, imageFiles: File[] 
     payload.artwork_images = [...(artwork.artwork_images ?? []), ...uploadedUrls];
     if (!payload.cover_image) payload.cover_image = uploadedUrls[0];
   }
+  if (!payload.classification) payload.classification = 'singular';
+  if (!payload.edition_number) {
+    payload.edition_number = 
+      payload.classification === 'singular' ? 'Original Único' :
+      (payload as { print_run_total?: number }).print_run_total ? `1/${(payload as { print_run_total?: number }).print_run_total}` :
+      'Original Único';
+  }
   if (!payload.accession_number) {
     payload.accession_number = await generateAccessionNumber();
   }
-  const { data: { user } } = await supabase.auth.getUser();
-  const defaultName = user?.user_metadata?.full_name || 'Artista';
-
-  if (!payload.artist_name) payload.artist_name = defaultName;
+  if (!payload.artist_name) payload.artist_name = 'Nany Arruda';
   if (!payload.dimensions_unit) payload.dimensions_unit = 'cm';
-  if (!payload.classification) payload.classification = 'singular';
   if (!payload.sale_status) payload.sale_status = 'available';
-  if (payload.copyright_holder === undefined) payload.copyright_holder = defaultName;
+  if (payload.copyright_holder === undefined) payload.copyright_holder = 'Nany Arruda';
   if (payload.certificate_of_authenticity === undefined) payload.certificate_of_authenticity = false;
   if (payload.exposed === undefined) payload.exposed = false;
   if (payload.sustainable_materials === undefined) payload.sustainable_materials = false;

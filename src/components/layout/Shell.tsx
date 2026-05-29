@@ -58,27 +58,10 @@ export function Shell() {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userData, setUserData] = useState<{ name: string; email: string; initials: string }>({
-    name: 'Artista',
-    email: '',
-    initials: 'A'
-  });
   const langRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        const name = user.user_metadata?.full_name || 'Artista';
-        const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-        setUserData({
-          name,
-          email: user.email || '',
-          initials
-        });
-      }
-    });
-
     function handleClick(e: MouseEvent) {
       if (langRef.current && !langRef.current.contains(e.target as Node)) setShowLangDropdown(false);
       if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) setShowAvatarDropdown(false);
@@ -162,7 +145,7 @@ export function Shell() {
             <h1 className="font-serif italic text-[18px] tracking-wide text-text-main leading-none">studio virtual</h1>
           </div>
           <div className="mt-2 font-sans text-[11px] text-[#B0ADA8]">
-            {userData.name}
+            Nany Arruda | 1988
           </div>
         </div>
         <div className="mx-6 mb-2 border-b border-[#B0ADA8]/20"></div>
@@ -293,13 +276,13 @@ export function Shell() {
                 aria-label="Menu do usuário"
                 className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-[#6B5CE7] text-white flex items-center justify-center text-sm font-bold active:scale-95 hover:bg-[#6B5CE7]/90 transition-all shadow-sm"
               >
-                {userData.initials}
+                NA
               </button>
               {showAvatarDropdown && (
                 <div className={`absolute right-0 top-full mt-2 w-56 md:w-44 rounded-xl shadow-lg border overflow-hidden z-50 shell-dropdown ${isDark ? 'shell-dropdown-dark' : 'shell-dropdown-light'}`}>
                   <div className="px-4 py-3 border-b shell-border">
-                    <p className="text-sm md:text-xs font-bold text-text-muted">{userData.name}</p>
-                    <p className="text-sm md:text-xs truncate text-text-muted">{userData.email}</p>
+                    <p className="text-sm md:text-xs font-bold text-text-muted">Nany Arruda</p>
+                    <p className="text-sm md:text-xs truncate text-text-muted">contato@nanyarruda.com</p>
                   </div>
                   
                   {/* Mobile Language and Theme inside avatar dropdown */}
