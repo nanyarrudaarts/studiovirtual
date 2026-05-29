@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useTranslation } from 'react-i18next';
@@ -68,10 +68,7 @@ function KeyInput({ label, value, onChange, placeholder, onSave, isSaved, t }: {
 
 export default function Configuracoes() {
   const { t } = useTranslation();
-  const [config, setConfig] = useState<Config>(defaultConfig);
   const [userEmail, setUserEmail] = useState('');
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [showDangerModal, setShowDangerModal] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -79,6 +76,7 @@ export default function Configuracoes() {
         setUserEmail(user.email || '');
       }
     });
+  }, []);
 
   const [config, setConfig] = useState<Config>(() => {
     const stored = localStorage.getItem('sv_config');

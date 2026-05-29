@@ -700,21 +700,9 @@ export default function Perfil() {
           nome: user.user_metadata?.full_name || f.nome,
           nomeArtistico: user.user_metadata?.full_name || f.nomeArtistico
         }));
+      }
+    });
 
-        supabase.from('artista').select('*').eq('id', user.id).maybeSingle().then(({ data }) => {
-          if (data) {
-            setForm(f => ({ ...f, ...data }));
-            if (data.foto_url) setPhotoUrl(data.foto_url);
-            if (data.instagrams) setInstagrams(data.instagrams);
-            if (data.social_links) setSocialLinks(data.social_links);
-            if (data.formacao) setFormacao(data.formacao);
-            if (data.premios) setPremios(data.premios);
-            if (data.residencias) setResidencias(data.residencias);
-            if (data.expos_individuais) setExposIndividuais(data.expos_individuais);
-            if (data.expos_coletivas) setExposColetivas(data.expos_coletivas);
-            if (data.publicacoes) setPublicacoes(data.publicacoes);
-          }
-        });
     supabase.from('artista').select('*').single().then(({ data, error }) => {
       if (error && error.code !== 'PGRST116') {
         alert('Erro ao carregar perfil: ' + error.message);
@@ -789,15 +777,6 @@ export default function Perfil() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setSaving(false);
-      return;
-    }
-
-    await supabase.from('artista').upsert({
-      id: user.id,
-      ...form,
     
     const payload = {
       id: artistId || 1,

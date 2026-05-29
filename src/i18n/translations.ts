@@ -8,9 +8,6 @@ const t = {
     configuracoes: 'Configurações', materiais: 'Materiais', perfil: 'Perfil', sair: 'Sair',
     // Auth
     login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
-    login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
-    login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
-    login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
     email: 'E-mail', senha: 'Senha', entrar: 'Entrar', esqueci_senha: 'Esqueci minha senha',
     login_error: 'E-mail ou senha incorretos.',
     // Dashboard
@@ -129,8 +126,6 @@ const t = {
     analise: 'Analysis', importar: 'Import', certificados: 'Certificates',
     configuracoes: 'Settings', materiais: 'Materials', perfil: 'Profile', sair: 'Sign out',
     login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
-    login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
-    login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
     email: 'Email', senha: 'Password', entrar: 'Sign in', esqueci_senha: 'Forgot password',
     login_error: 'Incorrect email or password.',
     bem_vinda: 'Welcome back to your studio.',
@@ -243,7 +238,6 @@ const t = {
     dashboard: 'Dashboard', upload: 'Subir', obras: 'Obras', dossie: 'Dossier',
     analise: 'Análisis', importar: 'Importar', certificados: 'Certificados',
     configuracoes: 'Configuración', materiais: 'Materiales', perfil: 'Perfil', sair: 'Salir',
-    login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
     login_title: 'studio virtual', login_subtitle: 'Gestão de Acervo para Artistas',
     email: 'Correo electrónico', senha: 'Contraseña', entrar: 'Iniciar sesión',
     esqueci_senha: 'Olvidé mi contraseña', login_error: 'Correo o contraseña incorrectos.',
