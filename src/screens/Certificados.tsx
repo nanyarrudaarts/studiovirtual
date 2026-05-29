@@ -28,7 +28,7 @@ export default function Certificados() {
     })();
   }, []);
 
-  const handleDownload = async (artworkTitle: string, coaId: string) => {
+  const handleDownload = async (_artworkTitle: string, coaId: string) => {
     try {
       setIsGenerating(true);
       if (!selectedArtwork) return;

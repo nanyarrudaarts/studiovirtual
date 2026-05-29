@@ -150,7 +150,7 @@ export function getMediumDisplay(medium?: string, support?: string): string {
   return result.toUpperCase();
 }
 
-export function getEditionDisplay(editionNumber?: string, printRunTotal?: number, creationYear?: number): string {
+export function getEditionDisplay(editionNumber?: string, printRunTotal?: number, _creationYear?: number): string {
   if (editionNumber && editionNumber !== 'Original Único' && editionNumber !== 'Original Unico' && editionNumber !== 'original unico') {
     return editionNumber.toUpperCase();
   }
@@ -161,7 +161,7 @@ export function getEditionDisplay(editionNumber?: string, printRunTotal?: number
   return 'UNIQUE ORIGINAL';
 }
 
-export function getVisualDescription(description?: string): string {
+export function getVisualDescription(_description?: string): string {
   // Retorna o texto poético padrão em inglês inteiramente em ALL CAPS para registro oficial
   return 'FOUR MOVEMENTS—NIGHT IN BLOOM, THE SEARCH, THE ENCOUNTER, AND GOLDEN EPIPHANY—NARRATE A JOURNEY OF HEALING. MERGING ORIGINAL POETRY AND IMAGE, GOLD FLOWS THROUGH COMPOSITIONS LIKE KINTSUGI, A TRACE OF LIGHT ENDURING SHADOW. THIS LUMINOSITY REVEALS THAT BEAUTY RESIDES IN TRANSCENDENCE.';
 }
