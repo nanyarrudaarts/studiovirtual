@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 import { Shell } from './components/layout/Shell';
 import { supabase } from './services/supabase';
+import { getOnboardingStatus } from './services/supabase';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 import type { Session } from '@supabase/supabase-js';
@@ -20,52 +21,99 @@ const Dossie = lazy(() => import('./screens/Dossie'));
 const SerieDetail = lazy(() => import('./screens/SerieDetail'));
 const Certificados = lazy(() => import('./screens/Certificados'));
 const Portfolio = lazy(() => import('./screens/Portfolio'));
+const Onboarding = lazy(() => import('./screens/Onboarding'));
 
 // Placeholder Screens
 const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Análise</h1><p>Relatório de saúde e análise curatorial (em breve)</p></div>;
 const Importar = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Importar</h1><p>Importação de acervo (em breve)</p></div>;
 
 const LoadingScreen = () => (
-  <div className="min-h-[50vh] flex items-center justify-center">
-    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+  <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-4">
+    <h1 className="font-serif italic text-2xl" style={{ color: '#0f3421' }}>studio virtual</h1>
+    <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: '#0f3421', borderTopColor: 'transparent' }} />
   </div>
 );
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      setSession(s);
+      if (s) {
+        const done = await getOnboardingStatus();
+        setOnboardingDone(done);
+      } else {
+        setOnboardingDone(null);
+      }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      setSession(s);
+      if (s) {
+        const done = await getOnboardingStatus();
+        setOnboardingDone(done);
+      } else {
+        setOnboardingDone(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
+  if (loading) return <LoadingScreen />;
+
+  // Not logged in — always show Login
+  if (!session) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <h1 className="font-serif italic text-2xl text-text-main">studio virtual</h1>
-          <p className="text-text-muted text-sm">Carregando...</p>
-        </div>
-      </div>
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+          <Analytics />
+          <SpeedInsights />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
+  // Logged in but onboarding not complete → force /onboarding
+  if (onboardingDone === false) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route
+              path="/onboarding"
+              element={
+                <Onboarding
+                  onComplete={() => setOnboardingDone(true)}
+                />
+              }
+            />
+            <Route path="*" element={<Navigate to="/onboarding" replace />} />
+          </Routes>
+          <Analytics />
+          <SpeedInsights />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  // Logged in + onboarding done → normal app
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/onboarding" element={<Navigate to="/" replace />} />
 
-          <Route path="/" element={session ? <Shell /> : <Navigate to="/login" replace />}>
+          <Route path="/" element={<Shell />}>
             <Route index element={<Dashboard />} />
             <Route path="upload" element={<Upload />} />
             <Route path="obras" element={<Obras />} />
@@ -88,4 +136,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-

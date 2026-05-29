@@ -374,3 +374,63 @@ export async function deletePortfolio(id: string): Promise<void> {
     .eq('portfolio_id', id);
   if (error) throw error;
 }
+
+// ─── ONBOARDING ───────────────────────────────────────────────────────────────
+
+export interface OnboardingData {
+  // Step 1 – Conta / Perfil Pessoal
+  nome?: string;
+  nomeartistico?: string;
+  email?: string;
+  nascimento?: string;
+  nacionalidade?: string;
+  cidade?: string;
+  telefone?: string;
+  foto_url?: string;
+  // Step 2 – Perfil Artístico
+  statement?: string;
+  bioshort?: string;
+  tags?: string;
+  // Step 3 – Trajetória
+  formacao?: object[];
+  expos_individuais?: object[];
+  expos_coletivas?: object[];
+  premios?: object[];
+  // Step 4 – Marca & Identidade
+  selo_url?: string;
+  assinatura_url?: string;
+  // Step 5 – Fotos profissionais
+  fotos_profissionais?: string[];
+  // Completion
+  onboarding_completed?: boolean;
+}
+
+/** Returns onboarding_completed flag (false = not started or pending). */
+export async function getOnboardingStatus(): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('artista')
+    .select('onboarding_completed')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error || !data) return false;
+  return data.onboarding_completed === true;
+}
+
+/** Persists partial onboarding data without marking as complete. */
+export async function saveOnboardingStep(payload: OnboardingData): Promise<void> {
+  const { error } = await supabase
+    .from('artista')
+    .upsert({ id: 1, ...payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+/** Marks onboarding as done and saves all collected data in one transaction. */
+export async function completeOnboarding(payload: OnboardingData): Promise<void> {
+  const { error } = await supabase
+    .from('artista')
+    .upsert(
+      { id: 1, ...payload, onboarding_completed: true, updated_at: new Date().toISOString() },
+      { onConflict: 'id' }
+    );
+  if (error) throw error;
+}
