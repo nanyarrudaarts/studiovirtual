@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
 import type { Artwork } from '../types';
@@ -13,43 +13,49 @@ export default function Dashboard() {
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
-  const getLocale = () => {
+  // ⚡ BOLT OPTIMIZATION: Memoize locale to avoid repeated calls to getLocale
+  const locale = useMemo(() => {
     if (lang === 'en') return enUS;
     if (lang === 'es') return es;
     if (lang === 'de') return de;
     return ptBR;
-  };
+  }, [lang]);
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        // Fetch obras
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ BOLT OPTIMIZATION: Parallelize independent Supabase queries using Promise.all
+        // This reduces total data loading time significantly.
+        const [
+          { data: obrasData },
+          { count: alertasMateriais },
+          { count: totalObras }
+        ] = await Promise.all([
+          supabase
+            .from('artworks')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .eq('sale_status', 'available'),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+        ]);
           
         if (obrasData) setObras(obrasData);
 
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        // Mock count for total obras
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
-
+        // ⚡ BOLT OPTIMIZATION: Use correct property names from Artwork interface for healthScore
         const healthScore = (obrasData && obrasData.length > 0) 
           ? Math.round((obrasData.reduce((acc, o) => {
               let filled = 0;
-              if (o.narrativa_curatorial) filled++;
-              if (o.sentenca_resumo) filled++;
+              if (o.curatorial_narrative) filled++;
+              if (o.summary_sentence) filled++;
               if (o.medium) filled++;
-              if (o.dimensions) filled++;
+              if (o.dimensions_formatted) filled++;
               return acc + (filled / 4);
             }, 0) / obrasData.length) * 100) 
           : 100;
@@ -69,7 +75,11 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
+  // ⚡ BOLT OPTIMIZATION: Memoize formatted date to prevent redundant calculation on every re-render
+  const dataAtual = useMemo(() =>
+    format(new Date(), "EEEE, d 'de' MMMM", { locale }),
+    [locale]
+  );
 
   return (
     <div className="flex flex-col md:flex-row gap-8 max-w-[1400px] mx-auto">
