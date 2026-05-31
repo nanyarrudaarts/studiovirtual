@@ -24,24 +24,18 @@ export default function Dashboard() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        // Fetch obras
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ BOLT OPTIMIZATION: Parallelize independent Supabase queries to reduce TTI
+        const [
+          { data: obrasData },
+          { count: alertasMateriaisCount },
+          { count: totalObrasCount }
+        ] = await Promise.all([
+          supabase.from('artworks').select('*').order('created_at', { ascending: false }).limit(6),
+          supabase.from('artworks').select('*', { count: 'exact', head: true }).eq('sale_status', 'available'),
+          supabase.from('artworks').select('*', { count: 'exact', head: true })
+        ]);
           
         if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        // Mock count for total obras
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
 
         const healthScore = (obrasData && obrasData.length > 0) 
           ? Math.round((obrasData.reduce((acc, o) => {
@@ -55,9 +49,9 @@ export default function Dashboard() {
           : 100;
 
         setMetricas({
-          totalObras: totalObras || 0,
+          totalObras: totalObrasCount || 0,
           healthScore,
-          alertasMateriais: alertasMateriais || 0,
+          alertasMateriais: alertasMateriaisCount || 0,
         });
       } catch (err) {
         alert('Erro ao carregar dashboard: ' + (err as Error).message);
