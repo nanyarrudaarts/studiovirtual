@@ -6,7 +6,8 @@ import {
   Check, Loader2, X,
 } from 'lucide-react';
 import { getArtworks, getPortfolios, savePortfolio, deletePortfolio } from '../services/supabase';
-import { PortfolioPDF, buildTechnicalLegend } from '../components/common/PortfolioPDF';
+import { PortfolioPDF } from '../components/common/PortfolioPDF';
+import { buildTechnicalLegend } from '../lib/pdfHelpers';
 import type { Artwork } from '../types';
 import type { PortfolioProject } from '../services/supabase';
 

@@ -4,7 +4,7 @@ import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, del
 import type { Artwork, Series, Collection } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { downloadCertificate } from '../lib/generateCertificate';
-import { formatCOAID, translateTitle } from '../components/common/CertificatePDF';
+import { formatCOAID, translateTitle } from '../lib/pdfHelpers';
 
 type Tab = 'unicas' | 'series' | 'colecoes';
 

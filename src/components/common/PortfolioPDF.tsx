@@ -21,89 +21,7 @@ Font.register({
   ],
 });
 
-// ─── Translation Engine ────────────────────────────────────────────────────────
-const MATERIAL_MAP: Record<string, string> = {
-  // Portuguese → English
-  'acrílica': 'Acrylic', 'acrilica': 'Acrylic', 'acrílico': 'Acrylic',
-  'óleo': 'Oil', 'oleo': 'Oil',
-  'aquarela': 'Watercolor',
-  'guache': 'Gouache',
-  'têmpera': 'Tempera', 'tempera': 'Tempera',
-  'carvão': 'Charcoal', 'carvao': 'Charcoal',
-  'grafite': 'Graphite',
-  'pastel': 'Pastel',
-  'tinta': 'Ink',
-  'folha de ouro': 'Gold Leaf',
-  'técnica mista': 'Mixed Media', 'tecnica mista': 'Mixed Media',
-  'impressão': 'Print', 'impressao': 'Print',
-  'pintura': 'Painting',
-  'desenho': 'Drawing',
-  'fotografia': 'Photography',
-  'escultura': 'Sculpture',
-  'instalação': 'Installation', 'instalacao': 'Installation',
-};
-
-const SUPPORT_MAP: Record<string, string> = {
-  'tela': 'Canvas',
-  'tela de algodão': 'Cotton Canvas', 'tela de algodao': 'Cotton Canvas',
-  'papel': 'Paper',
-  'papel de algodão': 'Cotton Paper',
-  'madeira': 'Wood',
-  'painel de madeira': 'Wood Panel',
-  'linho': 'Linen',
-  'placa de mdf': 'MDF Board', 'mdf': 'MDF Board',
-  'metal': 'Metal',
-  'alumínio': 'Aluminium', 'aluminio': 'Aluminium',
-  'vidro': 'Glass',
-  'cartão': 'Cardboard', 'cartao': 'Cardboard',
-  'parede': 'Wall',
-};
-
-function translateTerm(term: string, map: Record<string, string>): string {
-  const key = term.toLowerCase().trim();
-  return map[key] || term;
-}
-
-export function buildTechnicalLegend(artwork: Artwork, imageScale?: number): string {
-  const title = (artwork.artwork_title || '').toUpperCase();
-  const year = artwork.creation_year || '';
-
-  // Translate medium + support
-  let mediumStr = '';
-  const medium = artwork.medium || '';
-  const support = artwork.support || '';
-
-  if (medium && support) {
-    const medT = translateTerm(medium, MATERIAL_MAP);
-    const supT = translateTerm(support, SUPPORT_MAP);
-    mediumStr = `${medT} on ${supT}`;
-  } else if (medium) {
-    mediumStr = translateTerm(medium, MATERIAL_MAP);
-  } else if (support) {
-    mediumStr = translateTerm(support, SUPPORT_MAP);
-  }
-
-  // Dimensions — omit depth if absent
-  let dimStr = '';
-  const h = artwork.height;
-  const w = artwork.width;
-  const d = artwork.depth;
-  if (h && w) {
-    dimStr = d ? `${h} × ${w} × ${d} cm` : `${h} × ${w} cm`;
-  } else if (artwork.dimensions_formatted) {
-    dimStr = artwork.dimensions_formatted;
-  }
-
-  const parts: string[] = [];
-  if (year) parts.push(String(year));
-  if (mediumStr) parts.push(mediumStr);
-  if (dimStr) parts.push(dimStr);
-  if (imageScale && imageScale < 100) parts.push(`(${imageScale}%)`);
-
-  return parts.length > 0
-    ? `${title}, ${parts.join('. ')}.`
-    : title;
-}
+import { buildTechnicalLegend } from '../../lib/pdfHelpers';
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
 const shared = StyleSheet.create({
@@ -247,9 +165,9 @@ function TemplateAPage({
 
 // ─── Template B — "The Gallery" (grid of 2 or 4 artworks per page) ────────────
 function TemplateBPage({
-  artworks, scales: _scales, cols, pageNum, total, artistName,
+  artworks, cols, pageNum, total, artistName,
 }: {
-  artworks: Artwork[]; scales: Record<string, number>; cols: 2 | 4;
+  artworks: Artwork[]; cols: 2 | 4;
   pageNum: number; total: number; artistName: string;
 }) {
   const imageHeight = cols === 2 ? 220 : 110;
@@ -409,7 +327,6 @@ export function PortfolioPDF({
         <TemplateBPage
           key={i}
           artworks={chunk}
-          scales={imageScales}
           cols={gridColumns}
           pageNum={pageNum}
           total={total}

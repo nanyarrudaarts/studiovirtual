@@ -109,10 +109,10 @@ export function Shell() {
   const currentPageTitle = pageTitles[location.pathname] || 'Visão Geral';
 
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 h-[52px] md:h-[40px] px-3 rounded-lg transition-colors font-medium text-sm ${
+    `flex items-center gap-3 h-[52px] md:h-[40px] px-3 rounded-lg transition-all duration-150 font-medium text-sm cursor-pointer ${
       isActive 
-        ? 'bg-[#6B5CE7] text-white' 
-        : 'text-text-muted hover:bg-[#F0EDE6] hover:text-[#1a1a1a]'
+        ? 'bg-[var(--text-main)] text-[var(--bg)] shadow-sm' 
+        : 'text-text-muted hover:bg-[var(--surface-raised)] hover:text-[var(--text-main)]'
     }`;
 
   return (
@@ -129,7 +129,7 @@ export function Shell() {
       <aside 
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`shell-sidebar fixed md:static inset-y-0 left-0 w-[280px] md:w-[220px] bg-white flex flex-col shadow-xl md:shadow-sm z-50 shrink-0 transition-transform duration-300 ${
+        className={`shell-sidebar fixed md:static inset-y-0 left-0 w-[280px] md:w-[220px] flex flex-col z-50 shrink-0 transition-transform duration-300 shadow-none ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`} 
       >
@@ -142,20 +142,20 @@ export function Shell() {
             <X size={24} />
           </button>
           
-          <div className="flex items-center gap-2">
-            <img src="/logo-nany.png" alt="Seal" className="w-[20px] h-[20px] object-contain" />
-            <h1 className="font-serif italic text-[18px] tracking-wide text-text-main leading-none">studio virtual</h1>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo-nany.png" alt="Seal" className="w-[18px] h-[18px] object-contain opacity-80" />
+            <h1 className="font-serif italic text-[17px] tracking-wide text-text-main leading-none">studio virtual</h1>
           </div>
-          <div className="mt-2 font-sans text-[11px] text-[#B0ADA8]">
-            Nany Arruda | 1988
+          <div className="mt-1.5 font-sans text-[10px] tracking-widest uppercase text-text-faint">
+            Nany Arruda
           </div>
         </div>
-        <div className="mx-6 mb-2 border-b border-[#B0ADA8]/20"></div>
+        <div className="mx-5 mb-2 border-b border-border-subtle"></div>
         
         <nav className="flex-1 px-4 overflow-y-auto">
           {navGroups.map((group, idx) => (
             <div key={idx} className="mb-4">
-              <div className="text-[9px] uppercase tracking-[0.1em] text-[#B0ADA8] mt-5 mb-2 pl-[12px] font-bold">
+              <div className="text-[9px] uppercase tracking-[0.12em] text-text-faint mt-5 mb-1.5 pl-3 font-semibold">
                 {group.label}
               </div>
               <div className="space-y-1">
@@ -179,8 +179,8 @@ export function Shell() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-[#B0ADA8]/20 bg-white">
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[#B0ADA8] mb-2 pl-[12px] font-bold">
+        <div className="p-4 border-t border-border-subtle">
+          <div className="text-[9px] uppercase tracking-[0.12em] text-text-faint mb-1.5 pl-3 font-semibold">
             Gestão
           </div>
           <div className="space-y-1">
@@ -200,10 +200,10 @@ export function Shell() {
               );
             })}
           </div>
-          <div className="my-4 mx-2 border-b border-[#B0ADA8]/20"></div>
+          <div className="my-3 mx-2 border-b border-border-subtle"></div>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 h-[52px] md:h-[40px] px-3 w-full rounded-lg text-rose-500 hover:bg-rose-50 transition-colors"
+            className="flex items-center gap-3 h-[52px] md:h-[40px] px-3 w-full rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-150 cursor-pointer"
           >
             <LogOut size={18} />
             <span className="font-medium text-sm">{t('nav.sair')}</span>
@@ -214,7 +214,7 @@ export function Shell() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 bg-bg">
         {/* Topbar */}
-        <header className="h-16 md:h-16 border-b border-gray-100/50 flex items-center justify-between px-4 md:px-8 shrink-0 z-10 transition-colors duration-300 shell-topbar relative bg-white/50 backdrop-blur-sm">
+        <header className="h-14 border-b flex items-center justify-between px-4 md:px-8 shrink-0 z-10 shell-topbar relative">
           
           <div className="flex items-center gap-2">
             <button 
@@ -230,7 +230,7 @@ export function Shell() {
           </div>
 
           <div className="absolute left-1/2 -translate-x-1/2 hidden md:block">
-            <h2 className="font-serif italic text-[22px] text-text-main">{currentPageTitle}</h2>
+            <h2 className="font-serif italic text-[20px] text-text-main tracking-tight">{currentPageTitle}</h2>
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
@@ -246,14 +246,14 @@ export function Shell() {
                   <span className="uppercase">{currentLang.split('-')[0]}</span>
                 </button>
                 {showLangDropdown && (
-                  <div className={`absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg border overflow-hidden z-50 shell-dropdown ${isDark ? 'shell-dropdown-dark' : 'shell-dropdown-light'}`}>
+                  <div className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-50 shell-dropdown">
                     {LANGUAGES.map(l => (
                       <button key={l.value} onClick={() => handleLangChange(l.value)}
                         aria-label={`Idioma: ${l.label}`}
-                        className={`flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left transition-colors hover:bg-[#6B5CE7]/10 ${
-                          currentLang === l.value ? 'text-[#6B5CE7] font-bold' : 'text-text-main font-normal'
+                        className={`flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left transition-colors cursor-pointer hover:bg-[var(--surface-raised)] ${
+                          currentLang === l.value ? 'text-[var(--text-main)] font-semibold' : 'text-text-muted font-normal'
                         }`}>
-                        {currentLang === l.value && <span className="w-1.5 h-1.5 rounded-full bg-[#6B5CE7] inline-block" />}
+                        {currentLang === l.value && <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-main)] inline-block" />}
                         {l.label}
                       </button>
                     ))}
@@ -276,29 +276,29 @@ export function Shell() {
               <button
                 onClick={() => setShowAvatarDropdown(d => !d)}
                 aria-label="Menu do usuário"
-                className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-[#6B5CE7] text-white flex items-center justify-center text-sm font-bold active:scale-95 hover:bg-[#6B5CE7]/90 transition-all shadow-sm"
+                className="w-9 h-9 rounded-full bg-[var(--text-main)] text-[var(--bg)] flex items-center justify-center text-xs font-bold tracking-wider active:scale-95 hover:opacity-80 transition-all shadow-sm cursor-pointer"
               >
                 NA
               </button>
               {showAvatarDropdown && (
-                <div className={`absolute right-0 top-full mt-2 w-56 md:w-44 rounded-xl shadow-lg border overflow-hidden z-50 shell-dropdown ${isDark ? 'shell-dropdown-dark' : 'shell-dropdown-light'}`}>
+                <div className="absolute right-0 top-full mt-2 w-52 rounded-xl overflow-hidden z-50 shell-dropdown">
                   <div className="px-4 py-3 border-b shell-border">
-                    <p className="text-sm md:text-xs font-bold text-text-muted">Nany Arruda</p>
-                    <p className="text-sm md:text-xs truncate text-text-muted">contato@nanyarruda.com</p>
+                    <p className="text-xs font-semibold text-text-main">Nany Arruda</p>
+                    <p className="text-xs truncate text-text-faint mt-0.5">contato@nanyarruda.com</p>
                   </div>
                   
                   {/* Mobile Language and Theme inside avatar dropdown */}
                   <div className="md:hidden border-b shell-border py-2">
                     <div className="px-4 py-2">
-                      <p className="text-xs font-bold uppercase mb-2 text-text-muted">{t('configuracoes.idioma')}</p>
-                      <div className="grid grid-cols-2 gap-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 text-text-faint">{t('configuracoes.idioma')}</p>
+                      <div className="grid grid-cols-2 gap-1.5">
                         {LANGUAGES.map(l => (
                           <button key={l.value} onClick={() => handleLangChange(l.value)}
                             aria-label={`Idioma: ${l.label}`}
-                            className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors ${
+                            className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors cursor-pointer ${
                               currentLang === l.value
-                                ? 'bg-[#6B5CE7] text-white'
-                                : 'bg-bg text-text-main'
+                                ? 'bg-[var(--text-main)] text-[var(--bg)]'
+                                : 'bg-[var(--surface-raised)] text-text-main'
                             }`}>
                             {l.label.split(' ')[0]}
                           </button>
@@ -306,26 +306,26 @@ export function Shell() {
                       </div>
                     </div>
                     <button onClick={() => { toggleTheme(); setShowAvatarDropdown(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors text-text-main hover:bg-[#6B5CE7]/5">
-                      {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors text-text-main hover:bg-[var(--surface-raised)] cursor-pointer">
+                      {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
                       {isDark ? 'Modo claro' : 'Modo escuro'}
                     </button>
                   </div>
 
                   <div className="py-1">
                     <button onClick={() => { navigate('/perfil'); setShowAvatarDropdown(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm transition-colors text-text-main hover:bg-[#6B5CE7]/5">
-                      <UserCircle size={18} /> {t('nav.perfil')}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors text-text-main hover:bg-[var(--surface-raised)] cursor-pointer">
+                      <UserCircle size={16} /> {t('nav.perfil')}
                     </button>
                     <button onClick={() => { navigate('/configuracoes'); setShowAvatarDropdown(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm transition-colors text-text-main hover:bg-[#6B5CE7]/5">
-                      <Settings size={18} /> {t('nav.configuracoes')}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors text-text-main hover:bg-[var(--surface-raised)] cursor-pointer">
+                      <Settings size={16} /> {t('nav.configuracoes')}
                     </button>
                   </div>
                   <div className="border-t shell-border">
                     <button onClick={handleLogout}
-                      className="flex items-center gap-3 w-full px-4 py-3 md:py-2.5 text-sm text-rose-500 hover:bg-rose-50 transition-colors">
-                      <LogOut size={18} /> {t('nav.sair')}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer">
+                      <LogOut size={16} /> {t('nav.sair')}
                     </button>
                   </div>
                 </div>
@@ -335,7 +335,7 @@ export function Shell() {
         </header>
 
         {/* Scrollable Page Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 relative">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 md:p-10 relative">
           <Outlet />
         </div>
       </main>

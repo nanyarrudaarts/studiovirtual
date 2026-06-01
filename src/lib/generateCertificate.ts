@@ -4,7 +4,8 @@ import { CertificatePDF } from '../components/common/CertificatePDF';
 import type { CertificateData } from '../components/common/CertificatePDF';
 
 export const generateCertificateBlob = async (data: CertificateData): Promise<Blob> => {
-  const doc = React.createElement(CertificatePDF, { data }) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const doc = React.createElement(CertificatePDF, { data }) as React.ReactElement<any>;
   const asPdf = pdf(doc);
   return await asPdf.toBlob();
 };

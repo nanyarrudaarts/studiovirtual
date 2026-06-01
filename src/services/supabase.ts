@@ -386,16 +386,40 @@ export interface OnboardingData {
   nacionalidade?: string;
   cidade?: string;
   telefone?: string;
+  whatsapp?: string;
+  website?: string;
   foto_url?: string;
+  // Extra pessoal (virtualized via social_links → custom_metadata)
+  pronome?: string;
+  cidade_nascimento?: string;
+  pais_nascimento?: string;
+  pais_atual?: string;
   // Step 2 – Perfil Artístico
-  statement?: string;
   bioshort?: string;
+  biolong?: string;
+  statement?: string;
   tags?: string;
+  instagrams?: string[];
+  // Artistic virtual metadata
+  processo_criativo?: string;
+  tecnicas_recorrentes?: string;
+  temas_centrais?: string;
+  pesquisa_artistica?: string;
+  referencias_conceituais?: string;
   // Step 3 – Trajetória
   formacao?: object[];
   expos_individuais?: object[];
   expos_coletivas?: object[];
   premios?: object[];
+  residencias?: object[];
+  publicacoes?: object[];
+  // Extra trajectory (virtualized)
+  bolsas?: object[];
+  feiras?: object[];
+  bienais?: object[];
+  clipping?: object[];
+  colecoesPublicas?: object[];
+  colecoesPrivadas?: object[];
   // Step 4 – Marca & Identidade
   selo_url?: string;
   assinatura_url?: string;
@@ -416,21 +440,136 @@ export async function getOnboardingStatus(): Promise<boolean> {
   return data.onboarding_completed === true;
 }
 
+/**
+ * Builds the social_links payload with custom_metadata virtualized fields.
+ * Reads existing social links first to avoid overwriting user's other links.
+ */
+async function buildSocialLinksPayload(d: OnboardingData, existingSocialLinks: unknown[] = []): Promise<unknown[]> {
+  const cleanLinks = (existingSocialLinks as { id?: string }[]).filter(
+    (l) => l.id !== 'custom_metadata'
+  );
+  const metadataItem = {
+    id: 'custom_metadata',
+    pronome: d.pronome ?? '',
+    cidade_nascimento: d.cidade_nascimento ?? '',
+    pais_nascimento: d.pais_nascimento ?? '',
+    pais_atual: d.pais_atual ?? '',
+    processo_criativo: d.processo_criativo ?? '',
+    tecnicas_recorrentes: d.tecnicas_recorrentes ?? '',
+    temas_centrais: d.temas_centrais ?? '',
+    pesquisa_artistica: d.pesquisa_artistica ?? '',
+    referencias_conceituais: d.referencias_conceituais ?? '',
+    bolsas: d.bolsas ?? [],
+    feiras: d.feiras ?? [],
+    bienais: d.bienais ?? [],
+    clipping: d.clipping ?? [],
+    colecoesPublicas: d.colecoesPublicas ?? [],
+    colecoesPrivadas: d.colecoesPrivadas ?? [],
+  };
+  return [...cleanLinks, metadataItem];
+}
+
 /** Persists partial onboarding data without marking as complete. */
 export async function saveOnboardingStep(payload: OnboardingData): Promise<void> {
+  // Read existing social_links to preserve any existing entries
+  const { data: existing } = await supabase
+    .from('artista')
+    .select('social_links')
+    .eq('id', 1)
+    .maybeSingle();
+
+  const existingLinks = Array.isArray(existing?.social_links) ? existing.social_links : [];
+  const socialLinksPayload = await buildSocialLinksPayload(payload, existingLinks);
+
+  const dbPayload = {
+    id: 1,
+    nome: payload.nome,
+    nomeartistico: payload.nomeartistico,
+    email: payload.email,
+    nascimento: payload.nascimento,
+    nacionalidade: payload.nacionalidade,
+    cidade: payload.cidade,
+    telefone: payload.telefone,
+    whatsapp: payload.whatsapp,
+    website: payload.website,
+    foto_url: payload.foto_url,
+    bioshort: payload.bioshort,
+    biolong: payload.biolong,
+    statement: payload.statement,
+    tags: payload.tags,
+    instagrams: payload.instagrams,
+    formacao: payload.formacao,
+    expos_individuais: payload.expos_individuais,
+    expos_coletivas: payload.expos_coletivas,
+    premios: payload.premios,
+    residencias: payload.residencias,
+    publicacoes: payload.publicacoes,
+    selo_url: payload.selo_url,
+    assinatura_url: payload.assinatura_url,
+    fotos_profissionais: payload.fotos_profissionais,
+    social_links: socialLinksPayload,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Remove undefined keys so we don't accidentally null out existing data
+  const cleanPayload = Object.fromEntries(
+    Object.entries(dbPayload).filter(([, v]) => v !== undefined)
+  );
+
   const { error } = await supabase
     .from('artista')
-    .upsert({ id: 1, ...payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    .upsert(cleanPayload, { onConflict: 'id' });
   if (error) throw error;
 }
 
 /** Marks onboarding as done and saves all collected data in one transaction. */
 export async function completeOnboarding(payload: OnboardingData): Promise<void> {
+  const { data: existing } = await supabase
+    .from('artista')
+    .select('social_links')
+    .eq('id', 1)
+    .maybeSingle();
+
+  const existingLinks = Array.isArray(existing?.social_links) ? existing.social_links : [];
+  const socialLinksPayload = await buildSocialLinksPayload(payload, existingLinks);
+
+  const dbPayload = {
+    id: 1,
+    nome: payload.nome,
+    nomeartistico: payload.nomeartistico,
+    email: payload.email,
+    nascimento: payload.nascimento,
+    nacionalidade: payload.nacionalidade,
+    cidade: payload.cidade,
+    telefone: payload.telefone,
+    whatsapp: payload.whatsapp,
+    website: payload.website,
+    foto_url: payload.foto_url,
+    bioshort: payload.bioshort,
+    biolong: payload.biolong,
+    statement: payload.statement,
+    tags: payload.tags,
+    instagrams: payload.instagrams,
+    formacao: payload.formacao,
+    expos_individuais: payload.expos_individuais,
+    expos_coletivas: payload.expos_coletivas,
+    premios: payload.premios,
+    residencias: payload.residencias,
+    publicacoes: payload.publicacoes,
+    selo_url: payload.selo_url,
+    assinatura_url: payload.assinatura_url,
+    fotos_profissionais: payload.fotos_profissionais,
+    social_links: socialLinksPayload,
+    onboarding_completed: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const cleanPayload = Object.fromEntries(
+    Object.entries(dbPayload).filter(([, v]) => v !== undefined)
+  );
+
   const { error } = await supabase
     .from('artista')
-    .upsert(
-      { id: 1, ...payload, onboarding_completed: true, updated_at: new Date().toISOString() },
-      { onConflict: 'id' }
-    );
+    .upsert(cleanPayload, { onConflict: 'id' });
   if (error) throw error;
 }

@@ -7,7 +7,7 @@ import { callAIChat, callAI } from '../services/ai';
 import { TagInput } from '../components/common/TagInput';
 import { downloadCertificate } from '../lib/generateCertificate';
 import type { CertificateData } from '../components/common/CertificatePDF';
-import { formatCOAID, translateTitle } from '../components/common/CertificatePDF';
+import { formatCOAID, translateTitle } from '../lib/pdfHelpers';
 
 // ── Controlled vocabularies ───────────────────────────────────────────────────
 const MATERIALS_VOCAB = [

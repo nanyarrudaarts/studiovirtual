@@ -23,148 +23,14 @@ Font.register({
   src: `${window.location.origin}/fonts/GreatVibes-Regular.ttf`,
 });
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────
-
-const MEDIUM_MAP: Record<string, string> = {
-  'acrílica': 'ACRYLIC',
-  'acrilica': 'ACRYLIC',
-  'acrílico': 'ACRYLIC',
-  'acrilico': 'ACRYLIC',
-  'óleo': 'OIL',
-  'oleo': 'OIL',
-  'aquarela': 'WATERCOLOR',
-  'técnica mista': 'MIXED MEDIA',
-  'tecnica mista': 'MIXED MEDIA',
-  'pastel': 'PASTEL',
-  'guache': 'GOUACHE',
-  'nanquim': 'INK',
-  'lápis': 'PENCIL',
-  'lapis': 'PENCIL',
-  'grafite': 'GRAPHITE',
-};
-
-const SUPPORT_MAP: Record<string, string> = {
-  'tela': 'CANVAS',
-  'tela de linho': 'LINEN CANVAS',
-  'tela de algodão': 'COTTON CANVAS',
-  'tela de algodao': 'COTTON CANVAS',
-  'papel': 'PAPER',
-  'mdf': 'MDF BOARD',
-  'madeira': 'WOOD',
-  'cartão': 'CARDBOARD',
-  'cartao': 'CARDBOARD',
-};
-
-const TITLE_MAP: Record<string, string> = {
-  'noite em flor': 'NIGHT IN BLOOM',
-  'noite em flor i': 'NIGHT IN BLOOM I',
-  'noite em flor ii': 'NIGHT IN BLOOM II',
-  'noite em flor iii': 'NIGHT IN BLOOM III',
-  'noite em flor iv': 'NIGHT IN BLOOM IV',
-};
-
-export function translateTitle(title?: string): string {
-  if (!title) return '—';
-  const tKey = title.toLowerCase().trim();
-  const translated = TITLE_MAP[tKey] || title;
-  return translated.toUpperCase();
-}
-
-export function formatCOAID(coaId?: string): string {
-  if (!coaId) return '';
-  const cleanId = coaId.trim().toUpperCase();
-
-  // 1. Já está no formato ideal "NA-2026-1002"
-  const matchIdeal = cleanId.match(/^NA-(\d{4})-(\d{4,})$/);
-  if (matchIdeal) {
-    return cleanId;
-  }
-
-  // 2. Está no formato "NA-2026-002" ou "NA-2026-2" (menos de 4 dígitos)
-  const matchShort = cleanId.match(/^NA-(\d{4})-(\d+)$/);
-  if (matchShort) {
-    const year = matchShort[1];
-    const numStr = matchShort[2];
-    let num = parseInt(numStr, 10);
-    if (num < 1000) {
-      num = 1000 + num;
-    }
-    return `NA-${year}-${num}`;
-  }
-
-  // 3. Formato legado complexo como "2026NA001C0A001E" ou "2026NA..."
-  const matchLegacy = cleanId.match(/^(\d{4})NA(\d+)/);
-  if (matchLegacy) {
-    const year = matchLegacy[1];
-    const numStr = matchLegacy[2];
-    let num = parseInt(numStr, 10);
-    if (num < 1000) {
-      num = 1000 + num;
-    }
-    return `NA-${year}-${num}`;
-  }
-
-  // 4. Qualquer string contendo ano e algum número
-  const yearMatch = cleanId.match(/\b(19\d{2}|20\d{2})\b/);
-  const numMatch = cleanId.match(/(\d+)(?!.*\d)/); // último número na string
-  const year = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
-  if (numMatch) {
-    let num = parseInt(numMatch[1], 10);
-    if (num < 1000) {
-      num = 1000 + num;
-    }
-    return `NA-${year}-${num}`;
-  }
-
-  return `NA-${year}-1001`;
-}
-
-export function getCategory(medium?: string): string {
-  const m = medium?.toLowerCase() || '';
-  if (m.includes('acrílica') || m.includes('acrilica') || m.includes('óleo') || m.includes('oleo') || m.includes('aquarela') || m.includes('guache')) return 'PAINTING';
-  if (m.includes('escultura')) return 'SCULPTURE';
-  if (m.includes('fotografia')) return 'PHOTOGRAPHY';
-  if (m.includes('digital')) return 'DIGITAL ART';
-  if (m.includes('gravura')) return 'PRINTMAKING';
-  if (m.includes('instalação') || m.includes('instalacao')) return 'INSTALLATION';
-  if (m.includes('desenho') || m.includes('grafite') || m.includes('lápis') || m.includes('nanquim')) return 'DRAWING';
-  return 'PAINTING';
-}
-
-export function getMediumDisplay(medium?: string, support?: string): string {
-  const m = medium?.toLowerCase() || '';
-  const s = support?.toLowerCase() || '';
-  
-  if ((m.includes('acrílica') || m.includes('acrilica')) && (m.includes('tela') || s.includes('tela'))) {
-    return 'ACRYLIC ON COTTON CANVAS';
-  }
-  if ((m.includes('óleo') || m.includes('oleo')) && (m.includes('tela') || s.includes('tela'))) {
-    return 'OIL ON COTTON CANVAS';
-  }
-
-  const mKey = m.trim();
-  const sKey = s.trim();
-  const medTranslated = MEDIUM_MAP[mKey] || medium || '';
-  const supTranslated = SUPPORT_MAP[sKey] || support || '';
-  const result = supTranslated ? `${medTranslated} ON ${supTranslated}` : medTranslated;
-  return result.toUpperCase();
-}
-
-export function getEditionDisplay(editionNumber?: string, printRunTotal?: number, _creationYear?: number): string {
-  if (editionNumber && editionNumber !== 'Original Único' && editionNumber !== 'Original Unico' && editionNumber !== 'original unico') {
-    return editionNumber.toUpperCase();
-  }
-  if (printRunTotal && printRunTotal > 1) {
-    const num = editionNumber?.split('/')[0] || '1';
-    return `${num}/${printRunTotal}`;
-  }
-  return 'UNIQUE ORIGINAL';
-}
-
-export function getVisualDescription(_description?: string): string {
-  // Retorna o texto poético padrão em inglês inteiramente em ALL CAPS para registro oficial
-  return 'FOUR MOVEMENTS—NIGHT IN BLOOM, THE SEARCH, THE ENCOUNTER, AND GOLDEN EPIPHANY—NARRATE A JOURNEY OF HEALING. MERGING ORIGINAL POETRY AND IMAGE, GOLD FLOWS THROUGH COMPOSITIONS LIKE KINTSUGI, A TRACE OF LIGHT ENDURING SHADOW. THIS LUMINOSITY REVEALS THAT BEAUTY RESIDES IN TRANSCENDENCE.';
-}
+import {
+  translateTitle,
+  formatCOAID,
+  getCategory,
+  getMediumDisplay,
+  getEditionDisplay,
+  getVisualDescription
+} from '../../lib/pdfHelpers';
 
 // ─── STYLESHEET ──────────────────────────────────────────────────────────────
 
@@ -409,7 +275,7 @@ export const CertificatePDF = ({ data }: { data: CertificateData }) => {
   const formattedCoaId = formatCOAID(data.coaId);
 
   // Edition: smart logic
-  const editionDisplay = getEditionDisplay(data.editionNumber, data.printRunTotal, data.creationYear);
+  const editionDisplay = getEditionDisplay(data.editionNumber, data.printRunTotal);
 
   // Category: map medium to English category
   const categoryDisplay = getCategory(data.medium || data.category);
@@ -418,7 +284,7 @@ export const CertificatePDF = ({ data }: { data: CertificateData }) => {
   const mediumDisplay = getMediumDisplay(data.medium, data.support);
 
   // Description: prefer curatorial narrative, fallback to standard text
-  const descriptionText = getVisualDescription(data.curatorialNarrative || data.description);
+  const descriptionText = getVisualDescription();
 
   return (
     <Document

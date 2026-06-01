@@ -40,22 +40,47 @@ export default function App() {
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
+    console.log('App mounted, starting getSession');
+    const fallbackTimer = setTimeout(() => {
+      console.warn('Fallback timer fired: getSession took too long');
+      setLoading(false);
+    }, 3000);
+
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      console.log('getSession resolved', s);
       setSession(s);
       if (s) {
-        const done = await getOnboardingStatus();
-        setOnboardingDone(done);
+        try {
+          const done = await getOnboardingStatus();
+          console.log('onboarding status:', done);
+          setOnboardingDone(done);
+        } catch (err) {
+          console.error('Error fetching onboarding status:', err);
+          setOnboardingDone(null);
+        }
       } else {
         setOnboardingDone(null);
       }
+      clearTimeout(fallbackTimer);
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error getting session:', err);
+      setSession(null);
+      setOnboardingDone(null);
+      clearTimeout(fallbackTimer);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s) {
-        const done = await getOnboardingStatus();
-        setOnboardingDone(done);
+        try {
+          const done = await getOnboardingStatus();
+          setOnboardingDone(done);
+        } catch (err) {
+          console.error('Error in auth state change onboarding fetch:', err);
+          setOnboardingDone(null);
+        }
       } else {
         setOnboardingDone(null);
       }

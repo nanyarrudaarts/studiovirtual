@@ -4,7 +4,7 @@ import type { Artwork, Series } from '../types';
 import { CertificatePreview } from '../components/common/CertificatePreview';
 import { downloadCertificate } from '../lib/generateCertificate';
 import { Printer, Search, Loader2 } from 'lucide-react';
-import { formatCOAID, translateTitle } from '../components/common/CertificatePDF';
+import { formatCOAID, translateTitle } from '../lib/pdfHelpers';
 
 export default function Certificados() {
   const [artworks, setArtworks] = useState<Artwork[]>([]);

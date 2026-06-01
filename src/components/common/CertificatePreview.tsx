@@ -7,7 +7,7 @@ import {
   translateTitle,
   formatCOAID,
   getVisualDescription
-} from './CertificatePDF';
+} from '../../lib/pdfHelpers';
 
 interface CertificatePreviewProps {
   artwork: Artwork;
@@ -21,8 +21,7 @@ export const CertificatePreview = forwardRef<HTMLDivElement, CertificatePreviewP
   ({ artwork, coaId, seriesTitle }, ref) => {
     const editionDisplay = getEditionDisplay(
       artwork.edition_number,
-      (artwork as any).print_run_total,
-      artwork.creation_year
+      (artwork as Artwork & { print_run_total?: number }).print_run_total
     );
 
     const categoryDisplay = getCategory(artwork.medium);
@@ -31,7 +30,7 @@ export const CertificatePreview = forwardRef<HTMLDivElement, CertificatePreviewP
 
     const translatedTitle = translateTitle(artwork.artwork_title);
     const formattedCoaId = formatCOAID(coaId);
-    const descriptionText = getVisualDescription(artwork.curatorial_narrative || artwork.artwork_description);
+    const descriptionText = getVisualDescription();
 
     return (
       <div
