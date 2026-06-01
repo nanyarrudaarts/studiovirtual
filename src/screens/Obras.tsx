@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2, FileDown } from 'lucide-react';
 import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
@@ -144,17 +144,30 @@ export default function Obras() {
   };
 
   const q = search.toLowerCase();
-  const filteredArtworks = artworks.filter(a =>
-    !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
-  );
-  const filteredSeries = series.filter(s => !q || s.series_title.toLowerCase().includes(q));
-  const filteredCollections = collections.filter(c => !q || c.collection_name.toLowerCase().includes(q));
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = [
+  // ⚡ BOLT OPTIMIZATION: Memoize filtered lists to prevent expensive re-filtering on every render
+  const filteredArtworks = useMemo(() =>
+    artworks.filter(a =>
+      !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
+    ), [artworks, q]
+  );
+
+  const filteredSeries = useMemo(() =>
+    series.filter(s => !q || s.series_title.toLowerCase().includes(q)),
+    [series, q]
+  );
+
+  const filteredCollections = useMemo(() =>
+    collections.filter(c => !q || c.collection_name.toLowerCase().includes(q)),
+    [collections, q]
+  );
+
+  // ⚡ BOLT OPTIMIZATION: Memoize tabs configuration
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = useMemo(() => [
     { id: 'unicas', label: 'Únicas', icon: <Palette size={16} />, count: artworks.length },
     { id: 'series', label: 'Séries', icon: <Layers size={16} />, count: series.length },
     { id: 'colecoes', label: 'Coleções', icon: <Archive size={16} />, count: collections.length },
-  ];
+  ], [artworks.length, series.length, collections.length]);
 
   return (
     <div className="space-y-6 relative pb-20 md:pb-0">
@@ -219,8 +232,12 @@ export default function Obras() {
                   className={`bg-surface rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md group cursor-pointer transition-all ${deletingId === obra.artwork_id ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="relative aspect-square bg-gray-100 overflow-hidden">
                     {obra.cover_image || (obra.artwork_images?.[0]) ? (
-                      <img src={obra.cover_image || obra.artwork_images![0]} alt={obra.artwork_title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <img
+                        src={obra.cover_image || obra.artwork_images![0]}
+                        alt={obra.artwork_title}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300">
                         <Palette size={40} />
