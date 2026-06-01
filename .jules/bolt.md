@@ -1,0 +1,4 @@
+## 2025-05-14 - Dashboard and Obras Performance Optimization
+**Learning:** Parallelizing independent network requests using `Promise.all` significantly reduces the Time to Interactive (TTI) on data-heavy screens like the Dashboard. Additionally, memoizing expensive filtering logic and configuration objects in React components prevents unnecessary re-calculations and re-renders during user interaction. Using `loading="lazy"` on images in long galleries improves perceived performance and reduces initial bandwidth usage.
+
+**Action:** Always check for independent `await` calls in `useEffect` or data-fetching hooks and parallelize them. Look for complex filtering or mapping logic that can be wrapped in `useMemo`. Ensure all images below the fold or in long lists have the `loading="lazy"` attribute.
