@@ -111,8 +111,8 @@ export function Shell() {
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 h-[52px] md:h-[40px] px-3 rounded-lg transition-all duration-150 font-medium text-sm cursor-pointer ${
       isActive 
-        ? 'bg-[var(--text-main)] text-[var(--bg)] shadow-sm' 
-        : 'text-text-muted hover:bg-[var(--surface-raised)] hover:text-[var(--text-main)]'
+        ? 'bg-accent text-[#0A0A0C] shadow-sm font-semibold' 
+        : 'text-text-muted hover:bg-surface-raised hover:text-accent'
     }`;
 
   return (
@@ -203,7 +203,7 @@ export function Shell() {
           <div className="my-3 mx-2 border-b border-border-subtle"></div>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 h-[52px] md:h-[40px] px-3 w-full rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-150 cursor-pointer"
+            className="flex items-center gap-3 h-[52px] md:h-[40px] px-3 w-full rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all duration-150 cursor-pointer"
           >
             <LogOut size={18} />
             <span className="font-medium text-sm">{t('nav.sair')}</span>
@@ -240,7 +240,7 @@ export function Shell() {
                 <button
                   onClick={() => setShowLangDropdown(d => !d)}
                   aria-label="Selecionar idioma"
-                  className="shell-lang-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-black/5"
+                  className="shell-lang-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
                 >
                   <Globe size={16} />
                   <span className="uppercase">{currentLang.split('-')[0]}</span>
@@ -263,11 +263,11 @@ export function Shell() {
 
               <button
                 onClick={toggleTheme}
-                className="w-9 h-9 flex items-center justify-center rounded-xl transition-all hover:scale-110 hover:bg-black/5 shell-lang-btn"
+                className="w-9 h-9 flex items-center justify-center rounded-xl transition-all hover:scale-110 hover:bg-white/5 shell-lang-btn"
                 title={isDark ? 'Modo claro' : 'Modo escuro'}
                 aria-label={isDark ? 'Modo claro' : 'Modo escuro'}
               >
-                {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
+                {isDark ? <Sun size={18} className="text-accent" /> : <Moon size={18} className="text-accent" />}
               </button>
             </div>
 
@@ -276,7 +276,7 @@ export function Shell() {
               <button
                 onClick={() => setShowAvatarDropdown(d => !d)}
                 aria-label="Menu do usuário"
-                className="w-9 h-9 rounded-full bg-[var(--text-main)] text-[var(--bg)] flex items-center justify-center text-xs font-bold tracking-wider active:scale-95 hover:opacity-80 transition-all shadow-sm cursor-pointer"
+                className="w-9 h-9 rounded-full bg-accent text-[#0A0A0C] flex items-center justify-center text-xs font-bold tracking-wider active:scale-95 hover:opacity-80 transition-all shadow-sm cursor-pointer"
               >
                 NA
               </button>
@@ -297,7 +297,7 @@ export function Shell() {
                             aria-label={`Idioma: ${l.label}`}
                             className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors cursor-pointer ${
                               currentLang === l.value
-                                ? 'bg-[var(--text-main)] text-[var(--bg)]'
+                                ? 'bg-accent text-[#0A0A0C] font-semibold'
                                 : 'bg-[var(--surface-raised)] text-text-main'
                             }`}>
                             {l.label.split(' ')[0]}
@@ -307,7 +307,7 @@ export function Shell() {
                     </div>
                     <button onClick={() => { toggleTheme(); setShowAvatarDropdown(false); }}
                       className="flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors text-text-main hover:bg-[var(--surface-raised)] cursor-pointer">
-                      {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
+                      {isDark ? <Sun size={16} className="text-accent" /> : <Moon size={16} className="text-accent" />}
                       {isDark ? 'Modo claro' : 'Modo escuro'}
                     </button>
                   </div>
@@ -324,7 +324,7 @@ export function Shell() {
                   </div>
                   <div className="border-t shell-border">
                     <button onClick={handleLogout}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer">
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer">
                       <LogOut size={16} /> {t('nav.sair')}
                     </button>
                   </div>

@@ -30,7 +30,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg p-4">
-      <div className="bg-white w-full max-w-[400px] rounded-[14px] p-8 shadow-float border border-gray-100">
+      <div className="bg-surface w-full max-w-[400px] rounded-[14px] p-8 shadow-float border border-border">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-serif italic text-text-main mb-1">
             studio virtual
@@ -41,7 +41,7 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="bg-rose-50 text-rose-600 text-sm p-3 rounded-lg mb-6 border border-rose-100">
+          <div className="bg-rose-950/20 text-rose-400 text-sm p-3 rounded-lg mb-6 border border-rose-900/30">
             {error}
           </div>
         )}
@@ -57,7 +57,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none bg-surface transition-all"
+              className="w-full border border-border rounded-lg px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none bg-surface transition-all text-text-main"
               placeholder="contato@nanyarruda.com"
             />
           </div>
@@ -73,13 +73,13 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg pl-4 pr-10 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none bg-surface transition-all"
+                className="w-full border border-border rounded-lg pl-4 pr-10 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none bg-surface transition-all text-text-main"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-text-main transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-faint hover:text-text-main transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -89,7 +89,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent text-white font-bold rounded-lg py-3 flex items-center justify-center hover:bg-accent/90 transition-colors disabled:opacity-70"
+            className="w-full bg-accent text-[#0A0A0C] font-bold rounded-lg py-3 flex items-center justify-center hover:bg-accent/80 transition-colors disabled:opacity-70 cursor-pointer"
           >
             {loading ? <Loader2 size={20} className="animate-spin" /> : 'Entrar'}
           </button>

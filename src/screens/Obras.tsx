@@ -13,11 +13,11 @@ const STATUS_LABEL: Record<string, string> = {
   private_collection: 'Coleção Privada', not_for_sale: 'Não à venda',
 };
 const STATUS_COLOR: Record<string, string> = {
-  available: 'bg-emerald-100 text-emerald-700',
-  sold: 'bg-gray-100 text-gray-500',
-  reserved: 'bg-amber-100 text-amber-700',
-  private_collection: 'bg-purple-100 text-purple-700',
-  not_for_sale: 'bg-blue-100 text-blue-700',
+  available: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+  sold: 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/30',
+  reserved: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+  private_collection: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+  not_for_sale: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
 };
 
 export default function Obras() {
@@ -162,19 +162,19 @@ export default function Obras() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <h1 className="text-3xl font-serif text-text-main">Obras</h1>
         <div className="hidden md:flex items-center gap-2">
-          <button onClick={() => navigate('/upload?type=singular')} className="bg-accent text-white px-4 py-2.5 rounded-xl font-medium hover:bg-accent/90 transition-colors text-sm"><Plus size={16} className="inline mr-1 -mt-0.5"/> Obra Singular</button>
-          <button onClick={() => navigate('/upload?type=serie')} className="bg-surface text-accent border border-accent px-4 py-2.5 rounded-xl font-medium hover:bg-accent/10 transition-colors text-sm"><Plus size={16} className="inline mr-1 -mt-0.5"/> Série</button>
-          <button onClick={() => navigate('/upload?type=colecao')} className="bg-surface text-accent border border-accent px-4 py-2.5 rounded-xl font-medium hover:bg-accent/10 transition-colors text-sm"><Plus size={16} className="inline mr-1 -mt-0.5"/> Coleção</button>
+          <button onClick={() => navigate('/upload?type=singular')} className="bg-accent text-[#0A0A0C] px-4 py-2.5 rounded-xl font-bold hover:bg-accent/80 transition-colors text-sm cursor-pointer"><Plus size={16} className="inline mr-1 -mt-0.5"/> Obra Singular</button>
+          <button onClick={() => navigate('/upload?type=serie')} className="bg-surface text-accent border border-accent/30 px-4 py-2.5 rounded-xl font-medium hover:bg-accent/10 hover:border-accent transition-colors text-sm cursor-pointer"><Plus size={16} className="inline mr-1 -mt-0.5"/> Série</button>
+          <button onClick={() => navigate('/upload?type=colecao')} className="bg-surface text-accent border border-accent/30 px-4 py-2.5 rounded-xl font-medium hover:bg-accent/10 hover:border-accent transition-colors text-sm cursor-pointer"><Plus size={16} className="inline mr-1 -mt-0.5"/> Coleção</button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-surface-raised p-1 rounded-xl w-fit">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id ? 'bg-white shadow text-text-main' : 'text-text-muted hover:text-text-main'}`}>
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${tab === t.id ? 'bg-surface shadow text-text-main' : 'text-text-muted hover:text-text-main'}`}>
             {t.icon} {t.label}
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-accent/10 text-accent' : 'bg-gray-200 text-gray-500'}`}>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-accent/10 text-accent' : 'bg-surface-raised text-text-muted'}`}>
               {t.count}
             </span>
           </button>
@@ -183,9 +183,9 @@ export default function Obras() {
 
       {/* Search */}
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
         <input type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-surface focus:border-accent outline-none text-sm" />
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-surface focus:border-accent outline-none text-sm text-text-main" />
       </div>
 
       {/* Error */}
@@ -216,8 +216,8 @@ export default function Obras() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredArtworks.map(obra => (
                 <div key={obra.artwork_id} onClick={() => { setSelected(obra); setPhotoIdx(0); }}
-                  className={`bg-surface rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md group cursor-pointer transition-all ${deletingId === obra.artwork_id ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                  className={`bg-surface rounded-xl overflow-hidden shadow-sm border border-border hover:border-accent group cursor-pointer transition-all ${deletingId === obra.artwork_id ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div className="relative aspect-square bg-surface-raised overflow-hidden">
                     {obra.cover_image || (obra.artwork_images?.[0]) ? (
                       <img src={obra.cover_image || obra.artwork_images![0]} alt={obra.artwork_title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -281,7 +281,7 @@ export default function Obras() {
               {filteredSeries.map(s => (
                 <div key={s.series_id}
                   onClick={() => navigate(`/obras/serie/${s.series_id}`)}
-                  className="bg-surface rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                  className="bg-surface rounded-xl overflow-hidden border border-border hover:border-accent shadow-sm transition-all cursor-pointer group">
                   <style>{`
                     #series-bar-${s.series_id} { background-color: ${s.cor}; }
                     #series-bg-${s.series_id} { background-color: ${s.cor}15; }
@@ -350,7 +350,7 @@ export default function Obras() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCollections.map(c => (
                 <div key={c.collection_id}
-                  className="bg-surface rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                  className="bg-surface rounded-xl overflow-hidden border border-border hover:border-accent shadow-sm transition-all cursor-pointer group">
                   <div className="aspect-video bg-gray-100 overflow-hidden relative">
                     {c.cover_image ? (
                       <img src={c.cover_image} alt={c.collection_name}
@@ -400,8 +400,8 @@ export default function Obras() {
       {selected && (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelected(null)} />
-          <div className="relative z-10 bg-surface w-full md:max-w-4xl max-h-[92vh] md:max-h-[88vh] rounded-t-3xl md:rounded-2xl overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 z-20 bg-surface border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+          <div className="relative z-10 bg-surface w-full md:max-w-4xl max-h-[92vh] md:max-h-[88vh] rounded-t-3xl md:rounded-2xl overflow-y-auto shadow-2xl border border-border">
+            <div className="sticky top-0 z-20 bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
               <div>
                 <h2 className="font-serif text-xl text-text-main">{selected.artwork_title}</h2>
                 {selected.interpretive_title && <p className="text-xs text-text-muted italic">{selected.interpretive_title}</p>}
@@ -411,12 +411,12 @@ export default function Obras() {
                   {STATUS_LABEL[selected.sale_status]}
                 </span>
                 <button aria-label="Deletar" onClick={() => handleDelete(selected.artwork_id, selected.artwork_title)} className="p-2 rounded-xl hover:bg-red-100 text-red-600"><Trash2 size={20} /></button>
-                <button aria-label="Fechar" onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-gray-100"><X size={20} /></button>
+                <button aria-label="Fechar" onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-surface-raised"><X size={20} /></button>
               </div>
             </div>
             <div className="p-6 space-y-8">
               {/* Photos */}
-              <div className="relative rounded-2xl overflow-hidden aspect-video bg-gray-100">
+              <div className="relative rounded-2xl overflow-hidden aspect-video bg-surface-raised">
                 {(selected.artwork_images?.[photoIdx] || selected.cover_image) ? (
                   <img src={selected.artwork_images?.[photoIdx] || selected.cover_image}
                     alt={selected.artwork_title} className="w-full h-full object-contain" />
@@ -426,11 +426,11 @@ export default function Obras() {
                 {(selected.artwork_images?.length ?? 0) > 1 && (
                   <>
                     <button aria-label="Anterior" onClick={() => setPhotoIdx(i => Math.max(0, i - 1))}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow hover:bg-white">
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-surface/85 rounded-full p-2 shadow hover:bg-surface border border-border text-text-main cursor-pointer">
                       <ChevronLeft size={18} />
                     </button>
                     <button aria-label="Próxima" onClick={() => setPhotoIdx(i => Math.min((selected.artwork_images?.length ?? 1) - 1, i + 1))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow hover:bg-white">
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-surface/85 rounded-full p-2 shadow hover:bg-surface border border-border text-text-main cursor-pointer">
                       <ChevronRight size={18} />
                     </button>
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
@@ -483,15 +483,15 @@ export default function Obras() {
                 </div>
               )}
             </div>
-            <div className="sticky bottom-0 bg-surface border-t border-gray-100 px-6 py-4 flex gap-3">
+            <div className="sticky bottom-0 bg-surface border-t border-border px-6 py-4 flex gap-3">
               <button onClick={() => navigate(`/upload?id=${selected.artwork_id}`)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:border-accent transition-colors">
+                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-surface-raised transition-colors cursor-pointer">
                 Editar ficha
               </button>
               <button
                 onClick={() => handleExportPDF(selected)}
                 disabled={isGeneratingCOA}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent/90 transition-all disabled:opacity-60 disabled:cursor-wait"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-[#0A0A0C] text-sm font-bold hover:bg-accent/80 transition-all disabled:opacity-60 disabled:cursor-wait cursor-pointer"
               >
                 {isGeneratingCOA ? (
                   <span className="animate-spin inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full" />
@@ -508,10 +508,10 @@ export default function Obras() {
       {/* Delete Confirmation Modal */}
       {itemToDelete && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5 border border-border">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-red-600" />
+              <div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-red-500" />
               </div>
               <div>
                 <h3 className="font-serif text-xl text-text-main">Deletar {itemToDelete.type === 'artwork' ? 'Obra' : itemToDelete.type === 'series' ? 'Série' : 'Coleção'}</h3>
@@ -522,11 +522,11 @@ export default function Obras() {
             </div>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setItemToDelete(null)}
-                className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
+                className="px-5 py-2 border border-border rounded-lg text-sm font-medium hover:bg-surface-raised cursor-pointer">
                 Cancelar
               </button>
               <button onClick={executeDelete}
-                className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">
+                className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 cursor-pointer">
                 Confirmar
               </button>
             </div>

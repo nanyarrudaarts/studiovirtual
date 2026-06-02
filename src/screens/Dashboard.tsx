@@ -90,7 +90,7 @@ export default function Dashboard() {
           <div className="bg-surface rounded-xl p-6 border border-border hover-lift cursor-default">
             <p className="text-xs uppercase tracking-widest text-text-faint mb-4">{t('dashboard.total_obras')}</p>
             <div className="flex items-end justify-between">
-              <span className="text-5xl font-serif text-text-main leading-none">{metricas.totalObras}</span>
+              <span className="text-5xl font-serif text-accent leading-none">{metricas.totalObras}</span>
               <span className="text-xs text-text-faint font-medium mb-1 flex items-center gap-1">
                 <ArrowUpRight size={12} /> {t('dashboard.mais_dois_mes')}
               </span>
@@ -100,17 +100,17 @@ export default function Dashboard() {
           <div className="bg-surface rounded-xl p-6 border border-border hover-lift cursor-default">
             <p className="text-xs uppercase tracking-widest text-text-faint mb-4">{t('dashboard.health_score')}</p>
             <div className="flex items-end justify-between">
-              <span className="text-5xl font-serif text-text-main leading-none">
+              <span className="text-5xl font-serif text-accent leading-none">
                 {metricas.healthScore}<span className="text-2xl">%</span>
               </span>
-              <span className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: '#10B981' }}>
+              <span className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--accent)' }}>
                 <CheckCircle2 size={12} /> {t('dashboard.excelente')}
               </span>
             </div>
             <div className="mt-4 h-[2px] bg-border rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${metricas.healthScore}%`, background: '#10B981' }}
+                style={{ width: `${metricas.healthScore}%`, background: 'var(--accent)' }}
               />
             </div>
           </div>
@@ -118,8 +118,8 @@ export default function Dashboard() {
           <div className="bg-surface rounded-xl p-6 border border-border hover-lift cursor-default">
             <p className="text-xs uppercase tracking-widest text-text-faint mb-4">{t('dashboard.alertas')}</p>
             <div className="flex items-end justify-between">
-              <span className="text-5xl font-serif text-text-main leading-none">{metricas.alertasMateriais}</span>
-              <span className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: '#F59E0B' }}>
+              <span className="text-5xl font-serif text-accent leading-none">{metricas.alertasMateriais}</span>
+              <span className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--accent)' }}>
                 <AlertCircle size={12} /> {t('dashboard.reposicao')}
               </span>
             </div>
@@ -130,29 +130,29 @@ export default function Dashboard() {
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button
             className="group rounded-xl p-5 hover-lift flex items-center justify-between transition-all duration-200 cursor-pointer"
-            style={{ background: 'var(--text-main)', color: 'var(--bg)' }}
+            style={{ background: 'var(--accent)', color: '#0A0A0C' }}
           >
             <div className="flex items-center gap-3">
-              <UploadCloud size={18} />
-              <span className="font-serif text-base">{t('dashboard.novo_upload')}</span>
+              <UploadCloud size={18} className="text-[#0A0A0C]" />
+              <span className="font-serif text-base font-bold">{t('dashboard.novo_upload')}</span>
             </div>
-            <ArrowUpRight size={15} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpRight size={15} className="opacity-70 group-hover:opacity-100 transition-opacity text-[#0A0A0C]" />
           </button>
 
-          <button className="group bg-surface border border-border rounded-xl p-5 hover-lift flex items-center justify-between transition-all duration-200 cursor-pointer hover:border-text-main/30">
+          <button className="group bg-surface border border-accent/20 rounded-xl p-5 hover-lift flex items-center justify-between transition-all duration-200 cursor-pointer hover:border-accent">
             <div className="flex items-center gap-3 text-text-main">
               <FileText size={18} />
               <span className="font-serif text-base">{t('dashboard.criar_dossie')}</span>
             </div>
-            <ArrowUpRight size={15} className="text-text-faint group-hover:text-text-main transition-colors" />
+            <ArrowUpRight size={15} className="text-text-faint group-hover:text-accent transition-colors" />
           </button>
 
-          <button className="group bg-surface border border-border rounded-xl p-5 hover-lift flex items-center justify-between transition-all duration-200 cursor-pointer hover:border-text-main/30">
+          <button className="group bg-surface border border-accent/20 rounded-xl p-5 hover-lift flex items-center justify-between transition-all duration-200 cursor-pointer hover:border-accent">
             <div className="flex items-center gap-3 text-text-main">
               <Activity size={18} />
               <span className="font-serif text-base">{t('dashboard.analise_curatorial')}</span>
             </div>
-            <ArrowUpRight size={15} className="text-text-faint group-hover:text-text-main transition-colors" />
+            <ArrowUpRight size={15} className="text-text-faint group-hover:text-accent transition-colors" />
           </button>
         </section>
 
@@ -232,7 +232,7 @@ export default function Dashboard() {
             </h2>
           </div>
 
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] uppercase tracking-widest font-semibold mb-5 bg-surface-raised text-text-muted border border-border">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] uppercase tracking-widest font-semibold mb-5 bg-accent/10 text-accent border border-accent/20">
             {t('dashboard.insight_tag')}
           </span>
 
@@ -241,7 +241,7 @@ export default function Dashboard() {
             <p className="text-text-muted italic text-xs leading-relaxed">{t('dashboard.insight_p2')}</p>
           </div>
 
-          <button className="mt-6 w-full py-2.5 bg-surface-raised hover:bg-border text-text-muted hover:text-text-main rounded-lg font-medium text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border border-border">
+          <button className="mt-6 w-full py-2.5 bg-surface-raised hover:bg-surface border border-border text-text-muted hover:text-accent rounded-lg font-medium text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer">
             {t('dashboard.expandir_insights')} <ChevronRight size={12} />
           </button>
         </div>

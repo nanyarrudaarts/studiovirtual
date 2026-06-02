@@ -1,6 +1,6 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Courier+Prime&family=Great+Vibes&family=Droid+Serif&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Rozha+One&display=swap');
+@import "tailwindcss";
 
 @font-face {
   font-family: 'Russkopis';
@@ -11,64 +11,64 @@
 }
 
 @theme {
-  /* ── Paleta Minimalista ── */
-  --color-bg: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-surface-raised: #F4F4F5;
-  --color-border: #E4E4E7;
-  --color-border-subtle: #F1F1F3;
+  /* ── Paleta de Galeria Digital Premium (Dark & Gold) ── */
+  --color-bg: #0A0A0C;
+  --color-surface: #1A1A1F;
+  --color-surface-raised: #242429;
+  --color-border: #3D3D42;
+  --color-border-subtle: #2A2A2F;
 
-  --color-accent: #18181B;
-  --color-accent2: #52525B;
-  --color-cta: #18181B;
+  --color-accent: #D4AF37;
+  --color-accent2: #8B7355;
+  --color-cta: #D4AF37;
 
-  --color-text-main: #09090B;
-  --color-text-muted: #71717A;
-  --color-text-faint: #A1A1AA;
+  --color-text-main: #F5F5F5;
+  --color-text-muted: #A8A8A8;
+  --color-text-faint: #6B6B6B;
 
   /* Status / semânticas */
-  --color-emerald: #10B981;
+  --color-emerald: #D4AF37;
   --color-rose: #F43F5E;
-  --color-amber: #F59E0B;
+  --color-amber: #D4AF37;
 
   /* ── Tipografia ── */
-  --font-serif: "Archivo", sans-serif;
-  --font-sans:  "Space Grotesk", sans-serif;
+  --font-serif: "Rozha One", serif;
+  --font-sans:  "Poppins", sans-serif;
 
   /* ── Efeitos ── */
   --radius-xl: 12px;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-float: 0 20px 60px rgba(0,0,0,0.10);
-  --shadow-soft: 0 4px 24px rgba(0,0,0,0.06);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-float: 0 20px 60px rgba(0,0,0,0.5);
+  --shadow-soft: 0 4px 24px rgba(0,0,0,0.3);
 }
 
 @layer base {
   :root {
-    --bg: #FAFAFA;
-    --surface: #FFFFFF;
-    --surface-raised: #F4F4F5;
-    --border: #E4E4E7;
-    --border-subtle: #F1F1F3;
-    --accent: #18181B;
-    --accent2: #52525B;
-    --text-main: #09090B;
-    --text-muted: #71717A;
-    --text-faint: #A1A1AA;
-    --green: #0f3421;
-    --green-light: #e8f0eb;
+    --bg: #0A0A0C;
+    --surface: #1A1A1F;
+    --surface-raised: #242429;
+    --border: #3D3D42;
+    --border-subtle: #2A2A2F;
+    --accent: #D4AF37;
+    --accent2: #8B7355;
+    --text-main: #F5F5F5;
+    --text-muted: #A8A8A8;
+    --text-faint: #6B6B6B;
+    --green: #D4AF37;
+    --green-light: #242429;
   }
 
   html.dark {
-    --bg: #09090B;
-    --surface: #18181B;
-    --surface-raised: #27272A;
-    --border: #3F3F46;
-    --border-subtle: #27272A;
-    --accent: #FAFAFA;
-    --accent2: #A1A1AA;
-    --text-main: #FAFAFA;
-    --text-muted: #A1A1AA;
-    --text-faint: #71717A;
+    --bg: #0A0A0C;
+    --surface: #1A1A1F;
+    --surface-raised: #242429;
+    --border: #3D3D42;
+    --border-subtle: #2A2A2F;
+    --accent: #D4AF37;
+    --accent2: #8B7355;
+    --text-main: #F5F5F5;
+    --text-muted: #A8A8A8;
+    --text-faint: #6B6B6B;
   }
 
   *, *::before, *::after {
@@ -87,12 +87,12 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-serif);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   ::selection {
-    background: #18181B;
-    color: #FAFAFA;
+    background: #D4AF37;
+    color: #0A0A0C;
   }
 }
 
