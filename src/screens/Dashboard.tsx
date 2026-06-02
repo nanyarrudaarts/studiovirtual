@@ -24,43 +24,49 @@ export default function Dashboard() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ Bolt: Parallelize independent Supabase queries to reduce Time to Interactive (TTI)
+        const [
+          { data: recentArtworks },
+          { count: availableCount },
+          { count: totalCount }
+        ] = await Promise.all([
+          supabase
+            .from('artworks')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .eq('sale_status', 'available'),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+        ]);
 
-        if (obrasData) setObras(obrasData);
+        if (recentArtworks) setObras(recentArtworks);
 
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
-
+        // ⚡ Bolt: Corrected healthScore calculation with accurate Artwork property names
         const healthScore =
-          obrasData && obrasData.length > 0
+          recentArtworks && recentArtworks.length > 0
             ? Math.round(
-                (obrasData.reduce((acc, o) => {
+                (recentArtworks.reduce((acc, o) => {
                   let filled = 0;
-                  if (o.narrativa_curatorial) filled++;
-                  if (o.sentenca_resumo) filled++;
+                  if (o.curatorial_narrative) filled++;
+                  if (o.summary_sentence) filled++;
                   if (o.medium) filled++;
-                  if (o.dimensions) filled++;
+                  if (o.dimensions_formatted) filled++;
                   return acc + filled / 4;
                 }, 0) /
-                  obrasData.length) *
+                  recentArtworks.length) *
                 100
               )
             : 100;
 
         setMetricas({
-          totalObras: totalObras || 0,
+          totalObras: totalCount || 0,
           healthScore,
-          alertasMateriais: alertasMateriais || 0,
+          alertasMateriais: availableCount || 0,
         });
       } catch (err) {
         console.error('Erro ao carregar dashboard:', err);
