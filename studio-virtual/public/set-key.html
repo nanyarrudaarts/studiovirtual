@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salvar Chave Groq</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 80px auto; padding: 20px; }
+    input { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+    button { margin-top: 12px; padding: 12px 24px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; }
+    button:hover { background: #6d28d9; }
+    #status { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+    .ok { background: #d1fae5; color: #065f46; }
+    .current { background: #eff6ff; color: #1e40af; margin-top: 8px; padding: 8px; border-radius: 6px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h2>🔑 Configurar Chave Groq</h2>
+  <p>Cole sua chave do Groq (começa com <code>gsk_</code>) e clique em Salvar.</p>
+  <input type="password" id="keyInput" placeholder="gsk_..." />
+  <button onclick="saveKey()">Salvar Chave no Navegador</button>
+  <div id="status"></div>
+  <div class="current" id="current"></div>
+
+  <script>
+    const existing = localStorage.getItem('groq_api_key');
+    if (existing) {
+      document.getElementById('current').textContent = '✅ Chave atual: ' + existing.slice(0, 15) + '...';
+    }
+
+    function saveKey() {
+      const val = document.getElementById('keyInput').value.trim();
+      if (!val || !val.startsWith('gsk_')) {
+        alert('Por favor insira uma chave válida começando com gsk_');
+        return;
+      }
+      localStorage.setItem('groq_api_key', val);
+      // Also save to sv_config for the app
+      const cfg = JSON.parse(localStorage.getItem('sv_config') || '{}');
+      cfg.groqKey = val;
+      localStorage.setItem('sv_config', JSON.stringify(cfg));
+      
+      const el = document.getElementById('status');
+      el.textContent = '✅ Chave salva com sucesso! Você pode fechar esta página e voltar ao app.';
+      el.className = 'ok';
+      el.style.display = 'block';
+      document.getElementById('current').textContent = '✅ Chave atual: ' + val.slice(0, 15) + '...';
+    }
+  </script>
+</body>
+</html>
