@@ -436,7 +436,11 @@ export async function getOnboardingStatus(): Promise<boolean> {
     .select('onboarding_completed')
     .eq('id', 1)
     .maybeSingle();
-  if (error || !data) return false;
+  if (error) {
+    console.error('Error fetching onboarding status:', error);
+    throw error;
+  }
+  if (!data) return false;
   return data.onboarding_completed === true;
 }
 

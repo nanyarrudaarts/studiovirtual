@@ -238,21 +238,16 @@ export default function Dossie() {
       {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
         <div>
-          <h1 className="text-3xl font-serif" style={{ color: 'var(--text-main)' }}>Dossiê e Portfólio</h1>
+          <h1 className="text-3xl font-serif text-text-main">Dossiê e Portfólio</h1>
           <div className="gold-line mt-2 w-20" />
-          <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>Geração e exportação de Portfólio Curatorial &amp; Dossiê de Obras (Object ID / Museum Standards)</p>
+          <p className="text-sm mt-2 text-text-muted">Geração e exportação de Portfólio Curatorial &amp; Dossiê de Obras (Object ID / Museum Standards)</p>
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button 
             onClick={handlePrint}
             disabled={selectedArtworkIds.length === 0 && !incluirBios && !incluirCV}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold hover-lift transition-all disabled:opacity-50"
-            style={{
-              background: 'linear-gradient(135deg, var(--gold-dark), var(--gold))',
-              color: '#050507',
-              boxShadow: '0 4px 20px var(--gold-glow)',
-            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold hover-lift transition-all disabled:opacity-50 btn-gold-gradient shadow-[0_4px_20px_var(--gold-glow)]"
           >
             <Printer size={18} /> Exportar Dossiê (PDF)
           </button>
@@ -350,10 +345,11 @@ export default function Dossie() {
                     <div 
                       key={a.artwork_id} 
                       onClick={() => toggleArtwork(a.artwork_id)}
-                      className="flex items-center gap-3 p-2 rounded-xl border cursor-pointer transition-all"
-                      style={isSelected ? { borderColor: 'rgba(201,168,76,0.35)', background: 'rgba(201,168,76,0.08)' } : { borderColor: 'var(--border)', background: 'transparent' }}
-                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-raised)'; }}
-                      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                      className={`flex items-center gap-3 p-2 rounded-xl border cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-[rgba(201,168,76,0.35)] bg-[rgba(201,168,76,0.08)]'
+                          : 'border-border bg-transparent hover:bg-surface-raised'
+                      }`}
                     >
                       <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-gray-100 bg-gray-50 flex items-center justify-center">
                         {a.cover_image ? (
@@ -386,19 +382,25 @@ export default function Dossie() {
           
           {/* Top Bar Preview Toggles (Hides on Print) */}
           <div className="w-full flex items-center justify-between glass-slab rounded-2xl p-4 mb-6 no-print">
-            <span className="text-xs font-bold flex items-center gap-2" style={{ color: 'var(--text-muted)' }}><Eye size={16}/> VISUALIZAÇÃO PRÉVIA (PADRÃO A4)</span>
-            <div className="flex p-1 rounded-xl" style={{ background: 'var(--surface-raised)' }}>
+            <span className="text-xs font-bold flex items-center gap-2 text-text-muted"><Eye size={16}/> VISUALIZAÇÃO PRÉVIA (PADRÃO A4)</span>
+            <div className="flex p-1 rounded-xl bg-surface-raised">
               <button 
                 onClick={() => setActivePreviewTab('visual')}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
-                style={activePreviewTab === 'visual' ? { background: 'var(--surface)', color: 'var(--gold)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' } : { color: 'var(--text-muted)' }}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activePreviewTab === 'visual'
+                    ? 'bg-surface text-gold shadow-[0_2px_8px_rgba(0,0,0,0.2)]'
+                    : 'text-text-muted'
+                }`}
               >
                 Visual Dossiê
               </button>
               <button 
                 onClick={() => setActivePreviewTab('codigo')}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
-                style={activePreviewTab === 'codigo' ? { background: 'var(--surface)', color: 'var(--gold)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' } : { color: 'var(--text-muted)' }}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activePreviewTab === 'codigo'
+                    ? 'bg-surface text-gold shadow-[0_2px_8px_rgba(0,0,0,0.2)]'
+                    : 'text-text-muted'
+                }`}
               >
                 Visual Fichas (Fatores ID)
               </button>
@@ -451,7 +453,7 @@ export default function Dossie() {
                 </div>
               )}
 
-              {/* INTRODUÇÃO CUSTOMIZADA (Se houver texto) */}
+              {/* INTRODUÇÃO CUSTOMIZADA (Se houver text) */}
               {introCustomizada && (
                 <div className="a4-page bg-white w-full aspect-[1/1.414] shadow-float border border-gray-100 p-[2.5cm] flex flex-col justify-between text-text-main relative page-break">
                   <div className="space-y-6">
