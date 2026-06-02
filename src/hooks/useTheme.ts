@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 export function useTheme() {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('theme');
+    // Default to dark (OLED Antigravity) if no preference is stored
+    if (!saved) return true;
     return saved === 'dark';
   });
 

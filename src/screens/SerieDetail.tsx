@@ -46,15 +46,15 @@ function ArtworkModal({
     <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/85 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Panel */}
-      <div className="relative z-10 bg-white w-full md:max-w-5xl max-h-[96vh] md:max-h-[90vh] rounded-t-3xl md:rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+      <div className="relative z-10 bg-surface border border-border w-full md:max-w-5xl max-h-[96vh] md:max-h-[90vh] rounded-t-3xl md:rounded-2xl overflow-hidden shadow-gold-glow flex flex-col md:flex-row">
 
         {/* ── LEFT: image ─────────────────────────────── */}
-        <div className="relative md:w-1/2 bg-gray-50 flex-shrink-0">
+        <div className="relative md:w-1/2 bg-surface-raised/40 flex-shrink-0">
           <div className="aspect-square md:aspect-auto md:h-full min-h-64 flex items-center justify-center">
             {images.length > 0 ? (
               <img
@@ -63,7 +63,7 @@ function ArtworkModal({
                 className="w-full h-full object-contain"
               />
             ) : (
-              <Palette size={60} className="text-gray-200" />
+              <Palette size={60} className="text-text-muted/30" />
             )}
           </div>
 
@@ -73,7 +73,7 @@ function ArtworkModal({
               <button
                 aria-label="Anterior"
                 onClick={() => setIdx((i) => Math.max(0, i - 1))}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white disabled:opacity-30"
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-surface/90 border border-border rounded-full p-2 text-gold hover:bg-surface disabled:opacity-30 transition-all"
                 disabled={idx === 0}
               >
                 <ChevLeft size={18} />
@@ -81,7 +81,7 @@ function ArtworkModal({
               <button
                 aria-label="Próxima"
                 onClick={() => setIdx((i) => Math.min(images.length - 1, i + 1))}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white disabled:opacity-30"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-surface/90 border border-border rounded-full p-2 text-gold hover:bg-surface disabled:opacity-30 transition-all"
                 disabled={idx === images.length - 1}
               >
                 <ChevronRight size={18} />
@@ -94,8 +94,10 @@ function ArtworkModal({
                     key={i}
                     onClick={() => setIdx(i)}
                     className={`w-2 h-2 rounded-full transition-all ${
-                      i === idx ? 'bg-accent w-4' : 'bg-gray-300'
+                      i === idx ? 'bg-gold w-4' : 'bg-border'
                     }`}
+                    aria-label={`Ver imagem ${i + 1}`}
+                    title={`Ver imagem ${i + 1}`}
                   />
                 ))}
               </div>
@@ -105,10 +107,10 @@ function ArtworkModal({
           {/* accession / COA badge */}
           {artwork.accession_number && (
             <div className="absolute top-3 left-3 flex flex-col gap-1">
-              <span className="bg-white/90 text-gray-500 text-xs font-mono px-2 py-1 rounded">
+              <span className="bg-surface/90 border border-border text-gold text-xs font-mono px-2 py-1 rounded">
                 {artwork.accession_number}
               </span>
-              <span className="bg-gray-900/75 text-white text-xs font-semibold px-2 py-0.5 rounded max-w-[calc(100%-1rem)] leading-tight truncate">
+              <span className="bg-bg/90 border border-border/40 text-text-main text-xs font-semibold px-2 py-0.5 rounded max-w-[calc(100%-1rem)] leading-tight truncate">
                 {artwork.artwork_title}
               </span>
             </div>
@@ -119,9 +121,9 @@ function ArtworkModal({
         <div className="flex flex-col flex-1 overflow-y-auto">
 
           {/* top bar */}
-          <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-gray-100">
-            <span className="text-xs text-gray-400 tracking-[0.2em] uppercase">Ficha Técnica</span>
-            <button aria-label="Fechar" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+          <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-border bg-surface-raised/35">
+            <span className="text-xs text-gold/80 tracking-[0.2em] font-mono font-bold uppercase">Ficha Técnica</span>
+            <button aria-label="Fechar" onClick={onClose} className="p-2 hover:bg-surface-raised text-text-muted hover:text-text-main rounded-xl transition-colors">
               <X size={20} />
             </button>
           </div>
@@ -130,37 +132,37 @@ function ArtworkModal({
           <div className="flex-1 px-8 py-6 space-y-5 overflow-y-auto">
 
             {/* Title block */}
-            <div className="border-l-4 border-accent pl-5 space-y-0.5">
-              <h2 className="text-2xl font-serif italic text-gray-900 leading-snug">
+            <div className="border-l-4 border-gold pl-5 space-y-0.5">
+              <h2 className="text-2xl font-serif italic text-gold font-bold leading-snug">
                 {artwork.artwork_title}
               </h2>
               {artwork.alternative_title && (
-                <p className="text-sm text-gray-400 italic">[{artwork.alternative_title}]</p>
+                <p className="text-sm text-text-muted italic">[{artwork.alternative_title}]</p>
               )}
             </div>
 
             {/* Fields list */}
-            <dl className="space-y-0 divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden text-sm">
+            <dl className="space-y-0 divide-y divide-border border border-border rounded-xl overflow-hidden text-sm bg-surface/20">
 
               {/* Autoria */}
-              <div className="flex items-start gap-4 px-4 py-3 bg-white">
-                <dt className="w-40 shrink-0 font-medium text-gray-500">Autoria</dt>
-                <dd className="text-gray-900 font-semibold">{artwork.artist_name || 'Nany Arruda'}</dd>
+              <div className="flex items-start gap-4 px-4 py-3 bg-surface/20">
+                <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Autoria</dt>
+                <dd className="text-text-main font-semibold">{artwork.artist_name || 'Nany Arruda'}</dd>
               </div>
 
               {/* Série */}
               {artwork.series_reference && (
-                <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                  <dt className="w-40 shrink-0 font-medium text-gray-500">Série</dt>
-                  <dd className="text-gray-900">{artwork.series_reference}</dd>
+                <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                  <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Série</dt>
+                  <dd className="text-text-main">{artwork.series_reference}</dd>
                 </div>
               )}
 
               {/* Data / Ano */}
               {artwork.creation_year && (
-                <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                  <dt className="w-40 shrink-0 font-medium text-gray-500">Data / Ano</dt>
-                  <dd className="text-gray-900">
+                <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                  <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Data / Ano</dt>
+                  <dd className="text-text-main">
                     {artwork.creation_year}
                     {artwork.creation_city ? `, ${artwork.creation_city}` : ''}
                     {artwork.creation_country ? ` — ${artwork.creation_country}` : ''}
@@ -170,9 +172,9 @@ function ArtworkModal({
 
               {/* Local */}
               {artwork.physical_location && (
-                <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                  <dt className="w-40 shrink-0 font-medium text-gray-500">Local</dt>
-                  <dd className="text-gray-900">{artwork.physical_location}</dd>
+                <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                  <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Local</dt>
+                  <dd className="text-text-main">{artwork.physical_location}</dd>
                 </div>
               )}
 
@@ -187,34 +189,34 @@ function ArtworkModal({
                 }
                 if (!coa) return null;
                 return (
-                  <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                    <dt className="w-40 shrink-0 font-medium text-gray-500">Nº de Registro</dt>
-                    <dd className="text-gray-900 font-mono font-semibold tracking-wide">{coa}</dd>
+                  <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                    <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Nº de Registro</dt>
+                    <dd className="text-gold font-mono font-semibold tracking-wide">{coa}</dd>
                   </div>
                 );
               })()}
 
               {/* Resumo Descritivo */}
               {artwork.summary_sentence && (
-                <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                  <dt className="w-40 shrink-0 font-medium text-gray-500">Resumo</dt>
-                  <dd className="text-gray-700 leading-relaxed">{artwork.summary_sentence}</dd>
+                <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                  <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Resumo</dt>
+                  <dd className="text-text-main leading-relaxed">{artwork.summary_sentence}</dd>
                 </div>
               )}
 
               {/* Dimensões */}
               {(artwork.dimensions_formatted || formatDimensions(artwork)) && (
-                <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                  <dt className="w-40 shrink-0 font-medium text-gray-500">Dimensões</dt>
-                  <dd className="text-gray-900">{artwork.dimensions_formatted || formatDimensions(artwork)}</dd>
+                <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                  <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Dimensões</dt>
+                  <dd className="text-text-main">{artwork.dimensions_formatted || formatDimensions(artwork)}</dd>
                 </div>
               )}
 
               {/* Técnica */}
               {formatMedium(artwork) && (
-                <div className="flex items-start gap-4 px-4 py-3 odd:bg-gray-50/60">
-                  <dt className="w-40 shrink-0 font-medium text-gray-500">Técnica</dt>
-                  <dd className="text-gray-900">{formatMedium(artwork)}</dd>
+                <div className="flex items-start gap-4 px-4 py-3 bg-surface/20 odd:bg-surface/40">
+                  <dt className="w-40 shrink-0 font-medium text-text-muted font-bold">Técnica</dt>
+                  <dd className="text-text-main">{formatMedium(artwork)}</dd>
                 </div>
               )}
 
@@ -223,8 +225,8 @@ function ArtworkModal({
             {/* Curatorial narrative (expandable) */}
             {artwork.curatorial_narrative && (
               <div className="space-y-2 pt-1">
-                <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase">Nota Curatorial</p>
-                <p className="text-sm text-gray-600 leading-relaxed italic border-l-2 border-accent/30 pl-4">
+                <p className="text-xs font-bold tracking-[0.2em] text-gold font-mono uppercase">Nota Curatorial</p>
+                <p className="text-sm text-text-main leading-relaxed italic border-l-2 border-gold/30 pl-4">
                   {artwork.curatorial_narrative}
                 </p>
               </div>
@@ -234,7 +236,7 @@ function ArtworkModal({
             {artwork.tags && artwork.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {artwork.tags.map((tag) => (
-                  <span key={tag} className="text-xs bg-accent/10 text-accent px-3 py-1 rounded-full font-medium">
+                  <span key={tag} className="text-xs bg-gold/10 text-gold border border-gold/20 px-3 py-1 rounded-full font-medium">
                     #{tag}
                   </span>
                 ))}
@@ -243,16 +245,16 @@ function ArtworkModal({
           </div>
 
           {/* footer: Edit + Delete */}
-          <div className="border-t border-gray-100 px-8 py-5 flex gap-3">
+          <div className="border-t border-border bg-surface-raised/35 px-8 py-5 flex gap-3">
             <button
               onClick={onEdit}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-accent text-white font-bold hover:bg-accent/90 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gold text-bg font-bold hover:bg-gold-light shadow-gold-glow hover-lift transition-all"
             >
               <Pencil size={16} /> Editar
             </button>
             <button
               onClick={onDelete}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 transition-colors text-sm"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-950/40 text-rose-400 font-medium hover:bg-rose-950/20 transition-all text-sm"
             >
               <Trash2 size={15} /> Excluir
             </button>
@@ -320,12 +322,12 @@ export default function SerieDetail() {
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent" />
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold" />
       </div>
     );
 
   if (error)
-    return <div className="p-8 text-red-600 bg-red-50 rounded-xl">{error}</div>;
+    return <div className="p-8 text-rose-400 bg-rose-950/20 border border-rose-900/40 rounded-xl">{error}</div>;
 
   if (!serie) return null;
 
@@ -335,13 +337,13 @@ export default function SerieDetail() {
       {/* ── Breadcrumb ── */}
       <button
         onClick={() => navigate('/obras')}
-        className="flex items-center gap-2 text-text-muted hover:text-accent transition-colors text-sm font-medium"
+        className="flex items-center gap-2 text-text-muted hover:text-gold transition-colors text-sm font-medium"
       >
         <ChevronLeft size={18} /> Obras
       </button>
 
       {/* ── Hero ── */}
-      <div className="relative rounded-3xl overflow-hidden">
+      <div className="relative rounded-3xl overflow-hidden border border-border shadow-gold-glow-sm">
         {serie.cover_image ? (
           <img
             src={serie.cover_image}
@@ -349,16 +351,16 @@ export default function SerieDetail() {
             className="w-full h-64 md:h-80 object-cover"
           />
         ) : (
-          <div className="w-full h-64 md:h-80 bg-gradient-to-br from-accent/10 to-accent/5 flex items-center justify-center">
-            <Layers size={80} className="text-accent/20" />
+          <div className="w-full h-64 md:h-80 bg-gradient-to-br from-gold/15 to-gold/5 flex items-center justify-center">
+            <Layers size={80} className="text-gold/20" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20" />
         <div className="absolute bottom-0 left-0 right-0 p-8 space-y-1">
-          <p className="text-white/60 text-xs uppercase tracking-[0.2em]">Série</p>
-          <h1 className="text-4xl font-serif text-white">{serie.series_title}</h1>
+          <p className="text-gold/80 text-xs font-mono tracking-[0.2em] uppercase">Série</p>
+          <h1 className="text-4xl font-serif text-gold font-bold">{serie.series_title}</h1>
           {serie.series_number && (
-            <p className="text-white/50 text-sm font-mono">#{serie.series_number}</p>
+            <p className="text-gold/50 text-sm font-mono">#{serie.series_number}</p>
           )}
         </div>
       </div>
@@ -367,19 +369,19 @@ export default function SerieDetail() {
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => navigate(`/upload?type=serie&serieId=${id}`)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-xl font-medium hover:bg-accent/90 transition-colors text-sm"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gold text-bg rounded-xl font-bold hover:bg-gold-light transition-all hover-lift shadow-gold-glow text-sm"
         >
           <Plus size={16} /> Adicionar obra
         </button>
         <button
           onClick={() => navigate(`/upload?editSerie=${id}`)}
-          className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-xl font-medium hover:border-accent hover:text-accent transition-colors text-sm"
+          className="flex items-center gap-2 px-5 py-2.5 border border-border rounded-xl font-medium hover:border-gold hover:text-gold hover-lift text-text-main transition-all text-sm"
         >
           <Pencil size={16} /> Editar série
         </button>
         <button
           onClick={() => setConfirmDeleteSerie(true)}
-          className="flex items-center gap-2 px-5 py-2.5 border border-red-200 text-red-500 rounded-xl font-medium hover:bg-red-50 transition-colors text-sm ml-auto"
+          className="flex items-center gap-2 px-5 py-2.5 border border-rose-950/40 text-rose-400 rounded-xl font-medium hover:bg-rose-950/20 transition-all text-sm ml-auto"
         >
           <Trash2 size={16} /> Excluir série
         </button>
@@ -387,13 +389,13 @@ export default function SerieDetail() {
 
       {/* ── Info ── */}
       {(serie.conceptual_summary || serie.curatorial_narrative) && (
-        <div className="bg-surface border border-gray-100 rounded-2xl p-6 space-y-3">
-          <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase">Sobre a série</p>
+        <div className="glass-slab rounded-2xl p-6 space-y-3 shadow-gold-glow-sm">
+          <p className="text-xs font-bold tracking-[0.2em] text-gold font-mono uppercase">Sobre a série</p>
           {serie.conceptual_summary && (
             <p className="text-text-muted leading-relaxed">{serie.conceptual_summary}</p>
           )}
           {serie.curatorial_narrative && (
-            <blockquote className="border-l-4 border-accent/30 pl-4 font-serif italic text-text-main">
+            <blockquote className="border-l-4 border-gold/30 pl-4 font-serif italic text-text-main">
               {serie.curatorial_narrative}
             </blockquote>
           )}
@@ -403,7 +405,7 @@ export default function SerieDetail() {
       {/* ── Artworks ── */}
       <div>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-serif">Obras da série</h2>
+          <h2 className="text-xl font-serif text-gold font-bold">Obras da série</h2>
           <span className="text-sm text-text-muted">
             {artworks.length} obra{artworks.length !== 1 ? 's' : ''}
           </span>
@@ -412,7 +414,7 @@ export default function SerieDetail() {
         {artworks.length === 0 ? (
           <div
             onClick={() => navigate(`/upload?type=serie&serieId=${id}`)}
-            className="border-2 border-dashed border-gray-200 rounded-2xl p-16 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all text-text-muted hover:text-accent"
+            className="border border-dashed border-gold/45 bg-gold/5 rounded-2xl p-16 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gold/10 transition-all text-text-muted hover:text-gold shadow-gold-glow-sm"
           >
             <Plus size={32} />
             <p className="font-medium">Adicionar primeira obra à série</p>
@@ -423,10 +425,10 @@ export default function SerieDetail() {
               <div
                 key={obra.artwork_id}
                 onClick={() => setSelectedArtwork(obra)}
-                className="group cursor-pointer bg-surface rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                className="group cursor-pointer glass-slab rounded-2xl overflow-hidden hover-lift-3d hover:shadow-gold-glow-sm transition-all duration-300"
               >
                 {/* image */}
-                <div className="relative aspect-[4/5] bg-gray-50 overflow-hidden">
+                <div className="relative aspect-[4/5] bg-surface/50 overflow-hidden">
                   {obra.cover_image || obra.artwork_images?.[0] ? (
                     <img
                       src={obra.cover_image || obra.artwork_images![0]}
@@ -434,27 +436,27 @@ export default function SerieDetail() {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-200">
+                    <div className="w-full h-full flex items-center justify-center text-text-muted/30">
                       <Palette size={44} />
                     </div>
                   )}
                   {/* hover overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
-                    <span className="opacity-0 group-hover:opacity-100 bg-white text-text-main text-xs font-bold px-4 py-2 rounded-full shadow transition-all">
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 bg-gold text-bg text-xs font-bold px-4 py-2 rounded-full shadow-gold-glow transition-all">
                       Ver ficha técnica
                     </span>
                   </div>
                   {/* edition badge */}
                   {obra.edition_number && (
-                    <span className="absolute bottom-2 right-2 bg-white/90 text-accent text-xs font-bold px-2 py-0.5 rounded">
+                    <span className="absolute bottom-2 right-2 bg-gold text-bg text-xs font-mono font-bold px-2 py-0.5 rounded shadow-gold-glow-sm">
                       {obra.edition_number}
                     </span>
                   )}
                 </div>
 
                 {/* museum label below image */}
-                <div className="px-4 pt-3 pb-4 border-t border-gray-50">
-                  <p className="text-[11px] text-gray-400 font-semibold tracking-wide uppercase mb-0.5">
+                <div className="px-4 pt-3 pb-4 border-t border-border bg-surface-raised/20">
+                  <p className="text-[10px] text-gold/80 font-bold font-mono tracking-wide uppercase mb-0.5">
                     {obra.artist_name}
                   </p>
                   <h3 className="font-serif text-base text-text-main italic leading-snug">
@@ -465,7 +467,7 @@ export default function SerieDetail() {
                     {formatMedium(obra) ? ` · ${formatMedium(obra)}` : ''}
                   </p>
                   {formatDimensions(obra) && (
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDimensions(obra)}</p>
+                    <p className="text-[10px] text-text-muted font-mono mt-0.5">{formatDimensions(obra)}</p>
                   )}
                 </div>
               </div>
@@ -474,7 +476,7 @@ export default function SerieDetail() {
             {/* Add card */}
             <div
               onClick={() => navigate(`/upload?type=serie&serieId=${id}`)}
-              className="border-2 border-dashed border-gray-200 rounded-2xl aspect-[4/5] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all text-text-muted hover:text-accent"
+              className="border border-dashed border-gold/45 bg-gold/5 rounded-2xl aspect-[4/5] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gold/10 transition-all text-text-muted hover:text-gold shadow-gold-glow-sm"
             >
               <Plus size={28} />
               <span className="text-sm font-medium">Nova obra</span>
@@ -500,14 +502,14 @@ export default function SerieDetail() {
 
       {/* ── Delete Serie Confirm ── */}
       {confirmDeleteSerie && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl shadow-gold-glow w-full max-w-md p-6 space-y-5">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-red-600" />
+              <div className="w-10 h-10 bg-rose-950/40 rounded-full flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-rose-400" />
               </div>
               <div>
-                <h3 className="font-serif text-xl">Excluir série</h3>
+                <h3 className="font-serif text-xl text-rose-400">Excluir série</h3>
                 <p className="text-sm text-text-muted mt-1">
                   Tem certeza que deseja excluir <strong>{serie.series_title}</strong>? As obras
                   vinculadas <strong>não serão excluídas</strong>.
@@ -517,13 +519,13 @@ export default function SerieDetail() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setConfirmDeleteSerie(false)}
-                className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50"
+                className="px-5 py-2 border border-border rounded-lg text-sm font-medium hover:bg-surface-raised text-text-main transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteSerie}
-                className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700"
+                className="px-5 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 transition-colors"
               >
                 Excluir
               </button>

@@ -64,13 +64,13 @@ export function TagInput({ id, value, onChange, suggestions, placeholder, label 
         </label>
       )}
       <div
-        className="flex flex-wrap gap-1.5 border border-gray-200 rounded-lg px-3 py-2 bg-bg focus-within:border-accent cursor-text min-h-[42px]"
+        className="flex flex-wrap gap-1.5 border border-border rounded-lg px-3 py-2 bg-bg focus-within:border-gold focus-within:ring-1 focus-within:ring-gold/30 cursor-text min-h-[42px]"
         onClick={() => inputRef.current?.focus()}
       >
         {tags.map(tag => (
           <span
             key={tag}
-            className="flex items-center gap-1 bg-accent/10 text-accent text-xs font-semibold px-2.5 py-1 rounded-full border border-accent/20"
+            className="flex items-center gap-1 bg-gold/10 text-gold text-xs font-semibold px-2.5 py-1 rounded-full border border-gold/20"
           >
             {tag}
             <button
@@ -92,19 +92,19 @@ export function TagInput({ id, value, onChange, suggestions, placeholder, label 
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={tags.length === 0 ? (placeholder ?? 'Digite e pressione Enter...') : ''}
-          className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-gray-400"
+          className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-text-muted"
         />
       </div>
 
       {/* Dropdown suggestions */}
       {open && filtered.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-raised border border-border rounded-xl shadow-2xl max-h-52 overflow-y-auto">
           {filtered.map(s => (
             <button
               key={s}
               type="button"
               onMouseDown={e => { e.preventDefault(); addTag(s); }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-accent/5 hover:text-accent transition-colors"
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gold/10 hover:text-gold transition-colors text-text-main"
             >
               {s}
             </button>
@@ -113,14 +113,14 @@ export function TagInput({ id, value, onChange, suggestions, placeholder, label 
             <button
               type="button"
               onMouseDown={e => { e.preventDefault(); addTag(input); }}
-              className="w-full text-left px-4 py-2 text-sm text-text-muted italic border-t border-gray-100 hover:bg-gray-50"
+              className="w-full text-left px-4 py-2 text-sm text-text-muted italic border-t border-border hover:bg-surface"
             >
               Adicionar "{input.trim()}"
             </button>
           )}
         </div>
       )}
-      <p className="text-[10px] text-gray-400 mt-1">Pressione <kbd className="bg-gray-100 px-1 rounded">Enter</kbd> ou <kbd className="bg-gray-100 px-1 rounded">,</kbd> para adicionar. Clique nas sugestões abaixo.</p>
+      <p className="text-[10px] text-text-muted mt-1">Pressione <kbd className="bg-surface px-1 rounded border border-border">Enter</kbd> ou <kbd className="bg-surface px-1 rounded border border-border">,</kbd> para adicionar. Clique nas sugestões abaixo.</p>
     </div>
   );
 }

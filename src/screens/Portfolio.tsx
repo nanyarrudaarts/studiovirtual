@@ -205,7 +205,7 @@ export default function Portfolio() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="animate-spin text-accent h-8 w-8" />
+        <Loader2 className="animate-spin h-8 w-8" style={{ color: 'var(--gold)' }} />
       </div>
     );
   }
@@ -216,7 +216,8 @@ export default function Portfolio() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif text-text-main">Portfolio Generator</h1>
-          <p className="text-text-muted text-sm mt-1">
+          <div className="gold-line mt-2 w-20" />
+          <p className="text-sm mt-2 text-text-muted">
             Select artworks, choose a museum-standard layout and export a professional PDF portfolio.
           </p>
         </div>
@@ -224,7 +225,7 @@ export default function Portfolio() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-accent text-accent hover:bg-accent/10 transition-colors font-semibold text-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all hover-lift bg-surface text-text-main border border-border hover:border-gold"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? 'Saving…' : 'Save Project'}
@@ -232,7 +233,7 @@ export default function Portfolio() {
           <button
             onClick={handleExport}
             disabled={exporting || selectedArtworks.length === 0}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-white font-semibold text-sm transition-all shadow-float hover-float ${exporting || selectedArtworks.length === 0 ? 'bg-accent/40 cursor-not-allowed' : 'bg-accent hover:bg-accent/90'}`}
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed bg-gold-gradient ${selectedArtworks.length > 0 ? 'shadow-gold-btn' : ''}`}
           >
             {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {exporting ? 'Generating PDF…' : `Export PDF (${selectedArtworks.length} works)`}
@@ -246,37 +247,40 @@ export default function Portfolio() {
           {/* New Portfolio Button */}
           <button
             onClick={() => setCurrent(blankPortfolio())}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-accent/40 text-accent hover:border-accent hover:bg-accent/5 transition-colors font-semibold text-sm"
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed font-semibold text-sm transition-all hover-lift border-gold/35 text-gold hover:border-gold hover:bg-gold/5"
           >
             <Plus size={16} /> New Portfolio
           </button>
 
           {/* Saved projects */}
           {savedPortfolios.length > 0 && (
-            <div className="bg-surface rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-text-muted">Saved Projects</p>
+            <div className="glass-slab rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <p className="text-xs font-bold uppercase tracking-wider text-text-faint">Saved Projects</p>
               </div>
-              <div className="divide-y divide-gray-50">
-                {savedPortfolios.map(p => (
-                  <div
-                    key={p.portfolio_id}
-                    className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${(current as PortfolioProject).portfolio_id === p.portfolio_id ? 'bg-accent/5 border-l-2 border-accent' : ''}`}
-                    onClick={() => handleLoad(p)}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-text-main truncate">{p.portfolio_title}</p>
-                      <p className="text-[10px] text-text-muted">{p.selected_artworks.length} works · {p.template_type}</p>
-                    </div>
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDelete(p.portfolio_id); }}
-                      className="text-gray-300 hover:text-rose-500 transition-colors shrink-0 ml-2"
-                      aria-label="Delete portfolio"
+              <div>
+                {savedPortfolios.map(p => {
+                  const isSelected = (current as PortfolioProject).portfolio_id === p.portfolio_id;
+                  return (
+                    <div
+                      key={p.portfolio_id}
+                      className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-all text-text-main border-l-2 ${isSelected ? 'bg-gold/10 border-gold' : 'border-transparent hover:bg-surface-raised'}`}
+                      onClick={() => handleLoad(p)}
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate text-text-main">{p.portfolio_title}</p>
+                        <p className={`text-[10px] ${isSelected ? 'text-gold' : 'text-text-faint'}`}>{p.selected_artworks.length} works · {p.template_type}</p>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDelete(p.portfolio_id); }}
+                        className="shrink-0 ml-2 text-text-faint hover:text-rose-500 transition-colors"
+                        aria-label="Delete portfolio"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -285,33 +289,36 @@ export default function Portfolio() {
         {/* ── RIGHT: Main Editor ──────────────────────────────────── */}
         <div className="lg:col-span-9 space-y-5">
           {/* Project title */}
-          <div className="bg-surface rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <label className="block text-xs font-bold uppercase tracking-wider text-text-muted mb-2">Portfolio Title</label>
+          <div className="glass-slab rounded-2xl p-5">
+            <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-text-faint">Portfolio Title</label>
             <input
               type="text"
               value={current.portfolio_title ?? ''}
               onChange={e => setCurrent(p => ({ ...p, portfolio_title: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-lg font-serif focus:border-accent outline-none bg-bg"
+              className="w-full rounded-xl px-4 py-2.5 text-lg font-serif outline-none transition-all bg-surface-raised border border-border text-text-main focus:border-gold"
               placeholder="e.g. Paintings 2024 — Gallery Selection"
             />
           </div>
 
           {/* Step Tabs */}
-          <div className="flex gap-1 bg-gray-100/80 p-1 rounded-xl w-full">
+          <div className="flex gap-1 p-1 rounded-xl w-full bg-surface">
             {([
               { key: 'select', label: `Works (${selectedIds.length})` },
               { key: 'template', label: 'Template' },
               { key: 'statement', label: 'Statement' },
               { key: 'export', label: 'Preview & Export' },
-            ] as const).map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-colors ${activeTab === tab.key ? 'bg-white text-accent shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            ] as const).map(tab => {
+              const isTabActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${isTabActive ? 'bg-surface-raised text-gold shadow-md border border-gold/20' : 'text-text-muted border border-transparent'}`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* ── Tab: SELECT ARTWORKS ────────────────────────────── */}
@@ -387,6 +394,8 @@ export default function Portfolio() {
                             onChange={e => setScale(a.artwork_id, parseInt(e.target.value))}
                             className="w-20 accent-[#6B5CE7]"
                             onClick={e => e.stopPropagation()}
+                            aria-label="Escala da obra"
+                            title="Escala da obra"
                           />
                         </div>
                         <button

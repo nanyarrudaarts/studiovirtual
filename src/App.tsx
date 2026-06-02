@@ -28,9 +28,9 @@ const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-se
 const Importar = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Importar</h1><p>Importação de acervo (em breve)</p></div>;
 
 const LoadingScreen = () => (
-  <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-4">
-    <h1 className="font-serif italic text-2xl" style={{ color: '#0f3421' }}>studio virtual</h1>
-    <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: '#0f3421', borderTopColor: 'transparent' }} />
+  <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
+    <h1 className="font-serif italic text-2xl text-gold">studio virtual</h1>
+    <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
   </div>
 );
 

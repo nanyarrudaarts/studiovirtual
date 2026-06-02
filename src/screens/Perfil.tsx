@@ -70,31 +70,31 @@ function DiffPreview({ current, imported, onApply, t }: {
   };
 
   return (
-    <div className="border border-gray-100 rounded-xl overflow-hidden">
-      <div className="grid grid-cols-2 text-xs font-bold bg-gray-50 text-gray-500 px-4 py-2.5 border-b border-gray-100">
+    <div className="border border-border rounded-xl overflow-hidden bg-surface-raised">
+      <div className="grid grid-cols-2 text-xs font-bold bg-surface px-4 py-2.5 border-b border-border text-text-muted">
         <span>{t('perfil.dados_atuais')}</span>
-        <span className="text-emerald-600">{t('perfil.dados_importados')}</span>
+        <span className="text-emerald-500">{t('perfil.dados_importados')}</span>
       </div>
-      <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+      <div className="divide-y divide-border max-h-72 overflow-y-auto bg-bg">
         {keys.map(k => {
           const isNew = !current[k] || current[k] === '';
           const isConflict = current[k] && current[k] !== imported[k];
           return (
-            <label key={k} className="grid grid-cols-[auto_1fr_1fr] items-center gap-4 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors">
+            <label key={k} className="grid grid-cols-[auto_1fr_1fr] items-center gap-4 px-4 py-2.5 cursor-pointer hover:bg-surface-raised transition-colors">
               <input type="checkbox" aria-label={`Selecionar ${k}`} checked={!!checked[k]} onChange={() => toggle(k)}
-                className="accent-accent w-4 h-4" title={`Selecionar ${k}`} />
-              <span className="text-xs text-gray-400 truncate">{fmt(current[k])}</span>
-              <span className={`text-xs font-medium truncate ${isNew ? 'text-emerald-600' : isConflict ? 'text-amber-600' : 'text-gray-600'}`}>
+                className="accent-gold w-4 h-4 cursor-pointer" title={`Selecionar ${k}`} />
+              <span className="text-xs text-text-muted truncate">{fmt(current[k])}</span>
+              <span className={`text-xs font-medium truncate ${isNew ? 'text-emerald-500' : isConflict ? 'text-amber-500' : 'text-text-main'}`}>
                 {fmt(imported[k])}
               </span>
             </label>
           );
         })}
       </div>
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-        <span className="text-xs text-gray-500">{keys.filter(k => checked[k]).length} de {keys.length} {t('campos_selecionados')}</span>
+      <div className="px-4 py-3 bg-surface border-t border-border flex justify-between items-center">
+        <span className="text-xs text-text-muted">{keys.filter(k => checked[k]).length} de {keys.length} {t('campos_selecionados')}</span>
         <button onClick={apply}
-          className="flex items-center gap-2 px-5 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors">
+          className="flex items-center gap-2 px-5 py-2 bg-gold text-bg text-sm font-bold rounded-lg hover:bg-gold-light hover-lift transition-all shadow-gold-glow-sm">
           <Check size={14} /> {t('perfil.aplicar_selecionados')}
         </button>
       </div>
@@ -292,25 +292,25 @@ ${inputText.substring(0, 50000)}`;
   };
 
   return (
-    <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-      <div className="px-7 py-5 border-b border-gray-100">
-        <h2 className="text-lg font-serif mb-0.5">{t('perfil.importar_title')}</h2>
+    <section className="glass-slab rounded-2xl overflow-hidden">
+      <div className="px-7 py-5 border-b border-border bg-surface-raised/35">
+        <h2 className="text-lg font-serif mb-0.5 text-gold font-bold">{t('perfil.importar_title')}</h2>
         <p className="text-sm text-text-muted">{t('perfil.importar_subtitle')}</p>
       </div>
       <div className="p-7 space-y-5">
         {/* Tabs & Section Target */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
           <div className="flex gap-2">
             <button onClick={() => { setTab('text'); setImportedData(null); setError(''); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'text' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'text' ? 'bg-gold text-bg shadow-gold-glow-sm' : 'bg-surface-raised border border-border text-text-muted hover:text-text-main'}`}>
               <FileText size={15}/> Colar texto
             </button>
             <button onClick={() => { setTab('pdf'); setImportedData(null); setError(''); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'pdf' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'pdf' ? 'bg-gold text-bg shadow-gold-glow-sm' : 'bg-surface-raised border border-border text-text-muted hover:text-text-main'}`}>
               <FileUp size={15}/> Enviar PDF
             </button>
             <button onClick={() => { setTab('url'); setImportedData(null); setError(''); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === 'url' ? 'bg-accent text-white' : 'bg-gray-100 text-text-muted hover:text-text-main'}`}>
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'url' ? 'bg-gold text-bg shadow-gold-glow-sm' : 'bg-surface-raised border border-border text-text-muted hover:text-text-main'}`}>
               <Globe size={15}/> Importar de URL
             </button>
           </div>
@@ -321,7 +321,7 @@ ${inputText.substring(0, 50000)}`;
               id="section-select"
               value={targetSection}
               onChange={(e) => { setTargetSection(e.target.value); setImportedData(null); setError(''); }}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:border-accent outline-none bg-white font-bold text-text-main cursor-pointer"
+              className="border border-border rounded-lg px-3 py-1.5 text-xs focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg font-bold text-text-main cursor-pointer"
             >
               {Object.entries(SECTION_LABELS).map(([val, label]) => (
                 <option key={val} value={val}>{label}</option>
@@ -338,10 +338,10 @@ ${inputText.substring(0, 50000)}`;
                 ? "Cole aqui a biografia do seu site, um currículo copiado, perfil do Instagram, etc..."
                 : `Cole aqui as informações correspondentes a: ${SECTION_LABELS[targetSection]}...`
               }
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-32 resize-none" />
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg h-32 resize-none text-text-main" />
             <div className="flex justify-end">
               <button onClick={importFromText} disabled={loading || !textInput.trim()}
-                className="px-5 py-2.5 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap">
+                className="px-5 py-2.5 bg-gold text-bg font-bold rounded-xl text-sm hover:bg-gold-light disabled:opacity-60 transition-all whitespace-nowrap shadow-gold-glow-sm">
                 {loading ? <div className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Analisando...</div> : "Analisar com IA"}
               </button>
             </div>
@@ -350,11 +350,11 @@ ${inputText.substring(0, 50000)}`;
 
         {/* PDF Panel */}
         {tab === 'pdf' && (
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-bg hover:border-accent transition-colors relative cursor-pointer"
+          <div className="border border-dashed border-gold-dim rounded-xl p-8 text-center bg-surface hover:bg-gold/5 transition-colors relative cursor-pointer group shadow-gold-glow-sm"
             onClick={() => pdfRef.current?.click()}>
             <input type="file" ref={pdfRef} onChange={importFromPdf} accept="application/pdf" className="hidden" aria-label="Upload de arquivo PDF" />
             <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent">
+              <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center text-gold group-hover:scale-110 transition-transform">
                 <FileUp size={24} />
               </div>
               <p className="text-sm font-bold text-text-main">Escolha seu arquivo PDF ou arraste aqui</p>
@@ -373,12 +373,12 @@ ${inputText.substring(0, 50000)}`;
                 onChange={e => setUrlInput(e.target.value)}
                 placeholder="https://seu-site.com/biografia ou link do portfolio"
                 aria-label="URL para importação"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:border-accent outline-none bg-bg"
+                className="w-full border border-border rounded-xl px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main"
               />
               <button
                 onClick={importFromUrl}
                 disabled={loading || !urlInput.trim()}
-                className="px-5 py-2 bg-accent text-white font-bold rounded-xl text-sm hover:bg-accent/90 disabled:opacity-60 transition-colors whitespace-nowrap"
+                className="px-5 py-2 bg-gold text-bg font-bold rounded-xl text-sm hover:bg-gold-light disabled:opacity-60 transition-all whitespace-nowrap shadow-gold-glow-sm"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : "Importar"}
               </button>
@@ -389,7 +389,7 @@ ${inputText.substring(0, 50000)}`;
 
         {/* Loading */}
         {loading && (
-          <div className="flex items-center gap-3 py-3 text-accent">
+          <div className="flex items-center gap-3 py-3 text-gold">
             <Loader2 size={18} className="animate-spin" />
             <span className="text-sm font-medium">{loadingStep}</span>
           </div>
@@ -397,13 +397,13 @@ ${inputText.substring(0, 50000)}`;
 
         {/* Error */}
         {error && (
-          <div className="bg-rose-50 border border-rose-100 text-rose-600 text-sm px-4 py-3 rounded-xl">{error}</div>
+          <div className="bg-rose-950/20 border border-rose-900/40 text-rose-400 text-sm px-4 py-3 rounded-xl">{error}</div>
         )}
 
         {/* Diff Preview */}
         {importedData && !loading && (
           <div className="space-y-3">
-            <p className="text-sm font-bold text-emerald-600">✓ {t('dados_extraidos')}</p>
+            <p className="text-sm font-bold text-emerald-500">✓ {t('dados_extraidos')}</p>
             <DiffPreview current={currentData} imported={importedData} onApply={data => { onImport(data); setImportedData(null); setTextInput(''); setUrlInput(''); }} t={t} />
           </div>
         )}
@@ -543,11 +543,11 @@ function AutocompleteInput({
         }}
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed"
+        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all"
         autoComplete="off"
       />
       {isOpen && !disabled && filtered.length > 0 && (
-        <ul className="absolute z-[999] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-50">
+        <ul className="absolute z-[999] left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-gold-glow max-h-48 overflow-y-auto divide-y divide-border">
           {filtered.map((item, idx) => (
             <li key={idx}>
               <button
@@ -556,7 +556,7 @@ function AutocompleteInput({
                   onChange(item);
                   setIsOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-white transition-colors"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gold/10 hover:text-gold transition-colors"
               >
                 {item}
               </button>
@@ -605,15 +605,15 @@ function TagInput({ id, label, value, onChange, disabled, placeholder }: TagInpu
   return (
     <div>
       <label htmlFor={id} className="block text-xs font-bold text-text-muted mb-1">{label}</label>
-      <div className={`flex flex-wrap gap-2 p-2 border border-gray-200 rounded-xl min-h-[46px] bg-bg ${disabled ? 'opacity-75 cursor-not-allowed' : 'focus-within:border-accent'}`}>
+      <div className={`flex flex-wrap gap-2 p-2 border border-border rounded-xl min-h-[46px] bg-surface/50 ${disabled ? 'opacity-75 cursor-not-allowed' : 'focus-within:border-gold focus-within:ring-1 focus-within:ring-gold/30'}`}>
         {tags.map((tag, idx) => (
-          <span key={idx} className="flex items-center gap-1 bg-accent/10 text-accent text-xs font-medium px-2.5 py-1 rounded-full">
+          <span key={idx} className="flex items-center gap-1 bg-gold/10 text-gold border border-gold/20 text-xs font-medium px-2.5 py-1 rounded-full">
             {tag}
             {!disabled && (
               <button
                 type="button"
                 onClick={() => removeTag(idx)}
-                className="hover:bg-accent/20 rounded-full p-0.5"
+                className="hover:bg-gold/20 rounded-full p-0.5"
                 aria-label={`Remover tag ${tag}`}
               >
                 <X size={12} />
@@ -635,7 +635,7 @@ function TagInput({ id, label, value, onChange, disabled, placeholder }: TagInpu
               }
             }}
             placeholder={tags.length === 0 ? placeholder : ''}
-            className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm text-text-main py-0.5 px-1"
+            className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm text-text-main py-0.5 px-1 placeholder-text-muted"
           />
         )}
       </div>
@@ -679,13 +679,13 @@ function AddList({ title, fields, items, onChange, t, disabled }: {
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-text-muted">{title}</h4>
         {!disabled && (
-          <button onClick={add} className="flex items-center gap-1 text-accent text-xs font-bold hover:underline">
+          <button onClick={add} className="flex items-center gap-1 text-gold text-xs font-bold hover:text-gold-light transition-colors">
             <Plus size={14} /> {t('perfil.adicionar')}
           </button>
         )}
       </div>
       {items.map(item => (
-        <div key={item.id} className="bg-bg rounded-xl p-4 relative">
+        <div key={item.id} className="bg-surface/30 border border-border rounded-xl p-4 relative">
           {!disabled && (
             <button onClick={() => remove(item.id)}
               aria-label="Remover item"
@@ -704,7 +704,7 @@ function AddList({ title, fields, items, onChange, t, disabled }: {
                     value={item[f.key] || ''}
                     disabled={disabled}
                     onChange={e => update(item.id, f.key, e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white font-medium text-text-main cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                    className="w-full border border-border rounded-lg px-3 py-1.5 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg font-medium text-text-main cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all"
                   >
                     <option value="">{t('perfil.selecione') || 'Selecione...'}</option>
                     {f.options.map(opt => (
@@ -719,7 +719,7 @@ function AddList({ title, fields, items, onChange, t, disabled }: {
                     value={item[f.key] || ''}
                     disabled={disabled}
                     onChange={e => update(item.id, f.key, e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-accent outline-none bg-white disabled:opacity-75 disabled:cursor-not-allowed"
+                    className="w-full border border-border rounded-lg px-3 py-1.5 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all"
                   />
                 )}
               </div>
@@ -1136,13 +1136,13 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
       )}
 
       {/* Modern Premium Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-border">
         <button
           onClick={() => setProfileTab('pessoal')}
           className={`flex-1 py-4 text-center font-bold text-sm transition-all border-b-2 outline-none flex items-center justify-center gap-2 ${
             profileTab === 'pessoal'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-text-muted hover:text-text hover:border-gray-300'
+              ? 'border-gold text-gold font-serif'
+              : 'border-transparent text-text-muted hover:text-text-main hover:border-border'
           }`}
         >
           <User size={16} />
@@ -1152,8 +1152,8 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           onClick={() => setProfileTab('artistico')}
           className={`flex-1 py-4 text-center font-bold text-sm transition-all border-b-2 outline-none flex items-center justify-center gap-2 ${
             profileTab === 'artistico'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-text-muted hover:text-text hover:border-gray-300'
+              ? 'border-gold text-gold font-serif'
+              : 'border-transparent text-text-muted hover:text-text-main hover:border-border'
           }`}
         >
           <Sparkles size={16} />
@@ -1163,8 +1163,8 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           onClick={() => setProfileTab('trajetoria')}
           className={`flex-1 py-4 text-center font-bold text-sm transition-all border-b-2 outline-none flex items-center justify-center gap-2 ${
             profileTab === 'trajetoria'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-text-muted hover:text-text hover:border-gray-300'
+              ? 'border-gold text-gold font-serif'
+              : 'border-transparent text-text-muted hover:text-text-main hover:border-border'
           }`}
         >
           <Briefcase size={16} />
@@ -1176,25 +1176,25 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
       {profileTab === 'pessoal' && (
         <div className="space-y-8 animate-fadeIn">
           {/* Identificação Profissional */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-serif">{t('perfil.identidade_pessoal', 'Identificação Profissional')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35">
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.identidade_pessoal', 'Identificação Profissional')}</h2>
             </div>
             <div className="p-7">
               <div className="flex flex-col md:flex-row gap-8">
                 {/* Photo Upload Box */}
                 <div className="flex flex-col items-center gap-4 md:w-1/3">
                   <div className="relative w-[130px] h-[130px]">
-                    <div className="w-[130px] h-[130px] rounded-full overflow-hidden bg-gray-100 border-2 border-accent/20 flex items-center justify-center relative">
+                    <div className="w-[130px] h-[130px] rounded-full overflow-hidden bg-surface border-2 border-gold/20 flex items-center justify-center relative">
                       {photoUrl ? (
                         <img src={photoUrl} alt="Foto" className="w-full h-full object-cover" />
                       ) : (
-                        <Camera size={36} className="text-gray-400" />
+                        <Camera size={36} className="text-text-muted" />
                       )}
                       {isEditing && (
                         <button onClick={() => fileRef.current?.click()}
                           aria-label="Alterar foto de perfil"
-                          className="absolute inset-0 bg-black/40 text-white flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                          className="absolute inset-0 bg-black/60 text-white flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
                           {uploading ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
                           <span className="text-[10px] mt-1 font-bold">{t('perfil.alterar', 'Alterar')}</span>
                         </button>
@@ -1211,12 +1211,12 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <div>
                       <label htmlFor="perfil-nome-artistico" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.nome_artistico', 'Nome Artístico / Profissional')}</label>
                       <input id="perfil-nome-artistico" aria-label={t('perfil.nome_artistico')} value={form.nomeArtistico} disabled={!isEditing} onChange={e => set('nomeArtistico', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all" />
                     </div>
                     <div>
                       <label htmlFor="perfil-nome" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.nome_completo', 'Nome Completo')}</label>
                       <input id="perfil-nome" aria-label={t('perfil.nome_completo')} value={form.nome} disabled={!isEditing} onChange={e => set('nome', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all" />
                     </div>
                   </div>
 
@@ -1224,12 +1224,12 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <div className="col-span-2">
                       <label htmlFor="perfil-pronome" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.pronome', 'Pronome (Opcional)')}</label>
                       <input id="perfil-pronome" placeholder="Ex: ela/dela, ele/dele" aria-label={t('perfil.pronome')} value={form.pronome} disabled={!isEditing} onChange={e => set('pronome', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                     </div>
                     <div className="col-span-2">
                       <label htmlFor="perfil-nascimento" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.ano_nascimento', 'Ano de Nascimento')}</label>
                       <input id="perfil-nascimento" aria-label={t('perfil.ano_nascimento')} type="number" placeholder="Ex: 1990" value={form.nascimento} disabled={!isEditing} onChange={e => set('nascimento', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                     </div>
                   </div>
 
@@ -1237,12 +1237,12 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <div>
                       <label htmlFor="perfil-cidade-nascimento" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.cidade_nascimento', 'Cidade de Nascimento')}</label>
                       <input id="perfil-cidade-nascimento" aria-label={t('perfil.cidade_nascimento')} placeholder="Cidade" value={form.cidade_nascimento} disabled={!isEditing} onChange={e => set('cidade_nascimento', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                     </div>
                     <div>
                       <label htmlFor="perfil-pais-nascimento" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.pais_nascimento', 'País de Nascimento')}</label>
                       <input id="perfil-pais-nascimento" aria-label={t('perfil.pais_nascimento')} placeholder="País" value={form.pais_nascimento} disabled={!isEditing} onChange={e => set('pais_nascimento', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                     </div>
                   </div>
 
@@ -1261,7 +1261,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <div>
                       <label htmlFor="perfil-pais-atual" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.pais_atual', 'País Atual')}</label>
                       <input id="perfil-pais-atual" aria-label={t('perfil.pais_atual')} placeholder="Ex: Brasil" value={form.pais_atual} disabled={!isEditing} onChange={e => set('pais_atual', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                     </div>
                   </div>
 
@@ -1282,35 +1282,35 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           </section>
 
           {/* Contato Profissional & Presença Digital */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-serif">{t('perfil.contato_presenca', 'Contato Profissional & Presença Digital')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35">
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.contato_presenca', 'Contato Profissional & Presença Digital')}</h2>
             </div>
             <div className="p-7 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
                   <label htmlFor="perfil-email" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.email', 'E-mail Profissional')}</label>
                   <input id="perfil-email" aria-label={t('perfil.email')} type="email" placeholder="email@exemplo.com" value={form.email} disabled={!isEditing} onChange={e => set('email', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="perfil-telefone" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.telefone', 'Telefone Internacional')}</label>
                     <input id="perfil-telefone" aria-label={t('perfil.telefone')} placeholder="+55 21 99999-9999" value={form.telefone} disabled={!isEditing} onChange={e => set('telefone', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                   </div>
                   <div>
                     <label htmlFor="perfil-whatsapp" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.whatsapp', 'WhatsApp')}</label>
                     <input id="perfil-whatsapp" aria-label={t('perfil.whatsapp')} placeholder="+55 21 99999-9999" value={form.whatsapp} disabled={!isEditing} onChange={e => set('whatsapp', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                      className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                   </div>
                 </div>
 
                 <div>
                   <label htmlFor="perfil-website" className="block text-xs font-bold text-text-muted mb-1">{t('perfil.website', 'Website Oficial')}</label>
                   <input id="perfil-website" aria-label={t('perfil.website')} placeholder="https://..." value={form.website} disabled={!isEditing} onChange={e => set('website', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                    className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                 </div>
               </div>
 
@@ -1320,7 +1320,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <label className="text-xs font-bold text-text-muted">{t('perfil.instagram', 'Instagram Profissional')}</label>
                     {isEditing && (
                       <button onClick={() => setInstagrams(ig => [...ig, ''])}
-                        className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
+                        className="text-gold hover:text-gold-light text-xs font-bold flex items-center gap-1 transition-colors">
                         <Plus size={12} /> {t('perfil.adicionar', 'Adicionar')}
                       </button>
                     )}
@@ -1331,7 +1331,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                       <div key={i} className="flex gap-2">
                         <input aria-label={`Instagram ${i + 1}`} placeholder="@usuario" value={ig} disabled={!isEditing} onChange={e => {
                           const n = [...instagrams]; n[i] = e.target.value; setInstagrams(n);
-                        }} className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                        }} className="flex-1 border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                         {isEditing && (
                           <button onClick={() => setInstagrams(ig => ig.filter((_, j) => j !== i))}
                             aria-label="Remover Instagram"
@@ -1349,7 +1349,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <label className="text-xs font-bold text-text-muted">{t('perfil.outros_links', 'Outras Redes (Behance, ArtStation, LinkedIn)')}</label>
                     {isEditing && (
                       <button onClick={() => setSocialLinks(s => [...s, { id: uid(), label: '', url: '' }])}
-                        className="text-accent text-xs font-bold hover:underline flex items-center gap-1">
+                        className="text-gold hover:text-gold-light text-xs font-bold flex items-center gap-1 transition-colors">
                         <Plus size={12} /> {t('perfil.adicionar_campo', 'Adicionar')}
                       </button>
                     )}
@@ -1361,11 +1361,11 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                         <input aria-label="Nome do link" placeholder="Ex: Behance" value={link.label}
                           disabled={!isEditing}
                           onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, label: e.target.value} : l))}
-                          className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          className="w-28 border border-border rounded-lg px-3 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                         <input aria-label="URL do link" placeholder="https://..." value={link.url}
                           disabled={!isEditing}
                           onChange={e => setSocialLinks(s => s.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg text-text-main disabled:opacity-75 disabled:cursor-not-allowed" />
+                          className="flex-1 border border-border rounded-lg px-3 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted" />
                         {isEditing && (
                           <button onClick={() => setSocialLinks(s => s.filter(l => l.id !== link.id))}
                             aria-label="Remover link"
@@ -1382,19 +1382,19 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           </section>
 
           {/* Configuração Pública */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-serif">{t('perfil.config_publica', 'Configuração Pública & Disponibilidade')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35">
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.config_publica', 'Configuração Pública & Disponibilidade')}</h2>
             </div>
             <div className="p-7 space-y-4">
-              <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg rounded-xl hover:bg-bg/80 transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer p-3 bg-surface/30 border border-border/50 rounded-xl hover:bg-surface/55 transition-colors">
                 <input
                   type="checkbox"
                   aria-label="Mostrar Contato Publicamente"
                   checked={form.mostrar_contato_publico}
                   disabled={!isEditing}
                   onChange={e => set('mostrar_contato_publico', e.target.checked)}
-                  className="accent-accent w-5 h-5 cursor-pointer rounded"
+                  className="accent-gold w-5 h-5 cursor-pointer rounded"
                 />
                 <div>
                   <span className="text-sm font-bold block text-text-main">{t('perfil.mostrar_contato', 'Mostrar Contato Publicamente')}</span>
@@ -1403,56 +1403,56 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               </label>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg rounded-xl hover:bg-bg/80 transition-colors">
+                <label className="flex items-center gap-3 cursor-pointer p-3 bg-surface/30 border border-border/50 rounded-xl hover:bg-surface/55 transition-colors">
                   <input
                     type="checkbox"
                     aria-label="Disponível para Exposições"
                     checked={form.disponivel_exposicoes}
                     disabled={!isEditing}
                     onChange={e => set('disponivel_exposicoes', e.target.checked)}
-                    className="accent-accent w-4 h-4 cursor-pointer rounded"
+                    className="accent-gold w-4 h-4 cursor-pointer rounded"
                   />
                   <div>
                     <span className="text-xs font-bold block text-text-main">{t('perfil.disp_exposicoes', 'Disponível para Exposições')}</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg rounded-xl hover:bg-bg/80 transition-colors">
+                <label className="flex items-center gap-3 cursor-pointer p-3 bg-surface/30 border border-border/50 rounded-xl hover:bg-surface/55 transition-colors">
                   <input
                     type="checkbox"
                     aria-label="Disponível para Residências"
                     checked={form.disponivel_residencias}
                     disabled={!isEditing}
                     onChange={e => set('disponivel_residencias', e.target.checked)}
-                    className="accent-accent w-4 h-4 cursor-pointer rounded"
+                    className="accent-gold w-4 h-4 cursor-pointer rounded"
                   />
                   <div>
                     <span className="text-xs font-bold block text-text-main">{t('perfil.disp_residencias', 'Disponível para Residências')}</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg rounded-xl hover:bg-bg/80 transition-colors">
+                <label className="flex items-center gap-3 cursor-pointer p-3 bg-surface/30 border border-border/50 rounded-xl hover:bg-surface/55 transition-colors">
                   <input
                     type="checkbox"
                     aria-label="Disponível para Comissões"
                     checked={form.disponivel_comissoes}
                     disabled={!isEditing}
                     onChange={e => set('disponivel_comissoes', e.target.checked)}
-                    className="accent-accent w-4 h-4 cursor-pointer rounded"
+                    className="accent-gold w-4 h-4 cursor-pointer rounded"
                   />
                   <div>
                     <span className="text-xs font-bold block text-text-main">{t('perfil.disp_comissoes', 'Disponível para Comissões (Projetos Comissionados)')}</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 cursor-pointer p-3 bg-bg rounded-xl hover:bg-bg/80 transition-colors">
+                <label className="flex items-center gap-3 cursor-pointer p-3 bg-surface/30 border border-border/50 rounded-xl hover:bg-surface/55 transition-colors">
                   <input
                     type="checkbox"
                     aria-label="Disponível para Colaborações"
                     checked={form.disponivel_colaboracoes}
                     disabled={!isEditing}
                     onChange={e => set('disponivel_colaboracoes', e.target.checked)}
-                    className="accent-accent w-4 h-4 cursor-pointer rounded"
+                    className="accent-gold w-4 h-4 cursor-pointer rounded"
                   />
                   <div>
                     <span className="text-xs font-bold block text-text-main">
@@ -1470,9 +1470,9 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
       {profileTab === 'artistico' && (
         <div className="space-y-8 animate-fadeIn">
           {/* Biografias Institucionais */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-serif">{t('perfil.biografia', 'Biografias Institucionais')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35">
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.biografia', 'Biografias Institucionais')}</h2>
             </div>
             <div className="p-7 space-y-6">
               <div>
@@ -1483,7 +1483,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                       <button
                         onClick={handleGenerateBioCurta}
                         disabled={generatingBioCurta}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-accent/10 text-accent text-[11px] font-bold rounded-lg hover:bg-accent/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-gold/10 text-gold border border-gold/20 text-[11px] font-bold rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
                       >
                         {generatingBioCurta ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
                         {t('perfil.gerar_bio_curta', 'Gerar Bio Curta')}
@@ -1499,7 +1499,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                   disabled={!isEditing}
                   onChange={e => set('bioShort', e.target.value)}
                   placeholder={t('perfil.usada_capa', 'Escreva uma bio rápida para previews, feiras ou capas...')}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-24 resize-none disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main h-24 resize-none disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted"
                 />
               </div>
               <div>
@@ -1510,7 +1510,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                       <button
                         onClick={handleGenerateBioCompleta}
                         disabled={generatingBioCompleta}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-accent/10 text-accent text-[11px] font-bold rounded-lg hover:bg-accent/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-gold/10 text-gold border border-gold/20 text-[11px] font-bold rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
                       >
                         {generatingBioCompleta ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
                         {t('perfil.gerar_bio_completa', 'Gerar Bio Completa')}
@@ -1524,21 +1524,21 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                   disabled={!isEditing}
                   onChange={e => set('bioLong', e.target.value)}
                   placeholder={t('perfil.usada_portfolio', 'Escreva sua trajetória institucional completa, percurso, locais por onde passou...')}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-40 resize-none disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main h-40 resize-none disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted"
                 />
               </div>
             </div>
           </section>
 
           {/* Artist Statement */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-serif">{t('perfil.artist_statement', 'Artist Statement (Declaração de Artista)')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35 flex items-center justify-between">
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.artist_statement', 'Artist Statement (Declaração de Artista)')}</h2>
               {isEditing && (
                 <button
                   onClick={handleGenerateStatement}
                   disabled={generatingStatement}
-                  className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent text-xs font-bold rounded-lg hover:bg-accent/20 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-gold/10 text-gold border border-gold/20 text-xs font-bold rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
                 >
                   {generatingStatement ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                   {t('perfil.gerar_statement', 'Gerar Statement com IA')}
@@ -1554,15 +1554,15 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                 disabled={!isEditing}
                 onChange={e => set('statement', e.target.value)}
                 placeholder={t('perfil.statement_placeholder', 'Escreva sobre suas motivações, inquietações poéticas e abordagens conceituais...')}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg h-44 resize-none disabled:opacity-75 disabled:cursor-not-allowed"
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main h-44 resize-none disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted"
               />
             </div>
           </section>
 
           {/* Pesquisa e Poética Detalhada */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-serif">{t('perfil.pesquisa_poetica_detalhada', 'Pesquisa e Poética Detalhada')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35">
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.pesquisa_poetica_detalhada', 'Pesquisa e Poética Detalhada')}</h2>
             </div>
             <div className="p-7 space-y-6">
               <div>
@@ -1574,7 +1574,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                     <button
                       onClick={handleOptimizeProcessoCriativo}
                       disabled={optimizingProcesso}
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-accent/10 text-accent text-[11px] font-bold rounded-lg hover:bg-accent/20 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-gold/10 text-gold border border-gold/20 text-[11px] font-bold rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
                     >
                       {optimizingProcesso ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
                       {t('perfil.otimizar_processo', 'Otimizar Rascunho com IA')}
@@ -1587,7 +1587,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                   disabled={!isEditing}
                   onChange={e => set('processo_criativo', e.target.value)}
                   placeholder="Escreva um rascunho de como o seu trabalho se desenvolve no ateliê e use a IA para amadurecê-lo..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg h-28 resize-none disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main h-28 resize-none disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted"
                 />
               </div>
 
@@ -1621,7 +1621,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                   disabled={!isEditing}
                   onChange={e => set('pesquisa_artistica', e.target.value)}
                   placeholder="No que você está trabalhando ou investigando no momento?"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg h-24 resize-none disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main h-24 resize-none disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted"
                 />
               </div>
 
@@ -1635,11 +1635,11 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                   disabled={!isEditing}
                   onChange={e => set('referencias_conceituais', e.target.value)}
                   placeholder="Filósofos, teóricos, livros, cineastas ou outros artistas influentes na sua produção..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-accent outline-none bg-bg h-24 resize-none disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-surface/50 text-text-main h-24 resize-none disabled:opacity-75 disabled:cursor-not-allowed transition-all placeholder-text-muted"
                 />
               </div>
 
-              <div className="border-t border-gray-100 pt-6">
+              <div className="border-t border-border pt-6">
                 <TagInput
                   id="perfil-tags"
                   label={t('perfil.tags_portfolio', 'Tags do Portfólio (Palavras-chave de busca)')}
@@ -1658,10 +1658,10 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
       {profileTab === 'trajetoria' && (
         <div className="space-y-8 animate-fadeIn">
           {/* Formação Acadêmica & Prêmios */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-2">
-              <BookOpen size={20} className="text-accent" />
-              <h2 className="text-lg font-serif">{t('perfil.formacao_premios', 'Formação Acadêmica & Prêmios')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35 flex items-center gap-2">
+              <BookOpen size={20} className="text-gold" />
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.formacao_premios', 'Formação Acadêmica & Prêmios')}</h2>
             </div>
             <div className="p-7 space-y-8">
               {/* Formação */}
@@ -1681,7 +1681,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               ]} />
 
               {/* Prêmios */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.premios_distincoes', 'Prêmios, Distinções & Títulos')} items={premios} disabled={!isEditing} onChange={setPremios} t={t} fields={[
                   { key: 'nome', label: t('perfil.nome_premio', 'Nome do Prêmio') },
                   { key: 'categoria', label: t('perfil.categoria', 'Categoria') },
@@ -1695,7 +1695,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               </div>
 
               {/* Bolsas & Grants */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.bolsas_grants', 'Bolsas, Grants e Fomentos')} items={bolsas} disabled={!isEditing} onChange={setBolsas} t={t} fields={[
                   { key: 'nome', label: t('perfil.nome_bolsa', 'Nome da Bolsa / Fomento') },
                   { key: 'instituicao', label: t('perfil.instituicao', 'Instituição Financiadora') },
@@ -1709,10 +1709,10 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           </section>
 
           {/* Exposições & Residências */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-2">
-              <Award size={20} className="text-accent" />
-              <h2 className="text-lg font-serif">{t('perfil.trajetoria_expositiva', 'Trajetória Expositiva & Residências')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35 flex items-center gap-2">
+              <Award size={20} className="text-gold" />
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.trajetoria_expositiva', 'Trajetória Expositiva & Residências')}</h2>
             </div>
             <div className="p-7 space-y-8">
               {/* Residências */}
@@ -1727,7 +1727,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               ]} />
 
               {/* Individuais */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.individuais', 'Exposições Individuais')} items={exposIndividuais} disabled={!isEditing} onChange={setExposIndividuais} t={t} fields={[
                   { key: 'titulo', label: t('perfil.titulo_expo', 'Título da Exposição') },
                   { key: 'local', label: t('perfil.galeria_museu', 'Espaço / Galeria / Museu') },
@@ -1741,7 +1741,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               </div>
 
               {/* Coletivas */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.coletivas', 'Exposições Coletivas')} items={exposColetivas} disabled={!isEditing} onChange={setExposColetivas} t={t} fields={[
                   { key: 'titulo', label: t('perfil.titulo_expo', 'Título da Exposição') },
                   { key: 'local', label: t('perfil.galeria_museu', 'Espaço / Galeria / Museu') },
@@ -1755,7 +1755,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               </div>
 
               {/* Feiras de Arte */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.feiras_arte', 'Feiras de Arte')} items={feiras} disabled={!isEditing} onChange={setFeiras} t={t} fields={[
                   { key: 'nome', label: t('perfil.nome_feira', 'Nome da Feira') },
                   { key: 'galeria', label: t('perfil.galeria_representante', 'Galeria Representante') },
@@ -1766,7 +1766,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               </div>
 
               {/* Bienais e Festivais */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.bienais_festivais', 'Bienais & Festivais')} items={bienais} disabled={!isEditing} onChange={setBienais} t={t} fields={[
                   { key: 'nome', label: t('perfil.nome_evento', 'Nome da Bienal ou Festival') },
                   { key: 'obra', label: t('perfil.obra_exposta', 'Título da Obra / Projeto Exposto') },
@@ -1781,10 +1781,10 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           </section>
 
           {/* Publicações e Fortuna Crítica */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-2">
-              <FileText size={20} className="text-accent" />
-              <h2 className="text-lg font-serif">{t('perfil.publicacoes_critica', 'Publicações & Fortuna Crítica')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35 flex items-center gap-2">
+              <FileText size={20} className="text-gold" />
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.publicacoes_critica', 'Publicações & Fortuna Crítica')}</h2>
             </div>
             <div className="p-7 space-y-8">
               {/* Bibliografia Crítica */}
@@ -1797,7 +1797,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               ]} />
 
               {/* Publicações da Artista */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.publicacoes_autora', 'Publicações da Artista (Livros, Zines, Artigos)')} items={publicacoesAutora} disabled={!isEditing} onChange={setPublicacoesAutora} t={t} fields={[
                   { key: 'titulo', label: t('perfil.titulo_publicacao', 'Título da Publicação') },
                   {
@@ -1814,7 +1814,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               </div>
 
               {/* Clipping / Press */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.clipping_press', 'Clipping / Press (Matérias, Entrevistas e Mídia)')} items={clipping} disabled={!isEditing} onChange={setClipping} t={t} fields={[
                   { key: 'titulo', label: t('perfil.titulo_materia', 'Título da Matéria / Entrevista') },
                   { key: 'veiculo', label: t('perfil.veiculo_comunicacao', 'Veículo de Comunicação') },
@@ -1832,10 +1832,10 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
           </section>
 
           {/* Coleções */}
-          <section className="bg-white rounded-2xl shadow-float border border-gray-100 overflow-hidden">
-            <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-2">
-              <Bookmark size={20} className="text-accent" />
-              <h2 className="text-lg font-serif">{t('perfil.colecoes_acervos', 'Coleções & Acervos')}</h2>
+          <section className="glass-slab rounded-2xl overflow-hidden">
+            <div className="px-7 py-5 border-b border-border bg-surface-raised/35 flex items-center gap-2">
+              <Bookmark size={20} className="text-gold" />
+              <h2 className="text-lg font-serif text-gold font-bold">{t('perfil.colecoes_acervos', 'Coleções & Acervos')}</h2>
             </div>
             <div className="p-7 space-y-8">
               {/* Coleções Públicas */}
@@ -1848,7 +1848,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               ]} />
 
               {/* Coleções Privadas */}
-              <div className="border-t border-gray-100 pt-8">
+              <div className="border-t border-border pt-8">
                 <AddList title={t('perfil.colecoes_privadas', 'Coleções Privadas (Colecionadores Relevantes)')} items={colecoesPrivadas} disabled={!isEditing} onChange={setColecoesPrivadas} t={t} fields={[
                   { key: 'colecionador', label: t('perfil.colecionador', 'Nome do Colecionador / Nome da Coleção') },
                   { key: 'pais', label: t('perfil.pais_regiao', 'País / Região') },
@@ -1861,10 +1861,10 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
       )}
 
       {/* Fixed Save Button */}
-      <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 p-4 flex justify-end z-20">
+      <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-bg/85 backdrop-blur-md border-t border-border p-4 flex justify-end z-20 shadow-gold-glow-sm">
         {!isEditing ? (
           <button onClick={() => setIsEditing(true)}
-            className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 transition-all shadow-lg">
+            className="flex items-center justify-center w-full md:w-auto gap-2 px-8 py-3 bg-gold text-bg font-bold rounded-xl hover:bg-gold-light transition-all shadow-gold-glow hover-lift">
             <PenLine size={18} /> {t('perfil.editar_perfil', 'Editar Perfil')}
           </button>
         ) : (
@@ -1873,7 +1873,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               setIsEditing(false);
               window.location.reload();
             }}
-              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-6 py-3 bg-gray-100 text-text-muted hover:text-text-main font-bold rounded-xl transition-all">
+              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-6 py-3 bg-surface border border-border text-text-muted hover:text-text-main font-bold rounded-xl transition-all">
               {t('cancelar', 'Cancelar')}
             </button>
             <button onClick={async () => {
@@ -1881,7 +1881,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
               setIsEditing(false);
             }}
               disabled={!profileLoaded || saving}
-              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-8 py-3 bg-accent text-white font-bold rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg">
+              className="flex items-center justify-center flex-1 md:flex-none gap-2 px-8 py-3 bg-gold text-bg font-bold rounded-xl hover:bg-gold-light disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-gold-glow hover-lift">
               {saving ? <><Loader2 size={18} className="animate-spin" /> {t('perfil.salvando', 'Salvando')}...</> : t('perfil.salvar_perfil', 'Salvar Perfil')}
             </button>
           </div>

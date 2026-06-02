@@ -590,21 +590,21 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                 type="button"
                 aria-label={`Info sobre ${label}`}
                 onClick={() => setOpenTooltip(openTooltip === id ? null : id)}
-                className="text-accent/60 hover:text-accent transition-colors leading-none"
+                className="text-gold/60 hover:text-gold transition-colors leading-none"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               </button>
               {openTooltip === id && (
-                <div className="absolute z-50 left-0 top-5 w-72 bg-gray-900 text-white text-xs rounded-xl p-3 shadow-xl leading-relaxed border border-gray-700">
+                <div className="absolute z-50 left-0 top-5 w-72 glass-panel text-text-main text-xs rounded-xl p-3 shadow-xl leading-relaxed border-gold-dim">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-gray-300 font-normal">{opts.info}</span>
-                    <button type="button" onClick={() => setOpenTooltip(null)} className="ml-2 text-gray-400 hover:text-white shrink-0">✕</button>
+                    <span className="text-text-main font-normal">{opts.info}</span>
+                    <button type="button" onClick={() => setOpenTooltip(null)} className="ml-2 text-text-muted hover:text-text-main shrink-0">✕</button>
                   </div>
                   <button 
                     type="button" 
                     onClick={() => handleSuggestField(field, label, opts.info!)}
                     disabled={suggestingField === field}
-                    className="mt-2 w-full flex items-center justify-center gap-1.5 bg-accent/10 hover:bg-accent/20 text-accent font-bold py-2 rounded-lg transition-colors border border-accent/20 disabled:opacity-50 disabled:cursor-wait"
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 bg-gold/10 hover:bg-gold/20 text-gold font-bold py-2 rounded-lg transition-colors border border-gold-dim disabled:opacity-50 disabled:cursor-wait"
                   >
                     {suggestingField === field ? (
                       <span className="animate-pulse flex items-center gap-1">⏳ Analisando...</span>
@@ -618,9 +618,9 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
           )}
         </label>
         {opts?.rows ? (
-          <textarea id={id} value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg resize-none" />
+          <textarea id={id} value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => setFormData({...formData, [field]: e.target.value})} rows={opts.rows} className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg resize-none text-text-main" />
         ) : (
-          <input id={id} type="text" readOnly={opts?.readOnly} value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => !opts?.readOnly && setFormData({...formData, [field]: e.target.value})} className={`w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg ${opts?.readOnly ? 'opacity-70 bg-gray-50 cursor-not-allowed font-medium' : ''} ${opts?.font || ''}`} />
+          <input id={id} type="text" readOnly={opts?.readOnly} value={(formData as Record<string, string | boolean>)[field] as string} onChange={e => !opts?.readOnly && setFormData({...formData, [field]: e.target.value})} className={`w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main ${opts?.readOnly ? 'opacity-60 bg-surface-raised cursor-not-allowed font-medium' : ''} ${opts?.font || ''}`} />
         )}
       </div>
     );
@@ -631,33 +631,33 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
       <label className="flex items-center gap-1 text-xs font-bold text-text-muted mb-1">
         Dimensões (H × L × P)
         <span className="relative inline-flex">
-          <button type="button" onClick={() => setOpenTooltip(openTooltip === 'dim' ? null : 'dim')} className="text-accent/60 hover:text-accent transition-colors leading-none" aria-label="Info sobre Dimensões">
+          <button type="button" onClick={() => setOpenTooltip(openTooltip === 'dim' ? null : 'dim')} className="text-gold/60 hover:text-gold transition-colors leading-none" aria-label="Info sobre Dimensões">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           </button>
           {openTooltip === 'dim' && (
-            <div className="absolute z-50 left-0 top-5 w-72 bg-gray-900 text-white text-xs rounded-xl p-3 shadow-xl leading-relaxed border border-gray-700">
+            <div className="absolute z-50 left-0 top-5 w-72 glass-panel text-text-main text-xs rounded-xl p-3 shadow-xl leading-relaxed border-gold-dim">
               <div className="flex justify-between items-start">
-                <span className="text-gray-300 font-normal">Medidas exatas de Altura, Largura e Profundidade em centímetros. Para obras flexíveis, utilize "dimensões variáveis".</span>
-                <button type="button" onClick={() => setOpenTooltip(null)} className="ml-2 text-gray-400 hover:text-white shrink-0">✕</button>
+                <span className="text-text-main font-normal">Medidas exatas de Altura, Largura e Profundidade em centímetros. Para obras flexíveis, utilize "dimensões variáveis".</span>
+                <button type="button" onClick={() => setOpenTooltip(null)} className="ml-2 text-text-muted hover:text-text-main shrink-0">✕</button>
               </div>
             </div>
           )}
         </span>
       </label>
       <div className="flex gap-1 items-center">
-        <input type="text" placeholder="H" aria-label="Altura" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <input type="text" placeholder="H" aria-label="Altura" value={formData.dimensaoH} onChange={e=>setFormData({...formData,dimensaoH:e.target.value})} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main" />
         <span className="text-gray-400">×</span>
-        <input type="text" placeholder="L" aria-label="Largura" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
+        <input type="text" placeholder="L" aria-label="Largura" value={formData.dimensaoW} onChange={e=>setFormData({...formData,dimensaoW:e.target.value})} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main" />
         <span className="text-gray-400">×</span>
-        <input type="text" placeholder="P" aria-label="Profundidade" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent outline-none bg-bg" />
-        <select aria-label="Unidade de medida" value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-accent outline-none bg-bg"><option>cm</option><option>in</option></select>
+        <input type="text" placeholder="P" aria-label="Profundidade" value={formData.dimensaoD} onChange={e=>setFormData({...formData,dimensaoD:e.target.value})} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main" />
+        <select aria-label="Unidade de medida" value={formData.dimensaoUnidade} onChange={e=>setFormData({...formData,dimensaoUnidade:e.target.value})} className="border border-border rounded-lg px-2 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main"><option>cm</option><option>in</option></select>
       </div>
     </div>
   );
 
   const sec = (num: string, title: string, children: React.ReactNode) => (
     <section>
-      <p className="text-xs font-bold tracking-[0.2em] text-accent uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">{num}</span> {title}</p>
+      <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase mb-4 flex items-center gap-2"><span className="font-serif text-base">{num}</span> {title}</p>
       {children}
     </section>
   );
@@ -670,7 +670,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
           if (!contentToDisplay) return null;
           return (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-5 py-3 ${msg.role === 'user' ? 'bg-accent text-white rounded-br-none' : 'bg-gray-100 text-text-main rounded-bl-none'}`}>
+              <div className={`max-w-[80%] rounded-2xl px-5 py-3 ${msg.role === 'user' ? 'bg-gold text-bg font-bold rounded-br-none shadow-gold-glow-sm' : 'bg-surface-raised border border-border text-text-main rounded-bl-none'}`}>
                 <p className="whitespace-pre-wrap text-sm">{contentToDisplay}</p>
               </div>
             </div>
@@ -678,26 +678,26 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
         })}
         {aiLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-2xl px-5 py-3 rounded-bl-none flex items-center gap-2">
-              <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"/>
-              <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-200"/>
-              <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-400"/>
+            <div className="bg-surface-raised border border-border rounded-2xl px-5 py-3 rounded-bl-none flex items-center gap-2">
+              <span className="w-2 h-2 bg-gold/50 rounded-full animate-bounce"/>
+              <span className="w-2 h-2 bg-gold/50 rounded-full animate-bounce animation-delay-200"/>
+              <span className="w-2 h-2 bg-gold/50 rounded-full animate-bounce animation-delay-400"/>
             </div>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
       
-      <div className="flex flex-col gap-4 border-t border-gray-100 pt-4">
+      <div className="flex flex-col gap-4 border-t border-border pt-4">
         <div className="flex gap-3 overflow-x-auto pb-2">
-          <div className="shrink-0 w-20 h-20 border-2 border-dashed border-accent/40 rounded-xl overflow-hidden flex items-center justify-center bg-white hover:bg-accent/5 cursor-pointer" onClick={()=>photoRefs.current[0]?.click()}>
+          <div className="shrink-0 w-20 h-20 border border-dashed border-gold-dim rounded-xl overflow-hidden flex items-center justify-center bg-surface hover:bg-gold/5 cursor-pointer" onClick={()=>photoRefs.current[0]?.click()}>
             <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(0,e)} title="Foto de capa" aria-label="Foto de capa" placeholder="Foto de capa" />
-            {photos[0].url ? <img src={photos[0].url} alt="Foto de capa" title="Foto de capa" className="w-full h-full object-cover"/> : <Camera size={24} className="text-accent/50"/>}
+            {photos[0].url ? <img src={photos[0].url} alt="Foto de capa" title="Foto de capa" className="w-full h-full object-cover"/> : <Camera size={24} className="text-gold/50"/>}
           </div>
           {[1,2,3,4].map(i => photos[i-1].url ? (
-            <div key={i} className="shrink-0 w-20 h-20 border-2 border-dashed border-gray-200 rounded-xl overflow-hidden flex items-center justify-center bg-white hover:bg-gray-50 cursor-pointer" onClick={()=>photoRefs.current[i]?.click()}>
+            <div key={i} className="shrink-0 w-20 h-20 border border-dashed border-border rounded-xl overflow-hidden flex items-center justify-center bg-surface hover:bg-surface-raised cursor-pointer" onClick={()=>photoRefs.current[i]?.click()}>
               <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" onChange={e=>handlePhotoSlot(i,e)} title={`Foto adicional ${i}`} aria-label={`Foto adicional ${i}`} placeholder={`Foto adicional ${i}`} />
-              {photos[i].url ? <img src={photos[i].url} alt={`Foto adicional ${i}`} title={`Foto adicional ${i}`} className="w-full h-full object-cover"/> : <Plus size={24} className="text-gray-300"/>}
+              {photos[i].url ? <img src={photos[i].url} alt={`Foto adicional ${i}`} title={`Foto adicional ${i}`} className="w-full h-full object-cover"/> : <Plus size={24} className="text-text-muted"/>}
             </div>
           ) : null)}
         </div>
@@ -708,24 +708,24 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
             value={chatInput} 
             onChange={e => setChatInput(e.target.value)}
             placeholder="Descreva a obra, inspirações, materiais..." 
-            className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-bg"
+            className="flex-1 border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main"
             disabled={aiLoading}
           />
-          <button type="submit" disabled={aiLoading || !chatInput.trim()} className="bg-accent text-white px-6 py-3 rounded-xl font-bold hover:bg-accent/90 disabled:opacity-50">
+          <button type="submit" disabled={aiLoading || !chatInput.trim()} className="bg-gold text-bg px-6 py-3 rounded-xl font-bold hover:bg-gold-light transition-all disabled:opacity-50 shadow-gold-glow-sm">
             Enviar
           </button>
         </form>
         
         {messages.some(m => m.content.includes('```json')) && (
           <div className="flex justify-center mt-2">
-            <button onClick={onReview} className="text-sm font-bold text-accent hover:underline flex items-center gap-1">
+            <button onClick={onReview} className="text-sm font-bold text-gold hover:text-gold-light hover:underline flex items-center gap-1">
               Revisar Ficha Técnica Gerada <ChevronRight size={16}/>
             </button>
           </div>
         )}
         
         <div className="flex justify-center mt-2">
-            <button type="button" onClick={onSkip} className="text-xs text-gray-400 hover:text-accent transition-colors">
+            <button type="button" onClick={onSkip} className="text-xs text-text-muted hover:text-gold transition-colors">
               Pular conversa e ir para formulário manual
             </button>
         </div>
@@ -744,7 +744,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
       <div className="max-w-4xl mx-auto px-6">
         
           <div className="mb-8">
-            <h1 className="text-3xl font-serif mb-2">
+            <h1 className="text-3xl font-serif mb-2 text-gold font-bold">
               {editId 
                 ? 'Editar Ficha Técnica'
                 : formData.classificacao === 'serie' ? 'Nova Série' : 
@@ -767,13 +767,13 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
           if (s.id === 2 && formData.classificacao === 'singular') return null;
           if (s.id === 1 && formData.classificacao !== 'singular') return null;
           const isActive = step === s.id; const isPast = step > s.id;
-          return (<div key={s.id} className={`flex-1 h-2 rounded-full relative ${isActive ? 'bg-accent' : isPast ? 'bg-accent/40' : 'bg-gray-200'}`}>
-            <span className={`absolute -top-6 text-xs font-bold whitespace-nowrap ${isActive ? 'text-accent' : 'text-gray-400'}`}>{s.label}</span>
+          return (<div key={s.id} className={`flex-1 h-2 rounded-full relative ${isActive ? 'bg-gold' : isPast ? 'bg-gold/45' : 'bg-border'}`}>
+            <span className={`absolute -top-6 text-xs font-bold whitespace-nowrap ${isActive ? 'text-gold' : 'text-text-muted'}`}>{s.label}</span>
           </div>);
         })}
       </div>
 
-      <div className="bg-surface rounded-2xl shadow-float border border-gray-100 p-8 min-h-[500px]">
+      <div className="glass-slab rounded-2xl p-8 min-h-[500px]">
 
         {/* STEP 1: Chat Curatorial / Classificação (Only for Singular or if they haven't passed type) */}
         {step === 1 && isChatting ? (
@@ -788,7 +788,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
         ) : step === 1 && !isChatting && (
           <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
             <section>
-              <h2 className="text-2xl font-serif mb-6">O que você deseja registrar?</h2>
+              <h2 className="text-2xl font-serif mb-6 text-text-main">O que você deseja registrar?</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   { id: 'singular', label: 'Obra Singular', desc: 'Obra única — abre ficha técnica completa' },
@@ -796,25 +796,25 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                   { id: 'colecao', label: 'Coleção', desc: 'Criar ou adicionar obra a uma coleção' }
                 ].map(tipo => (
                   <button key={tipo.id} onClick={() => setFormData({...formData, classificacao: tipo.id})}
-                    className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col gap-2 ${formData.classificacao === tipo.id ? 'border-accent bg-accent/5 text-accent' : 'border-gray-100 bg-surface text-text-main hover:border-accent/30'}`}>
+                    className={`p-6 rounded-2xl border text-left transition-all flex flex-col gap-2 ${formData.classificacao === tipo.id ? 'border-gold bg-gold/10 text-gold shadow-gold-glow-sm' : 'border-border bg-surface text-text-main hover:border-gold/30 hover:bg-surface-raised'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${formData.classificacao === tipo.id ? 'border-accent' : 'border-gray-300'}`}>
-                        {formData.classificacao === tipo.id && <div className="w-2 h-2 bg-accent rounded-full" />}
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${formData.classificacao === tipo.id ? 'border-gold' : 'border-border'}`}>
+                        {formData.classificacao === tipo.id && <div className="w-2 h-2 bg-gold rounded-full" />}
                       </div>
                       <span className="font-serif text-lg">{tipo.label}</span>
                     </div>
-                    <p className={`text-sm ml-7 ${formData.classificacao === tipo.id ? 'text-accent/80' : 'text-text-muted'}`}>{tipo.desc}</p>
+                    <p className={`text-sm ml-7 ${formData.classificacao === tipo.id ? 'text-gold-light' : 'text-text-muted'}`}>{tipo.desc}</p>
                   </button>
                 ))}
               </div>
               
               {formData.classificacao === 'singular' && (
-                <div className="mt-10 p-6 rounded-2xl border-2 border-accent/20 bg-accent/5 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="mt-10 p-6 rounded-2xl border border-gold-dim bg-gold/5 flex flex-col md:flex-row items-center justify-between gap-6">
                   <div>
-                    <h3 className="text-lg font-bold text-accent mb-2">Modo Assistente (Recomendado)</h3>
+                    <h3 className="text-lg font-bold text-gold mb-2">Modo Assistente (Recomendado)</h3>
                     <p className="text-sm text-text-muted">Converse com a IA para extrair automaticamente a ficha técnica, curadoria e dimensões de forma fluida.</p>
                   </div>
-                  <button onClick={() => setIsChatting(true)} className="shrink-0 bg-accent text-white px-6 py-3 rounded-xl font-bold hover:bg-accent/90 shadow-float">
+                  <button onClick={() => setIsChatting(true)} className="shrink-0 bg-gold text-bg px-6 py-3 rounded-xl font-bold hover:bg-gold-light shadow-gold-glow-sm transition-all">
                     Preencher com IA
                   </button>
                 </div>
@@ -826,23 +826,23 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
         {/* STEP 2: Vinculação — Serie ou Colecao */}
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-2xl font-serif mb-6">{formData.classificacao === 'serie' ? 'Contexto da Série' : 'Contexto da Coleção'}</h2>
+            <h2 className="text-2xl font-serif mb-6 text-text-main">{formData.classificacao === 'serie' ? 'Contexto da Série' : 'Contexto da Coleção'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button onClick={() => setFormData({...formData, isNewHierarchy: false})}
-                className={`p-6 rounded-2xl border-2 text-left transition-all ${!formData.isNewHierarchy ? 'border-accent bg-accent/5' : 'border-gray-100 hover:border-accent/30'}`}>
+                className={`p-6 rounded-2xl border text-left transition-all ${!formData.isNewHierarchy ? 'border-gold bg-gold/10 text-gold shadow-gold-glow-sm' : 'border-border bg-surface text-text-main hover:border-gold/30 hover:bg-surface-raised'}`}>
                 <h3 className="font-bold mb-2">Escolher Existente</h3>
                 <p className="text-sm text-text-muted">Adicionar obra a um(a) {formData.classificacao === 'serie' ? 'série' : 'coleção'} já cadastrado(a).</p>
               </button>
               <button onClick={() => setFormData({...formData, isNewHierarchy: true})}
-                className={`p-6 rounded-2xl border-2 text-left transition-all ${formData.isNewHierarchy ? 'border-accent bg-accent/5' : 'border-gray-100 hover:border-accent/30'}`}>
-                <div className="flex items-center gap-2 mb-2"><Plus size={18} className="text-accent"/><h3 className="font-bold">Criar Nova {formData.classificacao === 'serie' ? 'Série' : 'Coleção'}</h3></div>
+                className={`p-6 rounded-2xl border text-left transition-all ${formData.isNewHierarchy ? 'border-gold bg-gold/10 text-gold shadow-gold-glow-sm' : 'border-border bg-surface text-text-main hover:border-gold/30 hover:bg-surface-raised'}`}>
+                <div className="flex items-center gap-2 mb-2"><Plus size={18} className="text-gold"/><h3 className="font-bold">Criar Nova {formData.classificacao === 'serie' ? 'Série' : 'Coleção'}</h3></div>
                 <p className="text-sm text-text-muted">Preencher ficha curatorial do agrupamento.</p>
               </button>
             </div>
             
             {formData.isNewHierarchy && isChatting && (
-               <div className="mt-8 border-t border-gray-100 pt-8">
-                 <h3 className="text-xl font-serif mb-2">Vamos registrar sua criação ✨</h3>
+               <div className="mt-8 border-t border-border pt-8">
+                 <h3 className="text-xl font-serif mb-2 text-gold">Vamos registrar sua criação ✨</h3>
                  <p className="text-text-muted mb-4">Me conta sobre ela do jeito que você quiser.</p>
                  {renderChatUI(
                     () => { setIsChatting(false); setStep(3); },
@@ -853,15 +853,15 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
 
 
             {!formData.isNewHierarchy && (
-              <div className="mt-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
+              <div className="mt-6 bg-surface-raised border border-border p-6 rounded-xl">
                 <label htmlFor="parent-selector" className="block text-sm font-bold text-text-main mb-2">Selecione</label>
                 {formData.classificacao === 'serie' ? (
-                  <select id="parent-selector" value={formData.parentSeriesId} onChange={e => setFormData({...formData, parentSeriesId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
+                  <select id="parent-selector" value={formData.parentSeriesId} onChange={e => setFormData({...formData, parentSeriesId: e.target.value})} className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                     <option value="">Selecione uma série...</option>
                     {seriesList.map(s => <option key={s.series_id} value={s.series_id}>{s.series_title}</option>)}
                   </select>
                 ) : (
-                  <select id="parent-selector" value={formData.parentCollectionId} onChange={e => setFormData({...formData, parentCollectionId: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none bg-white">
+                  <select id="parent-selector" value={formData.parentCollectionId} onChange={e => setFormData({...formData, parentCollectionId: e.target.value})} className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                     <option value="">Selecione uma coleção...</option>
                     {collections.map(c => <option key={c.collection_id} value={c.collection_id}>{c.collection_name}</option>)}
                   </select>
@@ -875,33 +875,33 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
         {/* STEP 3: Ficha Técnica */}
         {step === 3 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <h2 className="text-2xl font-serif">Ficha Técnica</h2>
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h2 className="text-2xl font-serif text-gold">Ficha Técnica</h2>
             </div>
 
             {/* Imagem Principal — Só aparece se for obra (singular ou vinculada existente) */}
             {(formData.classificacao === 'singular' || !formData.isNewHierarchy) && (
-              <section className="mb-8 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                <h3 className="text-lg font-serif mb-4">Imagem Principal</h3>
+              <section className="mb-8 glass-panel p-6 rounded-2xl shadow-gold-glow-sm">
+                <h3 className="text-lg font-serif mb-4 text-text-main">Imagem Principal</h3>
                 <div className="space-y-3">
-                  <div className="relative border-2 border-dashed border-accent/40 rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-white hover:bg-accent/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
+                  <div className="relative border border-dashed border-gold-dim rounded-2xl overflow-hidden aspect-video flex items-center justify-center bg-surface hover:bg-gold/5 transition-colors cursor-pointer group" onClick={()=>photoRefs.current[0]?.click()}>
                     <input ref={el=>{photoRefs.current[0]=el}} type="file" accept="image/*" className="hidden" aria-label="Upload imagem principal" onChange={e=>handlePhotoSlot(0,e)} />
                     {photos[0].url ? (
                       <div className="relative w-full h-full">
                         <img src={photos[0].url} alt="Foto principal" className="w-full h-full object-contain" />
-                        <span className="absolute top-2 left-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded">CAPA</span>
+                        <span className="absolute top-2 left-2 bg-gold text-bg text-xs font-bold px-2 py-1 rounded">CAPA</span>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-text-muted group-hover:text-accent transition-colors">
+                      <div className="flex flex-col items-center gap-2 text-text-muted group-hover:text-gold transition-colors">
                         <Camera size={40}/><span className="text-sm font-medium">Foto principal — clique para selecionar</span>
                       </div>
                     )}
                   </div>
                   <div className="grid grid-cols-4 gap-3">
                     {[1,2,3,4].map(i=>(
-                      <div key={i} className="relative border border-dashed border-gray-300 rounded-xl overflow-hidden bg-white hover:bg-accent/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
+                      <div key={i} className="relative border border-dashed border-border rounded-xl overflow-hidden bg-surface hover:bg-gold/5 transition-colors cursor-pointer group aspect-[3/4] flex items-center justify-center" onClick={()=>photoRefs.current[i]?.click()}>
                         <input ref={el=>{photoRefs.current[i]=el}} type="file" accept="image/*" className="hidden" aria-label={`Upload imagem ${i+1}`} onChange={e=>handlePhotoSlot(i,e)} />
-                        {photos[i].url ? <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /> : <Camera size={20} className="text-gray-300 group-hover:text-accent transition-colors"/>}
+                        {photos[i].url ? <img src={photos[i].url} alt={`Foto ${i+1}`} className="w-full h-full object-cover" /> : <Camera size={20} className="text-text-faint group-hover:text-gold transition-colors"/>}
                       </div>
                     ))}
                   </div>
@@ -918,7 +918,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                     {sec('I', 'Dados de Identificação Básica', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="inp-tipoObjeto" className="flex items-center gap-1 text-xs font-bold text-text-muted mb-1">Tipo de Objeto</label>
-                        <select id="inp-tipoObjeto" value={formData.tipoObjeto} onChange={e => setFormData({...formData, tipoObjeto: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                        <select id="inp-tipoObjeto" value={formData.tipoObjeto} onChange={e => setFormData({...formData, tipoObjeto: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                           <option value="Painting">Pintura (Painting)</option>
                           <option value="Drawing">Desenho (Drawing)</option>
                           <option value="Sculpture">Escultura (Sculpture)</option>
@@ -952,7 +952,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                           id="series-selector-singular"
                           value={formData.parentSeriesId || ''} 
                           onChange={e => setFormData({...formData, parentSeriesId: e.target.value})}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg"
+                          className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main"
                         >
                           <option value="">Não pertence a nenhuma série (Obra Independente)</option>
                           {seriesList.map(s => (
@@ -987,7 +987,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                       {inp('Número de Registro (Tombo)','numeroRegistro',{info:'Código único e exclusivo que vincula o objeto físico ao seu registro documental. Nunca deve ser reutilizado.'})}
                       <div>
                         <label htmlFor="inp-formaAquisicao" className="flex items-center gap-1 text-xs font-bold text-text-muted mb-1">Forma de Aquisição</label>
-                        <select id="inp-formaAquisicao" value={formData.formaAquisicao} onChange={e => setFormData({...formData, formaAquisicao: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                        <select id="inp-formaAquisicao" value={formData.formaAquisicao} onChange={e => setFormData({...formData, formaAquisicao: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                           <option value="">Selecione...</option>
                           <option value="Donation">Doação (Donation)</option>
                           <option value="Purchase">Compra (Purchase)</option>
@@ -1001,7 +1001,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                       {inp('Procedência e Histórico','procedencia',{span2:true,rows:2,info:'Registro cronológico de antigos proprietários e da trajetória da obra até a sua institucionalização.'})}
                       <div>
                         <label htmlFor="inp-estadoConservacao" className="flex items-center gap-1 text-xs font-bold text-text-muted mb-1">Estado de Conservação</label>
-                        <select id="inp-estadoConservacao" value={formData.estadoConservacao} onChange={e => setFormData({...formData, estadoConservacao: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                        <select id="inp-estadoConservacao" value={formData.estadoConservacao} onChange={e => setFormData({...formData, estadoConservacao: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                           <option value="Excellent">Excelente (Excellent)</option>
                           <option value="Good">Bom (Good)</option>
                           <option value="Fair">Regular (Fair)</option>
@@ -1014,7 +1014,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                       {inp('Número de Edição','numeroEdicao',{info:'Ex: 1/10, 2/10. Indica a posição desta obra dentro de uma tiragem limitada.'})}
                       <div className="flex flex-col gap-1">
                         <label htmlFor="inp-status-venda" className="text-xs font-bold text-text-muted mb-1">Status de Venda</label>
-                        <select id="inp-status-venda" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                        <select id="inp-status-venda" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                           <option value="Disponível">Disponível</option>
                           <option value="Vendida">Vendida</option>
                           <option value="Reservada">Reservada</option>
@@ -1031,7 +1031,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                       {inp('Perfil do Performer','perfilPerformer',{info:'Requisitos de habilidades (ex: dança, música) ou perfis demográficos específicos exigidos pela artista para os executantes.'})}
                       <div>
                         <label htmlFor="inp-duracao" className="flex items-center gap-1 text-xs font-bold text-text-muted mb-1">Duração</label>
-                        <select id="inp-duracao" value={formData.duracao} onChange={e => setFormData({...formData, duracao: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                        <select id="inp-duracao" value={formData.duracao} onChange={e => setFormData({...formData, duracao: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                           <option value="">Selecione...</option>
                           <option value="Short (up to 30 min)">Curta — até 30 min</option>
                           <option value="Medium (30–90 min)">Média — 30 a 90 min</option>
@@ -1078,7 +1078,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                             )}
                           </span>
                         </label>
-                        <select id="inp-redeBlockchain" value={formData.redeBlockchain} onChange={e=>setFormData({...formData, redeBlockchain: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                        <select id="inp-redeBlockchain" value={formData.redeBlockchain} onChange={e=>setFormData({...formData, redeBlockchain: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                           <option value="Ethereum">Ethereum</option>
                           <option value="Polygon">Polygon</option>
                           <option value="Tezos">Tezos</option>
@@ -1206,7 +1206,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                             id="series-parent-collection"
                             value={formData.parentCollectionId} 
                             onChange={e => setFormData({...formData, parentCollectionId: e.target.value})}
-                            className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg"
+                            className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main"
                           >
                             <option value="">Ainda não pertence a nenhuma coleção</option>
                             {collections.map(c => (
@@ -1243,7 +1243,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
                           <label htmlFor="statusSerie" className="text-sm font-bold text-text-muted mb-1 flex items-center gap-1">Status da Série</label>
-                          <select id="statusSerie" value={formData.statusSerie} onChange={e=>setFormData({...formData, statusSerie: e.target.value})} className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-bg">
+                          <select id="statusSerie" value={formData.statusSerie} onChange={e=>setFormData({...formData, statusSerie: e.target.value})} className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-bg text-text-main">
                             <option value="Em andamento">Em andamento</option>
                             <option value="Finalizada">Finalizada</option>
                             <option value="Arquivada">Arquivada</option>
@@ -1260,7 +1260,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                 {/* SÉRIE — Obra dentro de série existente */}
                 {formData.classificacao === 'serie' && !formData.isNewHierarchy && (
                   <div className="space-y-8">
-                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 mb-2"><p className="text-sm font-medium text-accent">Obra vinculada a uma Série existente. Campos herdados automaticamente.</p></div>
+                    <div className="bg-gold/5 border border-gold-dim/20 rounded-xl p-4 mb-2"><p className="text-sm font-medium text-gold">Obra vinculada a uma Série existente. Campos herdados automaticamente.</p></div>
                     {sec('I', 'Dados da Obra', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1 md:col-span-2">
                         <label htmlFor="series-selector-linked" className="text-sm font-bold text-text-muted mb-1 flex items-center gap-1">Título da Série (Termo Controlado)</label>
@@ -1268,7 +1268,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                           id="series-selector-linked"
                           value={formData.parentSeriesId || ''} 
                           onChange={e => setFormData({...formData, parentSeriesId: e.target.value})}
-                          className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-accent outline-none bg-accent/5 font-medium"
+                          className="w-full border border-border rounded-lg px-4 py-2 text-sm focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none bg-gold/5 text-text-main font-medium"
                         >
                           <option value="">Selecione uma série...</option>
                           {seriesList.map(s => (
@@ -1296,7 +1296,7 @@ Retorne APENAS o texto sugerido para ser inserido diretamente no campo, sem aspa
                 {/* COLEÇÃO — Obra dentro de coleção existente */}
                 {formData.classificacao === 'colecao' && !formData.isNewHierarchy && (
                   <div className="space-y-8">
-                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 mb-2"><p className="text-sm font-medium text-accent">Obra vinculada a uma Coleção existente.</p></div>
+                    <div className="bg-gold/5 border border-gold-dim/20 rounded-xl p-4 mb-2"><p className="text-sm font-medium text-gold">Obra vinculada a uma Coleção existente.</p></div>
                     {sec('I', 'Dados da Obra', <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{inp('Título da Obra *','titulo',{span2:true, font:'font-serif text-lg'})}{inp('Técnica','tecnica')}{inp('Suporte','suporte')}{dimInput()}{inp('Autoria','autoria',{readOnly:true})}</div>)}
                     {sec('II', 'Curadoria', <div className="space-y-4">{inp('Descrição','narrativaCuratorial',{rows:3})}</div>)}
                   </div>
