@@ -43,42 +43,46 @@ export default function App() {
     let active = true;
     console.log('App mounted, starting auth listener');
 
+    // Fallback: nunca fica preso no loading por mais de 4s
     const fallbackTimer = setTimeout(() => {
       if (active) {
         console.warn('Fallback timer fired: auth check took too long');
         setLoading(false);
       }
-    }, 3000);
+    }, 4000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log('onAuthStateChange:', event, s?.user?.email);
+      console.log('onAuthStateChange:', event, s?.user?.email ?? 'no-user');
       if (!active) return;
 
-      setSession(s);
-      if (s) {
-        // Se for um novo login, mostra o loading para checar o onboarding
-        if (event === 'SIGNED_IN') {
-          setLoading(true);
-        }
+      // Logout: limpa tudo imediatamente
+      if (event === 'SIGNED_OUT' || !s) {
+        setSession(null);
+        setOnboardingDone(null);
+        clearTimeout(fallbackTimer);
+        setLoading(false);
+        return;
+      }
 
-        try {
-          const done = await getOnboardingStatus();
-          if (active) {
-            setOnboardingDone(done);
-            clearTimeout(fallbackTimer);
-            setLoading(false);
-          }
-        } catch (err) {
-          console.error('Error fetching onboarding status:', err);
-          if (active) {
-            setOnboardingDone(null);
-            clearTimeout(fallbackTimer);
-            setLoading(false);
-          }
-        }
-      } else {
+      // Login / sessão existente
+      setSession(s);
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        setLoading(true);
+      }
+
+      try {
+        const done = await getOnboardingStatus();
         if (active) {
-          setOnboardingDone(null);
+          setOnboardingDone(done);
+        }
+      } catch (err) {
+        console.error('getOnboardingStatus falhou, assumindo concluído:', err);
+        // Falha no onboarding não deve bloquear o login — assume true
+        if (active) {
+          setOnboardingDone(true);
+        }
+      } finally {
+        if (active) {
           clearTimeout(fallbackTimer);
           setLoading(false);
         }

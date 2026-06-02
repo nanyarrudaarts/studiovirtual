@@ -72,7 +72,14 @@ export function Shell() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      // Força redirecionamento independentemente do onAuthStateChange
+      navigate('/login', { replace: true });
+    }
   };
 
   const handleLangChange = (lang: string) => {
