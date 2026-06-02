@@ -1,0 +1,3 @@
+## 2025-05-15 - Dashboard and Gallery Optimization
+**Learning:** Sequential database queries in initial page load significantly increase Time to Interactive (TTI), especially when multiple counts are needed. Memoizing filtered lists in React prevent expensive re-calculations on every keystroke in search bars. Correct property naming in health score calculations prevents "silent" failures where data is processed but results in 0% due to undefined fields.
+**Action:** Always parallelize independent Supabase/API queries using `Promise.all`. Apply `useMemo` for any filtering logic that depends on search state. Verify property names against the `types/index.ts` source of truth.
