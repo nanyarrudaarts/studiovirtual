@@ -406,6 +406,7 @@ export interface OnboardingData {
   temas_centrais?: string;
   pesquisa_artistica?: string;
   referencias_conceituais?: string;
+  ano_inicio_carreira?: string;
   // Step 3 – Trajetória
   formacao?: object[];
   expos_individuais?: object[];
@@ -463,6 +464,7 @@ async function buildSocialLinksPayload(d: OnboardingData, existingSocialLinks: u
     temas_centrais: d.temas_centrais ?? '',
     pesquisa_artistica: d.pesquisa_artistica ?? '',
     referencias_conceituais: d.referencias_conceituais ?? '',
+    ano_inicio_carreira: d.ano_inicio_carreira ?? '',
     bolsas: d.bolsas ?? [],
     feiras: d.feiras ?? [],
     bienais: d.bienais ?? [],

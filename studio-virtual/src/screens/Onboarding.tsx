@@ -2,6 +2,286 @@ import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, saveOnboardingStep, completeOnboarding } from '../services/supabase';
 
+// ─── Image Crop & Compression Helpers ──────────────────────────────────────────
+
+async function compressImage(file: File, maxSize: number = 1600): Promise<File | Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          0.8
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressAndCropImage(
+  imageSrc: string,
+  cropArea: { x: number; y: number; width: number; height: number },
+  targetSize: number = 600
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+      ctx.drawImage(
+        img,
+        cropArea.x,
+        cropArea.y,
+        cropArea.width,
+        cropArea.height,
+        0,
+        0,
+        targetSize,
+        targetSize
+      );
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas compression failed'));
+          }
+        },
+        'image/jpeg',
+        0.8
+      );
+    };
+    img.onerror = () => reject(new Error('Failed to load image for cropping'));
+    img.src = imageSrc;
+  });
+}
+
+// Cropper Modal Component
+function CropperModal({
+  imageSrc,
+  onClose,
+  onSave,
+}: {
+  imageSrc: string;
+  onClose: () => void;
+  onSave: (croppedBlob: Blob) => void;
+}) {
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setOffset({
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    setIsDragging(true);
+    dragStart.current = {
+      x: e.touches[0].clientX - offset.x,
+      y: e.touches[0].clientY - offset.y,
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setOffset({
+      x: e.touches[0].clientX - dragStart.current.x,
+      y: e.touches[0].clientY - dragStart.current.y,
+    });
+  };
+
+  const handleCrop = async () => {
+    const img = imageRef.current;
+    if (!img) return;
+
+    const displayedWidth = img.clientWidth * zoom;
+    const displayedHeight = img.clientHeight * zoom;
+
+    const cropSize = 250;
+    const containerWidth = 300;
+    const containerHeight = 300;
+
+    const cropBoxLeft = (containerWidth - cropSize) / 2;
+    const cropBoxTop = (containerHeight - cropSize) / 2;
+
+    const imgLeft = (containerWidth - displayedWidth) / 2 + offset.x;
+    const imgTop = (containerHeight - displayedHeight) / 2 + offset.y;
+
+    const xOnImg = (cropBoxLeft - imgLeft) / zoom;
+    const yOnImg = (cropBoxTop - imgTop) / zoom;
+    const cropWidthOnImg = cropSize / zoom;
+    const cropHeightOnImg = cropSize / zoom;
+
+    const scaleX = img.naturalWidth / img.clientWidth;
+    const scaleY = img.naturalHeight / img.clientHeight;
+
+    const cropArea = {
+      x: xOnImg * scaleX,
+      y: yOnImg * scaleY,
+      width: cropWidthOnImg * scaleX,
+      height: cropHeightOnImg * scaleY,
+    };
+
+    try {
+      const cropped = await compressAndCropImage(imageSrc, cropArea, 500);
+      onSave(cropped);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao cortar a imagem');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-6 shadow-2xl">
+        <div className="text-center">
+          <h3 className="font-serif text-lg text-[#1A1816] font-medium">Ajustar foto de perfil</h3>
+          <p className="text-xs text-[#6B6762] mt-1">Arraste e ajuste o zoom para enquadrar a foto no círculo.</p>
+        </div>
+
+        <div className="flex justify-center">
+          <div
+            className="w-[300px] h-[300px] bg-[#fafaf8] border border-[#e8e4de] rounded-xl overflow-hidden relative cursor-move select-none"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
+          >
+            <div
+              className="absolute inset-0 pointer-events-none z-10"
+              style={{
+                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                margin: '25px',
+                width: '250px',
+                height: '250px',
+                borderRadius: '50%',
+                border: '2px solid white',
+              }}
+            />
+
+            <img
+              ref={imageRef}
+              src={imageSrc}
+              alt="Preview"
+              draggable={false}
+              className="absolute pointer-events-none max-w-none max-h-none"
+              style={{
+                width: '250px',
+                height: 'auto',
+                left: '50%',
+                top: '50%',
+                transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+                transformOrigin: 'center center',
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs uppercase tracking-widest text-[#6B6762] block">Zoom</label>
+          <input
+            type="range"
+            min="1"
+            max="3"
+            step="0.01"
+            value={zoom}
+            onChange={(e) => setZoom(parseFloat(e.target.value))}
+            className="w-full accent-[#0f3421]"
+            aria-label="Ajustar zoom"
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg border text-sm font-medium text-[#1A1816] hover:bg-gray-50"
+            style={{ borderColor: '#d1ccc4' }}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleCrop}
+            className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white"
+            style={{ background: '#0f3421' }}
+          >
+            Cortar & Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface ListItem {
@@ -38,6 +318,7 @@ interface WizardData {
   temas_centrais: string;
   pesquisa_artistica: string;
   referencias_conceituais: string;
+  ano_inicio_carreira: string;
   // Step 3 — Trajetória & Currículo
   formacao: ListItem[];
   expos_individuais: ListItem[];
@@ -76,6 +357,7 @@ const EMPTY_DATA: WizardData = {
   bioshort: '', biolong: '', statement: '', tags: '', instagrams: [],
   processo_criativo: '', tecnicas_recorrentes: '', temas_centrais: '',
   pesquisa_artistica: '', referencias_conceituais: '',
+  ano_inicio_carreira: '',
   formacao: [], expos_individuais: [], expos_coletivas: [], premios: [],
   residencias: [], publicacoes: [], bolsas: [], feiras: [],
   clipping: [], colecoesPublicas: [], colecoesPrivadas: [],
@@ -85,8 +367,8 @@ const EMPTY_DATA: WizardData = {
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
-async function uploadToStorage(file: File, folder: string): Promise<string> {
-  const ext = file.name.split('.').pop();
+async function uploadToStorage(file: File | Blob, folder: string): Promise<string> {
+  const ext = file instanceof File ? file.name.split('.').pop() : 'jpg';
   const path = `${folder}/${Date.now()}-${uid()}.${ext}`;
   const { error } = await supabase.storage.from('obras-images').upload(path, file, { upsert: true });
   if (error) throw error;
@@ -295,14 +577,24 @@ function InstagramList({ values, onChange }: { values: string[]; onChange: (v: s
 
 function AvatarUploader({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const ref = useRef<HTMLInputElement>(null);
 
-  const handleFile = async (file: File) => {
+  const handleFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setSelectedImage(url);
+  };
+
+  const handleCropSave = async (blob: Blob) => {
+    setSelectedImage(null);
     setUploading(true);
     try {
-      const url = await uploadToStorage(file, 'onboarding/avatar');
+      const url = await uploadToStorage(blob, 'onboarding/avatar');
       onChange(url);
-    } catch { /* silent */ } finally {
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao carregar avatar.');
+    } finally {
       setUploading(false);
     }
   };
@@ -334,7 +626,7 @@ function AvatarUploader({ value, onChange }: { value: string; onChange: (url: st
       </div>
       <div>
         <p className="text-sm font-medium" style={{ color: '#1A1816' }}>Foto de perfil</p>
-        <p className="text-xs mt-0.5" style={{ color: '#6B6762' }}>JPG, PNG ou WEBP · recomendado 400×400</p>
+        <p className="text-xs mt-0.5" style={{ color: '#6B6762' }}>JPG, PNG ou WEBP · corte quadrado e compressão automática</p>
         <button
           type="button"
           onClick={() => ref.current?.click()}
@@ -352,119 +644,301 @@ function AvatarUploader({ value, onChange }: { value: string; onChange: (url: st
         className="hidden"
         onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}
       />
+
+      {selectedImage && (
+        <CropperModal
+          imageSrc={selectedImage}
+          onClose={() => setSelectedImage(null)}
+          onSave={handleCropSave}
+        />
+      )}
     </div>
   );
 }
 
-// ─── Image Uploader (Marca) ───────────────────────────────────────────────────
+// ─── Brand Asset Uploader (Marca & Identidade) ────────────────────────────────
 
-function ImageUploader({ label, hint, value, onChange, folder }: {
-  label: string; hint: string; value: string; onChange: (url: string) => void; folder: string;
+function BrandAssetUploader({
+  label,
+  description,
+  hint,
+  value,
+  onChange,
+  folder,
+}: {
+  label: string;
+  description: string;
+  hint: string;
+  value: string;
+  onChange: (url: string) => void;
+  folder: string;
 }) {
   const [uploading, setUploading] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
     setUploading(true);
     try {
-      const url = await uploadToStorage(file, folder);
+      const compressed = await compressImage(file, 1200);
+      const url = await uploadToStorage(compressed, folder);
       onChange(url);
-    } catch { /* silent */ } finally {
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao carregar imagem.');
+    } finally {
       setUploading(false);
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    if (e.dataTransfer.files?.[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
   return (
-    <div>
-      <Label>{label}</Label>
+    <div className="flex flex-col h-full">
+      <label className="block text-xs uppercase tracking-widest mb-1.5 font-medium text-[#6B6762]">
+        {label}
+      </label>
+      
+      {/* Upload Card */}
       <div
-        onClick={() => ref.current?.click()}
-        className="cursor-pointer flex flex-col items-center justify-center rounded-xl transition-colors"
-        style={{
-          height: 140,
-          border: `1.5px dashed ${value ? GREEN : '#d1ccc4'}`,
-          background: value ? GREEN_LIGHT : '#fafaf8',
-        }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`flex-1 border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[160px] ${
+          value ? 'bg-[#e8f0eb] border-[#0f3421]' : isDragActive ? 'bg-gray-50 border-[#0f3421]' : 'bg-[#fafaf8] border-[#d1ccc4]'
+        } hover:border-[#0f3421]`}
       >
         {uploading ? (
-          <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: GREEN, borderTopColor: 'transparent' }} />
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: '#0f3421', borderTopColor: 'transparent' }} />
+            <span className="text-xs text-[#6B6762]">Carregando...</span>
+          </div>
         ) : value ? (
-          <img src={value} alt={label} style={{ maxHeight: 130, maxWidth: '90%', objectFit: 'contain', padding: 4 }} />
+          <div className="relative group w-full h-full flex items-center justify-center max-h-[120px]">
+            <img src={value} alt={label} className="max-h-[120px] max-w-full object-contain" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange('');
+                }}
+                className="bg-white/90 hover:bg-white text-xs px-3 py-1.5 rounded-lg text-red-600 font-medium"
+              >
+                Remover
+              </button>
+            </div>
+          </div>
         ) : (
-          <>
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke={GREEN} strokeWidth={1.5}>
+          <div className="flex flex-col items-center gap-2">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#0f3421" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
             </svg>
-            <p className="text-xs mt-1" style={{ color: '#6B6762' }}>{hint}</p>
-          </>
+            <span className="text-xs font-medium text-[#1A1816]">Arraste ou clique para enviar</span>
+            <span className="text-[10px] text-[#6B6762]">{hint}</span>
+          </div>
         )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          aria-label={`Escolher ${label}`}
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleFile(e.target.files[0]);
+          }}
+        />
       </div>
-      {value && (
-        <button type="button" onClick={() => ref.current?.click()} className="text-xs underline mt-1" style={{ color: GREEN }}>
-          Trocar imagem
-        </button>
-      )}
-      <input ref={ref} type="file" accept="image/*" aria-label={`Escolher ${label}`} className="hidden"
-        onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+
+      <p className="text-xs mt-2 text-[#6B6762] leading-relaxed">
+        {description}
+      </p>
     </div>
   );
 }
 
-// ─── Multi Photo Uploader ─────────────────────────────────────────────────────
+// ─── Multi Photo Uploader (Fotos Profissionais) ────────────────────────────────
 
 function MultiPhotoUploader({ values, onChange }: { values: string[]; onChange: (urls: string[]) => void }) {
-  const [uploading, setUploading] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [uploadList, setUploadList] = useState<{ id: string; name: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX = 5;
 
   const handleFiles = async (files: FileList) => {
     const remaining = MAX - values.length;
     const toUpload = Array.from(files).slice(0, remaining);
-    setUploading(true);
+    if (toUpload.length === 0) return;
+
+    const tempEntries = toUpload.map(f => ({ id: Math.random().toString(), name: f.name }));
+    setUploadList(tempEntries);
+
     try {
-      const urls = await Promise.all(toUpload.map(f => uploadToStorage(f, 'onboarding/fotos')));
-      onChange([...values, ...urls]);
-    } catch { /* silent */ } finally {
-      setUploading(false);
+      const uploadedUrls: string[] = [];
+      for (const file of toUpload) {
+        const compressed = await compressImage(file, 1600);
+        const url = await uploadToStorage(compressed, 'onboarding/fotos');
+        uploadedUrls.push(url);
+      }
+      onChange([...values, ...uploadedUrls]);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao carregar algumas fotos.');
+    } finally {
+      setUploadList([]);
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    if (e.dataTransfer.files) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const moveLeft = (index: number) => {
+    if (index === 0) return;
+    const newPhotos = [...values];
+    const temp = newPhotos[index];
+    newPhotos[index] = newPhotos[index - 1];
+    newPhotos[index - 1] = temp;
+    onChange(newPhotos);
+  };
+
+  const moveRight = (index: number) => {
+    if (index === values.length - 1) return;
+    const newPhotos = [...values];
+    const temp = newPhotos[index];
+    newPhotos[index] = newPhotos[index + 1];
+    newPhotos[index + 1] = temp;
+    onChange(newPhotos);
+  };
+
+  const removePhoto = (index: number) => {
+    onChange(values.filter((_, i) => i !== index));
+  };
+
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-3 mb-3">
+    <div className="space-y-4">
+      {/* Upload Zone */}
+      {values.length < MAX && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+            isDragActive ? 'bg-gray-50 border-[#0f3421]' : 'bg-[#fafaf8] border-[#d1ccc4]'
+          } hover:border-[#0f3421]`}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#0f3421" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <span className="text-sm font-medium text-[#1A1816]">Arraste suas fotos profissionais aqui</span>
+            <span className="text-xs text-[#6B6762]">Ou clique para selecionar arquivos (JPEG, PNG, WebP)</span>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            aria-label="Adicionar fotos profissionais"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) handleFiles(e.target.files);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Slots Counter */}
+      <div className="flex justify-between items-center text-xs text-[#6B6762]">
+        <span>Formatos recomendados: JPG, PNG, WebP</span>
+        <span className="font-medium text-[#0f3421]">
+          {values.length} de {MAX} fotos carregadas
+        </span>
+      </div>
+
+      {/* Preview Gallery */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {values.map((url, i) => (
-          <div key={i} className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '1', background: '#f0ece6' }}>
-            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <button
-              type="button"
-              onClick={() => onChange(values.filter((_, j) => j !== i))}
-              className="absolute top-1.5 right-1.5 flex items-center justify-center rounded-full w-6 h-6 text-white text-sm"
-              style={{ background: 'rgba(0,0,0,0.55)' }}
-            >×</button>
+          <div key={url} className="relative rounded-xl overflow-hidden group aspect-square border border-[#e8e4de]" style={{ background: '#f5f3ee' }}>
+            <img src={url} alt={`Foto profissional ${i + 1}`} className="w-full h-full object-cover" />
+            
+            {/* Control Bar Overlay */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  className="bg-red-600 text-white rounded-full p-1 hover:bg-red-700 shadow-lg text-xs"
+                  title="Excluir foto"
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="flex justify-between gap-1">
+                <button
+                  type="button"
+                  disabled={i === 0}
+                  onClick={() => moveLeft(i)}
+                  className="bg-white/90 hover:bg-white text-gray-800 disabled:opacity-40 rounded p-1 text-xs flex-1 flex justify-center items-center shadow"
+                  title="Mover para esquerda"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  disabled={i === values.length - 1}
+                  onClick={() => moveRight(i)}
+                  className="bg-white/90 hover:bg-white text-gray-800 disabled:opacity-40 rounded p-1 text-xs flex-1 flex justify-center items-center shadow"
+                  title="Mover para direita"
+                >
+                  →
+                </button>
+              </div>
+            </div>
           </div>
         ))}
-        {values.length < MAX && (
-          <div
-            onClick={() => ref.current?.click()}
-            className="rounded-xl flex flex-col items-center justify-center cursor-pointer"
-            style={{ aspectRatio: '1', border: `1.5px dashed ${GREEN}`, background: GREEN_LIGHT }}
-          >
-            {uploading ? (
-              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: GREEN, borderTopColor: 'transparent' }} />
-            ) : (
-              <>
-                <span style={{ color: GREEN, fontSize: 24 }}>+</span>
-                <span style={{ color: GREEN, fontSize: 10 }}>adicionar</span>
-              </>
-            )}
+
+        {/* Loading / Progress Skeletons */}
+        {uploadList.map((item) => (
+          <div key={item.id} className="relative rounded-xl overflow-hidden aspect-square border border-dashed border-[#d1ccc4] bg-[#fafaf8] flex flex-col items-center justify-center p-3 text-center">
+            <div className="w-6 h-6 border-2 rounded-full animate-spin mb-2" style={{ borderColor: '#0f3421', borderTopColor: 'transparent' }} />
+            <span className="text-[10px] text-[#6B6762] truncate w-full">{item.name}</span>
           </div>
-        )}
+        ))}
       </div>
-      <p className="text-xs" style={{ color: '#6B6762' }}>{values.length}/{MAX} fotos · JPG, PNG ou WEBP</p>
-      <input
-        ref={ref} type="file" accept="image/*" multiple aria-label="Adicionar fotos profissionais" className="hidden"
-        onChange={e => { if (e.target.files) handleFiles(e.target.files); }}
-      />
     </div>
   );
 }
@@ -665,10 +1139,14 @@ function Step2({ data, onChange }: { data: WizardData; onChange: (d: Partial<Wiz
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-5">
         <div className="col-span-2 sm:col-span-1">
+          <Label>Ano de início da carreira</Label>
+          <Input value={data.ano_inicio_carreira} onChange={v => onChange({ ano_inicio_carreira: v })} placeholder="Ex: 2012" type="number" />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
           <Label>Técnicas recorrentes</Label>
           <Input value={data.tecnicas_recorrentes} onChange={v => onChange({ tecnicas_recorrentes: v })} placeholder="Pintura a óleo, gravura, vídeo..." />
         </div>
-        <div className="col-span-2 sm:col-span-1">
+        <div className="col-span-2">
           <Label>Temas centrais</Label>
           <Input value={data.temas_centrais} onChange={v => onChange({ temas_centrais: v })} placeholder="Memória, corpo, identidade..." />
         </div>
@@ -857,33 +1335,29 @@ function Step4({ data, onChange }: { data: WizardData; onChange: (d: Partial<Wiz
         <p className="text-sm" style={{ color: '#6B6762' }}>Faça upload do seu selo e assinatura para uso em certificados e dossiês.</p>
       </div>
 
-      <div className="rounded-xl p-4" style={{ background: GREEN_LIGHT, border: `1px solid ${GREEN}20` }}>
-        <p className="text-xs leading-relaxed" style={{ color: GREEN }}>
-          <strong>Dica:</strong> O selo deve ter fundo transparente (PNG). A assinatura pode ser digitalizada ou fotografada em fundo branco. Pelo menos um dos dois é recomendado para apresentações curatoriais.
-        </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <BrandAssetUploader
+          label="Selo / Carimbo da marca"
+          description="Usado no rodapé do portfólio PDF e certificado de autenticidade."
+          hint="PNG recomendado (fundo transparente)"
+          value={data.selo_url}
+          onChange={v => onChange({ selo_url: v })}
+          folder="onboarding/selo"
+        />
+        <BrandAssetUploader
+          label="Assinatura digital"
+          description="Assinatura visual alternativa para validação de autoria nos documentos."
+          hint="JPG, PNG ou WebP"
+          value={data.assinatura_url}
+          onChange={v => onChange({ assinatura_url: v })}
+          folder="onboarding/assinatura"
+        />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <ImageUploader
-            label="Selo / Carimbo da marca"
-            hint="PNG com fundo transparente"
-            value={data.selo_url}
-            onChange={v => onChange({ selo_url: v })}
-            folder="onboarding/selo"
-          />
-          <p className="text-xs mt-2" style={{ color: '#b0ada8' }}>Usado no rodapé do portfólio PDF e certificado de autenticidade.</p>
-        </div>
-        <div>
-          <ImageUploader
-            label="Assinatura digital"
-            hint="JPG ou PNG da sua assinatura"
-            value={data.assinatura_url}
-            onChange={v => onChange({ assinatura_url: v })}
-            folder="onboarding/assinatura"
-          />
-          <p className="text-xs mt-2" style={{ color: '#b0ada8' }}>Alternativa ao selo visual para validação de autoria.</p>
-        </div>
+      <div className="rounded-xl p-4 mt-4" style={{ background: '#fafaf8', border: '1px solid #e8e4de' }}>
+        <p className="text-xs text-[#6B6762] text-center">
+          Adding a brand seal or digital signature is recommended for professional presentations.
+        </p>
       </div>
     </div>
   );
@@ -958,9 +1432,12 @@ function ConclusionScreen({ data, onAddWork, onDashboard, loading }: {
           )}
           <div className="min-w-0">
             <p className="font-serif text-lg leading-tight truncate">{data.nomeartistico || data.nome || 'Artista'}</p>
-            {(data.cidade || data.nacionalidade) && (
+            {((data.cidade || data.nacionalidade) || data.ano_inicio_carreira) && (
               <p className="text-xs mt-0.5 truncate" style={{ color: '#B0ADA8' }}>
-                {[data.cidade, data.nacionalidade].filter(Boolean).join(' · ')}
+                {[
+                  [data.cidade, data.nacionalidade].filter(Boolean).join(' · '),
+                  data.ano_inicio_carreira ? `Carreira desde ${data.ano_inicio_carreira}` : null
+                ].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>
@@ -1064,6 +1541,7 @@ export default function Onboarding({ onComplete }: Props) {
     temas_centrais: data.temas_centrais,
     pesquisa_artistica: data.pesquisa_artistica,
     referencias_conceituais: data.referencias_conceituais,
+    ano_inicio_carreira: data.ano_inicio_carreira,
     formacao: data.formacao,
     expos_individuais: data.expos_individuais,
     expos_coletivas: data.expos_coletivas,
