@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import i18n from '../../i18n';
 
 interface Props {
   children: ReactNode;
@@ -42,9 +43,9 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
             
             <div className="space-y-2">
-              <h1 className="font-serif italic text-2xl text-text-main">Algo deu incorreto</h1>
+              <h1 className="font-serif italic text-2xl text-text-main">{i18n.t('error_boundary.title')}</h1>
               <p className="text-sm text-text-muted">
-                Um erro inesperado aconteceu na interface do Studio. Não se preocupe, seus dados estão seguros no banco.
+                {i18n.t('error_boundary.description')}
               </p>
             </div>
 
@@ -59,13 +60,13 @@ export default class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReload}
                 className="flex items-center gap-2 bg-accent text-white px-5 py-2.5 rounded-xl font-medium hover:bg-accent/90 transition-colors text-sm shadow-sm"
               >
-                <RefreshCw size={16} /> Recarregar Página
+                <RefreshCw size={16} /> {i18n.t('error_boundary.reload')}
               </button>
               <button
                 onClick={this.handleGoHome}
                 className="flex items-center gap-2 bg-surface hover:bg-gray-50 text-text-main border border-gray-200 px-5 py-2.5 rounded-xl font-medium transition-all text-sm"
               >
-                <Home size={16} /> Início
+                <Home size={16} /> {i18n.t('error_boundary.home')}
               </button>
             </div>
           </div>

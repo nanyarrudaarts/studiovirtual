@@ -867,7 +867,10 @@ export default function Perfil() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const { data, error } = await supabase.from('artista').select('*').single();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase.from('artista').select('*').eq('user_id', user.id).maybeSingle();
         if (error && error.code !== 'PGRST116') {
           alert('Erro ao carregar perfil: ' + error.message);
         }
@@ -1112,11 +1115,12 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
       const cleanLinks = socialLinks.filter(l => l.id !== 'custom_metadata');
       const socialLinksPayload = [...cleanLinks, metadataItem];
 
-      const isBootstrap = artistId === null;
-      const idToUse = isBootstrap ? 1 : artistId;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
 
       const payload = {
-        id: idToUse,
+        ...(artistId ? { id: artistId } : {}),
+        user_id: user.id,
         nome: form.nome,
         nacionalidade: form.nacionalidade,
         cidade: form.cidade,
@@ -1145,10 +1149,18 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from('artista').upsert(payload, { onConflict: 'id' });
-      if (error) {
-        alert('Erro ao salvar perfil: ' + error.message);
-        return;
+      if (artistId) {
+        const { error } = await supabase.from('artista').update(payload).eq('id', artistId);
+        if (error) {
+          alert('Erro ao atualizar perfil: ' + error.message);
+          return;
+        }
+      } else {
+        const { error } = await supabase.from('artista').insert(payload);
+        if (error) {
+          alert('Erro ao criar perfil: ' + error.message);
+          return;
+        }
       }
       alert('Perfil salvo com sucesso!');
     } catch (err) {
@@ -1987,6 +1999,8 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                       {isEditing && (
                         <button
                           onClick={() => setSeloUrl(null)}
+                          title={t('common.remover', 'Remover')}
+                          aria-label={t('common.remover', 'Remover')}
                           className="absolute top-2 right-2 bg-red-600/90 text-white rounded-full p-1.5 hover:bg-red-700 transition-colors shadow-lg animate-fadeIn"
                         >
                           <X size={14} />
@@ -2041,6 +2055,8 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                       {isEditing && (
                         <button
                           onClick={() => setAssinaturaUrl(null)}
+                          title={t('common.remover', 'Remover')}
+                          aria-label={t('common.remover', 'Remover')}
                           className="absolute top-2 right-2 bg-red-600/90 text-white rounded-full p-1.5 hover:bg-red-700 transition-colors shadow-lg animate-fadeIn"
                         >
                           <X size={14} />
@@ -2143,6 +2159,8 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
                           onClick={() => {
                             setFotosProfissionais(fotosProfissionais.filter((_, idx) => idx !== i));
                           }}
+                          title={t('common.remover', 'Remover')}
+                          aria-label={t('common.remover', 'Remover')}
                           className="bg-red-600 text-white rounded p-1 hover:bg-red-700 shadow text-xs flex items-center justify-center w-5 h-5"
                         >
                           <X size={12} />

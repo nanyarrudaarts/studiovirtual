@@ -280,6 +280,12 @@ const es = {
       sim: 'Sí',
       nao: 'No',
     },
+    error_boundary: {
+      title: 'Algo salió mal',
+      description: 'Ocurrió un error inesperado en la interfaz de Studio. No te preocupes, tus datos están seguros en la base de datos.',
+      reload: 'Recargar página',
+      home: 'Inicio',
+    },
   },
 } as const;
 

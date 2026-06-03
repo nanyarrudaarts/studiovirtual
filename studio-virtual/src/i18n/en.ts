@@ -280,6 +280,12 @@ const en = {
       sim: 'Yes',
       nao: 'No',
     },
+    error_boundary: {
+      title: 'Something went wrong',
+      description: 'An unexpected error occurred in the Studio interface. Do not worry, your data is safe in the database.',
+      reload: 'Reload Page',
+      home: 'Home',
+    },
   },
 } as const;
 
