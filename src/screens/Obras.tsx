@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2, FileDown } from 'lucide-react';
 import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
@@ -120,17 +120,22 @@ export default function Obras() {
   };
 
   const q = search.toLowerCase();
-  const filteredArtworks = artworks.filter(a =>
-    !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
-  );
-  const filteredSeries = series.filter(s => !q || s.series_title.toLowerCase().includes(q));
-  const filteredCollections = collections.filter(c => !q || c.collection_name.toLowerCase().includes(q));
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = [
+  // ⚡ BOLT OPTIMIZATION: Memoize filtered lists to avoid expensive recalculations on every render
+  const filteredArtworks = useMemo(() => artworks.filter(a =>
+    !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
+  ), [artworks, q]);
+
+  const filteredSeries = useMemo(() => series.filter(s => !q || s.series_title.toLowerCase().includes(q)), [series, q]);
+
+  const filteredCollections = useMemo(() => collections.filter(c => !q || c.collection_name.toLowerCase().includes(q)), [collections, q]);
+
+  // ⚡ BOLT OPTIMIZATION: Memoize tabs configuration to prevent unnecessary re-renders of the tab bar
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = useMemo(() => [
     { id: 'unicas', label: 'Únicas', icon: <Palette size={15} />, count: artworks.length },
     { id: 'series', label: 'Séries', icon: <Layers size={15} />, count: series.length },
     { id: 'colecoes', label: 'Coleções', icon: <Archive size={15} />, count: collections.length },
-  ];
+  ], [artworks.length, series.length, collections.length]);
 
   return (
     <div className="space-y-7 relative pb-20 md:pb-0">
@@ -244,8 +249,12 @@ export default function Obras() {
 
                   <div className="relative aspect-square overflow-hidden bg-surface-raised">
                     {obra.cover_image || obra.artwork_images?.[0] ? (
-                      <img src={obra.cover_image || obra.artwork_images![0]} alt={obra.artwork_title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <img
+                        src={obra.cover_image || obra.artwork_images![0]}
+                        alt={obra.artwork_title}
+                        loading="lazy" // ⚡ BOLT OPTIMIZATION: Lazy load gallery images to improve initial page load and reduce data usage
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-text-faint">
                         <Palette size={40} />
@@ -328,8 +337,12 @@ export default function Obras() {
                   <div className="h-1.5" style={{ background: s.cor || 'var(--gold)' }} />
                   <div className="aspect-video overflow-hidden relative bg-surface-raised">
                     {s.cover_image ? (
-                      <img src={s.cover_image} alt={s.series_title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img
+                        src={s.cover_image}
+                        alt={s.series_title}
+                        loading="lazy" // ⚡ BOLT OPTIMIZATION: Lazy load series covers
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center" style={{ background: `${s.cor}20`, color: s.cor || 'var(--gold)' }}>
                         <Layers size={40} />
@@ -397,8 +410,12 @@ export default function Obras() {
                   <div className="gold-line opacity-50" />
                   <div className="aspect-video overflow-hidden relative bg-surface-raised">
                     {c.cover_image ? (
-                      <img src={c.cover_image} alt={c.collection_name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img
+                        src={c.cover_image}
+                        alt={c.collection_name}
+                        loading="lazy" // ⚡ BOLT OPTIMIZATION: Lazy load collection covers
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[rgba(201,168,76,0.05)]">
                         <Archive size={40} className="text-gold opacity-40" />
