@@ -29,32 +29,31 @@ export default function Dashboard() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ Bolt Optimization: Parallelize Supabase queries to eliminate waterfall loading
+        // This reduces total load time from sum(queries) to max(queries)
+        const [
+          { data: recentObras },
+          { count: availableCount },
+          { count: totalCount }
+        ] = await Promise.all([
+          supabase.from('artworks').select('*').order('created_at', { ascending: false }).limit(6),
+          supabase.from('artworks').select('*', { count: 'exact', head: true }).eq('sale_status', 'available'),
+          supabase.from('artworks').select('*', { count: 'exact', head: true })
+        ]);
 
-        if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
+        const obrasData = (recentObras || []) as Artwork[];
+        setObras(obrasData);
 
         const healthScore =
-          obrasData && obrasData.length > 0
+          obrasData.length > 0
             ? Math.round(
                 (obrasData.reduce((acc, o) => {
                   let filled = 0;
-                  if (o.narrativa_curatorial) filled++;
-                  if (o.sentenca_resumo) filled++;
+                  // ⚡ BOLT OPTIMIZATION: Fixed field names to match Artwork type and improved check logic
+                  if (o.curatorial_narrative) filled++;
+                  if (o.summary_sentence) filled++;
                   if (o.medium) filled++;
-                  if (o.dimensions) filled++;
+                  if (o.dimensions_formatted) filled++;
                   return acc + filled / 4;
                 }, 0) /
                   obrasData.length) *
@@ -63,9 +62,9 @@ export default function Dashboard() {
             : 100;
 
         setMetricas({
-          totalObras: totalObras || 0,
+          totalObras: totalCount || 0,
           healthScore,
-          alertasMateriais: alertasMateriais || 0,
+          alertasMateriais: availableCount || 0,
         });
       } catch (err) {
         console.error('Erro ao carregar dashboard:', err);
