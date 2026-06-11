@@ -1,0 +1,3 @@
+## 2026-06-11 - Parallelized Dashboard Queries and Memoized UI Components
+**Learning:** Request waterfalls in React useEffect can significantly slow down the perceived performance of the initial load. Parallelizing Supabase queries using Promise.all reduces the wait time to the slowest single request. Additionally, memoizing search filtering logic and static UI configuration arrays (like tabs) prevents redundant calculations and object recreations during unrelated state updates.
+**Action:** Always check for sequential await calls in data-fetching hooks and parallelize them where possible. Use useMemo for filtering logic and static component configurations in list-heavy screens.
