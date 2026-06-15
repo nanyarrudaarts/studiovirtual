@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
 import type { Artwork } from '../types';
@@ -15,56 +15,54 @@ export default function Dashboard() {
   const lang = i18n.language;
   const navigate = useNavigate();
   const [obras, setObras] = useState<Artwork[]>([]);
-  const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
+  const [metricas, setMetricas] = useState({ totalObras: 0, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
-  const getLocale = () => {
+  // ⚡ BOLT OPTIMIZATION: Memoize health score calculation to avoid redundant processing
+  const healthScore = useMemo(() => {
+    if (loading || obras.length === 0) return 100;
+    return Math.round(
+      (obras.reduce((acc, o) => {
+        let filled = 0;
+        // ⚡ BOLT FIX: Using correct field names from Artwork type for accurate score
+        if (o.curatorial_narrative) filled++;
+        if (o.summary_sentence) filled++;
+        if (o.medium) filled++;
+        if (o.dimensions_formatted) filled++;
+        return acc + filled / 4;
+      }, 0) /
+        obras.length) *
+      100
+    );
+  }, [obras, loading]);
+
+  // ⚡ BOLT OPTIMIZATION: Memoize locale object to prevent re-creation on every render
+  const localeObj = useMemo(() => {
     if (lang === 'en') return enUS;
     if (lang === 'es') return es;
     if (lang === 'de') return de;
     return ptBR;
-  };
+  }, [lang]);
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ BOLT OPTIMIZATION: Parallelize Supabase queries to eliminate request waterfall
+        const [obrasRes, alertasRes, totalRes] = await Promise.all([
+          supabase.from('artworks').select('*').order('created_at', { ascending: false }).limit(6),
+          supabase.from('artworks').select('*', { count: 'exact', head: true }).eq('sale_status', 'available'),
+          supabase.from('artworks').select('*', { count: 'exact', head: true })
+        ]);
+
+        const obrasData = obrasRes.data;
+        const alertasMateriais = alertasRes.count;
+        const totalObras = totalRes.count;
 
         if (obrasData) setObras(obrasData);
 
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
-
-        const healthScore =
-          obrasData && obrasData.length > 0
-            ? Math.round(
-                (obrasData.reduce((acc, o) => {
-                  let filled = 0;
-                  if (o.narrativa_curatorial) filled++;
-                  if (o.sentenca_resumo) filled++;
-                  if (o.medium) filled++;
-                  if (o.dimensions) filled++;
-                  return acc + filled / 4;
-                }, 0) /
-                  obrasData.length) *
-                100
-              )
-            : 100;
-
         setMetricas({
           totalObras: totalObras || 0,
-          healthScore,
           alertasMateriais: alertasMateriais || 0,
         });
       } catch (err) {
@@ -76,7 +74,11 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
+  // ⚡ BOLT OPTIMIZATION: Memoize date string to prevent formatting on every render
+  const dataAtual = useMemo(() =>
+    format(new Date(), "EEEE, d 'de' MMMM", { locale: localeObj }),
+    [localeObj]
+  );
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 max-w-[1400px] mx-auto">
@@ -121,7 +123,7 @@ export default function Dashboard() {
             </p>
             <div className="flex items-end justify-between">
               <span className="text-6xl font-serif leading-none text-text-main">
-                {metricas.healthScore}<span className="text-2xl text-text-muted">%</span>
+                {healthScore}<span className="text-2xl text-text-muted">%</span>
               </span>
               <span className="text-xs font-medium mb-1 flex items-center gap-1 text-emerald">
                 <CheckCircle2 size={12} /> {t('dashboard.excelente')}
@@ -130,7 +132,7 @@ export default function Dashboard() {
             <div className="progress-track mt-5">
               <div
                 className="progress-fill-emerald"
-                style={{ width: `${metricas.healthScore}%` }}
+                style={{ width: `${healthScore}%` }}
               />
             </div>
           </div>
@@ -234,6 +236,7 @@ export default function Dashboard() {
                       <img
                         src={obra.cover_image}
                         alt={obra.artwork_title}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -268,6 +271,7 @@ export default function Dashboard() {
                     <img
                       src={`https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&h=800&fit=crop&auto=format&q=80`}
                       alt="Mock"
+                      loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute top-0 inset-x-0 h-px"
