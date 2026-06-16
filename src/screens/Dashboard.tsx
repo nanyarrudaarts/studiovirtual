@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
 import type { Artwork } from '../types';
@@ -18,43 +18,50 @@ export default function Dashboard() {
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
-  const getLocale = () => {
+  // ⚡ Bolt: Memoizing locale object to prevent re-creation on every render
+  const localeObj = useMemo(() => {
     if (lang === 'en') return enUS;
     if (lang === 'es') return es;
     if (lang === 'de') return de;
     return ptBR;
-  };
+  }, [lang]);
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ Bolt: Parallelizing Supabase queries to eliminate request waterfall
+        const [
+          { data: obrasData },
+          { count: alertasMateriais },
+          { count: totalObras }
+        ] = await Promise.all([
+          supabase
+            .from('artworks')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .eq('sale_status', 'available'),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+        ]);
 
         if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
 
         const healthScore =
           obrasData && obrasData.length > 0
             ? Math.round(
                 (obrasData.reduce((acc, o) => {
                   let filled = 0;
-                  if (o.narrativa_curatorial) filled++;
-                  if (o.sentenca_resumo) filled++;
+                  // ⚡ Bolt: Correcting property names to match Artwork type definition
+                  if (o.curatorial_narrative) filled++;
+                  if (o.summary_sentence) filled++;
                   if (o.medium) filled++;
-                  if (o.dimensions) filled++;
+                  if (o.dimensions_formatted) filled++;
                   return acc + filled / 4;
                 }, 0) /
                   obrasData.length) *
@@ -76,7 +83,11 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
+  // ⚡ Bolt: Memoizing formatted date to avoid redundant calculations
+  const dataAtual = useMemo(() =>
+    format(new Date(), "EEEE, d 'de' MMMM", { locale: localeObj }),
+    [localeObj]
+  );
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 max-w-[1400px] mx-auto">
@@ -234,6 +245,7 @@ export default function Dashboard() {
                       <img
                         src={obra.cover_image}
                         alt={obra.artwork_title}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -268,6 +280,7 @@ export default function Dashboard() {
                     <img
                       src={`https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&h=800&fit=crop&auto=format&q=80`}
                       alt="Mock"
+                      loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute top-0 inset-x-0 h-px"
