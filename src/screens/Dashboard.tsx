@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
 import type { Artwork } from '../types';
@@ -18,43 +18,41 @@ export default function Dashboard() {
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
-  const getLocale = () => {
+  const localeObj = useMemo(() => {
+    // ⚡ BOLT OPTIMIZATION: Memoize locale object based on current language
     if (lang === 'en') return enUS;
     if (lang === 'es') return es;
     if (lang === 'de') return de;
     return ptBR;
-  };
+  }, [lang]);
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ BOLT OPTIMIZATION: Parallelize queries to eliminate the request waterfall
+        const [
+          { data: obrasData },
+          { count: alertasMateriais },
+          { count: totalObras }
+        ] = await Promise.all([
+          supabase.from('artworks').select('*').order('created_at', { ascending: false }).limit(6),
+          supabase.from('artworks').select('*', { count: 'exact', head: true }).eq('sale_status', 'available'),
+          supabase.from('artworks').select('*', { count: 'exact', head: true })
+        ]);
 
         if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
 
         const healthScore =
           obrasData && obrasData.length > 0
             ? Math.round(
                 (obrasData.reduce((acc, o) => {
                   let filled = 0;
-                  if (o.narrativa_curatorial) filled++;
-                  if (o.sentenca_resumo) filled++;
+                  // ⚡ BOLT OPTIMIZATION: Correcting field names to match Artwork interface
+                  if (o.curatorial_narrative) filled++;
+                  if (o.summary_sentence) filled++;
                   if (o.medium) filled++;
-                  if (o.dimensions) filled++;
+                  if (o.dimensions_formatted) filled++;
                   return acc + filled / 4;
                 }, 0) /
                   obrasData.length) *
@@ -76,7 +74,11 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
+  const dataAtual = useMemo(() =>
+    // ⚡ BOLT OPTIMIZATION: Memoize formatted date to prevent re-calculation on every render
+    format(new Date(), "EEEE, d 'de' MMMM", { locale: localeObj }),
+    [localeObj]
+  );
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 max-w-[1400px] mx-auto">
@@ -234,6 +236,7 @@ export default function Dashboard() {
                       <img
                         src={obra.cover_image}
                         alt={obra.artwork_title}
+                        loading="lazy" // ⚡ BOLT OPTIMIZATION: Lazy load images
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -268,6 +271,7 @@ export default function Dashboard() {
                     <img
                       src={`https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&h=800&fit=crop&auto=format&q=80`}
                       alt="Mock"
+                      loading="lazy" // ⚡ BOLT OPTIMIZATION: Lazy load images
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute top-0 inset-x-0 h-px"
