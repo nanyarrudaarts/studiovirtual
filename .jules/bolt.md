@@ -1,0 +1,3 @@
+## 2025-05-14 - Dashboard Request Waterfall & Derived State Optimization
+**Learning:** The Dashboard was fetching data sequentially and managing derived metrics (healthScore) in state via useEffect, causing unnecessary render cycles and request waterfalls. Additionally, field names in the health score calculation were mismatched with the Artwork TypeScript interface.
+**Action:** Use Promise.all for parallel data fetching in components with multiple independent queries. Prefer useMemo for derived state (like scores or formatted dates) to reduce state management complexity and avoid redundant renders. Always verify property names against TypeScript interfaces during refactoring.
