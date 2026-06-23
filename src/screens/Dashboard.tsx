@@ -29,22 +29,27 @@ export default function Dashboard() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ Bolt: Parallelize queries to eliminate request waterfall
+        const [
+          { data: obrasData },
+          { count: alertasMateriais },
+          { count: totalObras }
+        ] = await Promise.all([
+          supabase
+            .from('artworks')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .eq('sale_status', 'available'),
+          supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+        ]);
 
         if (obrasData) setObras(obrasData);
-
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
 
         const healthScore =
           obrasData && obrasData.length > 0
