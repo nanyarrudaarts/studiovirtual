@@ -22,6 +22,7 @@ const SerieDetail = lazy(() => import('./screens/SerieDetail'));
 const Certificados = lazy(() => import('./screens/Certificados'));
 const Portfolio = lazy(() => import('./screens/Portfolio'));
 const Onboarding = lazy(() => import('./screens/Onboarding'));
+const CadastroUsuario = lazy(() => import('./screens/CadastroUsuario'));
 
 // Placeholder Screens
 const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Análise</h1><p>Relatório de saúde e análise curatorial (em breve)</p></div>;
@@ -158,6 +159,7 @@ export default function App() {
             <Route path="materiais" element={<Materiais />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="perfil" element={<Perfil />} />
+            <Route path="cadastro-usuario" element={<CadastroUsuario />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

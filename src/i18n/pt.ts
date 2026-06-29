@@ -13,6 +13,7 @@ const pt = {
       perfil: 'Perfil da Artista',
       configuracoes: 'Configurações',
       sair: 'Sair',
+      cadastroUsuario: 'Cadastrar Usuária',
     },
     dashboard: {
       welcome: 'Bem-vinda de volta, Nany.',
@@ -280,6 +281,12 @@ const pt = {
       sucesso: 'Salvo com sucesso',
       sim: 'Sim',
       nao: 'Não',
+    },
+    error_boundary: {
+      title: 'Algo deu incorreto',
+      description: 'Um erro inesperado aconteceu na interface do Studio. Não se preocupe, seus dados estão seguros no banco.',
+      reload: 'Recarregar Página',
+      home: 'Início',
     },
   },
 } as const;

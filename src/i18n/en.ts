@@ -13,6 +13,7 @@ const en = {
       perfil: 'Artist Profile',
       configuracoes: 'Settings',
       sair: 'Sign Out',
+      cadastroUsuario: 'Register User',
     },
     dashboard: {
       welcome: 'Welcome back, Nany.',
@@ -279,6 +280,12 @@ const en = {
       sucesso: 'Saved successfully',
       sim: 'Yes',
       nao: 'No',
+    },
+    error_boundary: {
+      title: 'Something went wrong',
+      description: 'An unexpected error occurred in the Studio interface. Do not worry, your data is safe in the database.',
+      reload: 'Reload Page',
+      home: 'Home',
     },
   },
 } as const;

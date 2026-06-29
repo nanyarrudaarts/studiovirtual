@@ -13,6 +13,7 @@ const es = {
       perfil: 'Perfil de la Artista',
       configuracoes: 'Configuración',
       sair: 'Salir',
+      cadastroUsuario: 'Registrar Usuario',
     },
     dashboard: {
       welcome: 'Bienvenida de nuevo, Nany.',
@@ -279,6 +280,12 @@ const es = {
       sucesso: 'Guardado con éxito',
       sim: 'Sí',
       nao: 'No',
+    },
+    error_boundary: {
+      title: 'Algo salió mal',
+      description: 'Ocurrió un error inesperado en la interfaz de Studio. No te preocupes, tus datos están seguros en la base de datos.',
+      reload: 'Recargar página',
+      home: 'Inicio',
     },
   },
 } as const;

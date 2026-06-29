@@ -13,6 +13,7 @@ const de = {
       perfil: 'Künstlerprofil',
       configuracoes: 'Einstellungen',
       sair: 'Abmelden',
+      cadastroUsuario: 'Benutzer registrieren',
     },
     dashboard: {
       welcome: 'Willkommen zurück, Nany.',
@@ -279,6 +280,12 @@ const de = {
       sucesso: 'Erfolgreich gespeichert',
       sim: 'Ja',
       nao: 'Nein',
+    },
+    error_boundary: {
+      title: 'Etwas ist schief gelaufen',
+      description: 'Ein unerwarteter Fehler ist in der Studio-Oberfläche aufgetreten. Keine Sorge, Ihre Daten sind sicher in der Datenbank.',
+      reload: 'Seite neu laden',
+      home: 'Startseite',
     },
   },
 } as const;
