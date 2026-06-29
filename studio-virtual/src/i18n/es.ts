@@ -13,6 +13,7 @@ const es = {
       perfil: 'Perfil de la Artista',
       configuracoes: 'Configuración',
       sair: 'Salir',
+      cadastroUsuario: 'Registrar Usuario',
     },
     dashboard: {
       welcome: 'Bienvenida de nuevo, Nany.',

@@ -13,6 +13,7 @@ const de = {
       perfil: 'Künstlerprofil',
       configuracoes: 'Einstellungen',
       sair: 'Abmelden',
+      cadastroUsuario: 'Benutzer registrieren',
     },
     dashboard: {
       welcome: 'Willkommen zurück, Nany.',

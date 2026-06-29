@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, UploadCloud, Image as ImageIcon, FileText, Activity,
   DownloadCloud, Award, Box, Settings, UserCircle, LogOut,
-  Sun, Moon, Globe, Menu, X, BookOpen
+  Sun, Moon, Globe, Menu, X, BookOpen, UserPlus
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n/index';
@@ -40,6 +40,7 @@ const navGroups = [
 const bottomItems = [
   { path: '/perfil', labelKey: 'nav.perfil', icon: UserCircle },
   { path: '/configuracoes', labelKey: 'nav.configuracoes', icon: Settings },
+  { path: '/cadastro-usuario', labelKey: 'nav.cadastroUsuario', icon: UserPlus },
 ];
 
 const LANGUAGES = [
@@ -111,7 +112,8 @@ export function Shell() {
     '/portfolio': 'Gerador de Portfólio',
     '/materiais': 'Inventário de Ateliê',
     '/perfil': 'Perfil da Artista',
-    '/configuracoes': 'Configurações'
+    '/configuracoes': 'Configurações',
+    '/cadastro-usuario': 'Cadastrar Usuária'
   };
   const currentPageTitle = pageTitles[location.pathname] || 'Visão Geral';
 
