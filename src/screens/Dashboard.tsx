@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { format } from 'date-fns';
 import type { Artwork } from '../types';
@@ -18,43 +18,43 @@ export default function Dashboard() {
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
 
-  const getLocale = () => {
+  // ⚡ BOLT OPTIMIZATION: Memoize locale and date to avoid redundant calculations on every render
+  const currentLocale = useMemo(() => {
     if (lang === 'en') return enUS;
     if (lang === 'es') return es;
     if (lang === 'de') return de;
     return ptBR;
-  };
+  }, [lang]);
+
+  const dataAtual = useMemo(() =>
+    format(new Date(), "EEEE, d 'de' MMMM", { locale: currentLocale }),
+    [currentLocale]
+  );
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const { data: obrasData } = await supabase
-          .from('artworks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
+        // ⚡ BOLT OPTIMIZATION: Parallelize Supabase requests to eliminate the request waterfall
+        const [obrasResponse, alertasResponse, totalResponse] = await Promise.all([
+          supabase.from('artworks').select('*').order('created_at', { ascending: false }).limit(6),
+          supabase.from('artworks').select('*', { count: 'exact', head: true }).eq('sale_status', 'available'),
+          supabase.from('artworks').select('*', { count: 'exact', head: true })
+        ]);
 
+        const obrasData = obrasResponse.data;
         if (obrasData) setObras(obrasData);
 
-        const { count: alertasMateriais } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true })
-          .eq('sale_status', 'available');
-
-        const { count: totalObras } = await supabase
-          .from('artworks')
-          .select('*', { count: 'exact', head: true });
-
+        // ⚡ BOLT OPTIMIZATION: Corrected field names for healthScore calculation based on Artwork interface
         const healthScore =
           obrasData && obrasData.length > 0
             ? Math.round(
                 (obrasData.reduce((acc, o) => {
                   let filled = 0;
-                  if (o.narrativa_curatorial) filled++;
-                  if (o.sentenca_resumo) filled++;
+                  if (o.curatorial_narrative) filled++;
+                  if (o.summary_sentence) filled++;
                   if (o.medium) filled++;
-                  if (o.dimensions) filled++;
+                  if (o.dimensions_formatted) filled++;
                   return acc + filled / 4;
                 }, 0) /
                   obrasData.length) *
@@ -63,9 +63,9 @@ export default function Dashboard() {
             : 100;
 
         setMetricas({
-          totalObras: totalObras || 0,
+          totalObras: totalResponse.count || 0,
           healthScore,
-          alertasMateriais: alertasMateriais || 0,
+          alertasMateriais: alertasResponse.count || 0,
         });
       } catch (err) {
         console.error('Erro ao carregar dashboard:', err);
@@ -75,8 +75,6 @@ export default function Dashboard() {
     }
     loadDashboardData();
   }, []);
-
-  const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 max-w-[1400px] mx-auto">
@@ -234,6 +232,7 @@ export default function Dashboard() {
                       <img
                         src={obra.cover_image}
                         alt={obra.artwork_title}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
