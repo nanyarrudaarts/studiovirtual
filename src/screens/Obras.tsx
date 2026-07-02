@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2, FileDown } from 'lucide-react';
 import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
@@ -119,18 +119,32 @@ export default function Obras() {
     }
   };
 
-  const q = search.toLowerCase();
-  const filteredArtworks = artworks.filter(a =>
-    !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
-  );
-  const filteredSeries = series.filter(s => !q || s.series_title.toLowerCase().includes(q));
-  const filteredCollections = collections.filter(c => !q || c.collection_name.toLowerCase().includes(q));
+  // ⚡ BOLT OPTIMIZATION: Memoize filtered results to prevent expensive re-filtering
+  // on every render (e.g. when opening/closing modals).
+  const filteredArtworks = useMemo(() => {
+    const q = search.toLowerCase();
+    return artworks.filter(a =>
+      !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
+    );
+  }, [artworks, search]);
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = [
+  const filteredSeries = useMemo(() => {
+    const q = search.toLowerCase();
+    return series.filter(s => !q || s.series_title.toLowerCase().includes(q));
+  }, [series, search]);
+
+  const filteredCollections = useMemo(() => {
+    const q = search.toLowerCase();
+    return collections.filter(c => !q || c.collection_name.toLowerCase().includes(q));
+  }, [collections, search]);
+
+  // ⚡ BOLT OPTIMIZATION: Memoize tabs configuration to prevent redundant
+  // object creation and child re-renders.
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = useMemo(() => [
     { id: 'unicas', label: 'Únicas', icon: <Palette size={15} />, count: artworks.length },
     { id: 'series', label: 'Séries', icon: <Layers size={15} />, count: series.length },
     { id: 'colecoes', label: 'Coleções', icon: <Archive size={15} />, count: collections.length },
-  ];
+  ], [artworks.length, series.length, collections.length]);
 
   return (
     <div className="space-y-7 relative pb-20 md:pb-0">
@@ -244,7 +258,9 @@ export default function Obras() {
 
                   <div className="relative aspect-square overflow-hidden bg-surface-raised">
                     {obra.cover_image || obra.artwork_images?.[0] ? (
+                      /* ⚡ BOLT OPTIMIZATION: Lazy load images to improve initial page load performance */
                       <img src={obra.cover_image || obra.artwork_images![0]} alt={obra.artwork_title}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-text-faint">
@@ -328,7 +344,9 @@ export default function Obras() {
                   <div className="h-1.5" style={{ background: s.cor || 'var(--gold)' }} />
                   <div className="aspect-video overflow-hidden relative bg-surface-raised">
                     {s.cover_image ? (
+                      /* ⚡ BOLT OPTIMIZATION: Lazy load images to improve initial page load performance */
                       <img src={s.cover_image} alt={s.series_title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center" style={{ background: `${s.cor}20`, color: s.cor || 'var(--gold)' }}>
@@ -397,7 +415,9 @@ export default function Obras() {
                   <div className="gold-line opacity-50" />
                   <div className="aspect-video overflow-hidden relative bg-surface-raised">
                     {c.cover_image ? (
+                      /* ⚡ BOLT OPTIMIZATION: Lazy load images to improve initial page load performance */
                       <img src={c.cover_image} alt={c.collection_name}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[rgba(201,168,76,0.05)]">
@@ -486,8 +506,9 @@ export default function Obras() {
               {/* Photos */}
               <div className="relative rounded-2xl overflow-hidden aspect-video bg-surface-raised">
                 {(selected.artwork_images?.[photoIdx] || selected.cover_image) ? (
+                  /* ⚡ BOLT OPTIMIZATION: Lazy load images to improve initial page load performance */
                   <img src={selected.artwork_images?.[photoIdx] || selected.cover_image}
-                    alt={selected.artwork_title} className="w-full h-full object-contain" />
+                    alt={selected.artwork_title} loading="lazy" className="w-full h-full object-contain" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-text-faint">
                     <Palette size={60} />
