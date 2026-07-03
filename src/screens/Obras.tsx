@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, X, ChevronLeft, ChevronRight, Leaf, Palette, Archive, Layers, Trash2, FileDown } from 'lucide-react';
 import { getArtworks, getSeries, getCollections, deleteArtwork, deleteSerie, deleteCollection } from '../services/supabase';
 import type { Artwork, Series, Collection } from '../types';
@@ -119,18 +119,32 @@ export default function Obras() {
     }
   };
 
+  // ⚡ BOLT OPTIMIZATION: Memoize filtering logic to prevent expensive re-calculations on every render
+  // (e.g. when changing photoIdx in the modal or toggling a delete confirmation)
   const q = search.toLowerCase();
-  const filteredArtworks = artworks.filter(a =>
-    !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
-  );
-  const filteredSeries = series.filter(s => !q || s.series_title.toLowerCase().includes(q));
-  const filteredCollections = collections.filter(c => !q || c.collection_name.toLowerCase().includes(q));
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = [
+  const filteredArtworks = useMemo(() =>
+    artworks.filter(a =>
+      !q || a.artwork_title.toLowerCase().includes(q) || (a.medium ?? '').toLowerCase().includes(q)
+    ), [artworks, q]
+  );
+
+  const filteredSeries = useMemo(() =>
+    series.filter(s => !q || s.series_title.toLowerCase().includes(q)),
+    [series, q]
+  );
+
+  const filteredCollections = useMemo(() =>
+    collections.filter(c => !q || c.collection_name.toLowerCase().includes(q)),
+    [collections, q]
+  );
+
+  // ⚡ BOLT OPTIMIZATION: Memoize tabs configuration to prevent redundant object creation
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; count: number }[] = useMemo(() => [
     { id: 'unicas', label: 'Únicas', icon: <Palette size={15} />, count: artworks.length },
     { id: 'series', label: 'Séries', icon: <Layers size={15} />, count: series.length },
     { id: 'colecoes', label: 'Coleções', icon: <Archive size={15} />, count: collections.length },
-  ];
+  ], [artworks.length, series.length, collections.length]);
 
   return (
     <div className="space-y-7 relative pb-20 md:pb-0">
