@@ -1,0 +1,3 @@
+## 2026-07-08 - Memoization and Lazy Loading in List-Heavy Screens
+**Learning:** List-heavy screens like `Obras.tsx` that combine search filtering across multiple datasets and complex UI configurations (like tab arrays with counts) suffer from redundant computations and object allocations on every render. This becomes particularly noticeable when the component has multiple interactive states (modals, active tabs) that trigger re-renders.
+**Action:** Always wrap search-based filtering logic and static/semi-static UI configuration objects in `useMemo`. Complement this with `loading="lazy"` on grid images to improve the Initial Supplemental Content and LCP metrics.
