@@ -40,22 +40,7 @@ export default function Login() {
 
         if (signUpError) throw signUpError;
 
-        const user = data.user;
-        if (user) {
-          // 2. Initialize artist profile in database
-          const { error: dbError } = await supabase.from('artista').insert({
-            user_id: user.id,
-            nome: nome.trim(),
-            email: email.trim(),
-            nomeartistico: nome.trim(),
-            onboarding_completed: false,
-          });
-
-          if (dbError) {
-            console.error('Erro ao inicializar perfil:', dbError);
-            throw new Error('Conta criada, mas erro ao inicializar perfil: ' + dbError.message);
-          }
-        }
+        // 2. O perfil na tabela 'artista' é criado automaticamente via trigger no banco (handle_new_user)
 
         // 3. Handle email confirmation if enabled, or direct sign in
         if (data.user && !data.session) {
