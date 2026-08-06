@@ -16,7 +16,7 @@ const pt = {
       cadastroUsuario: 'Cadastrar Usuária',
     },
     dashboard: {
-      welcome: 'Bem-vinda de volta, Nany.',
+      welcome: 'Bem-vinda de volta, {{name}}.',
       total_obras: 'Total de Obras',
       health_score: 'Saúde do Portfólio',
       alertas: 'Alertas de Materiais',

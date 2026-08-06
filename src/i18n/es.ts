@@ -16,7 +16,7 @@ const es = {
       cadastroUsuario: 'Registrar Usuario',
     },
     dashboard: {
-      welcome: 'Bienvenida de nuevo, Nany.',
+      welcome: 'Bienvenida de nuevo, {{name}}.',
       total_obras: 'Total de Obras',
       health_score: 'Salud del Portafolio',
       alertas: 'Alertas de Materiales',

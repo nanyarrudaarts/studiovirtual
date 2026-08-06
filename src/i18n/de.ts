@@ -16,7 +16,7 @@ const de = {
       cadastroUsuario: 'Benutzer registrieren',
     },
     dashboard: {
-      welcome: 'Willkommen zurück, Nany.',
+      welcome: 'Willkommen zurück, {{name}}.',
       total_obras: 'Kunstwerke gesamt',
       health_score: 'Portfolio-Gesundheit',
       alertas: 'Materialwarnungen',

@@ -57,7 +57,7 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentLang = i18n.language || 'pt';
-  const { artist } = useAuth();
+  const { artist, session } = useAuth();
 
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
@@ -66,6 +66,16 @@ export function Shell() {
   const avatarRef = useRef<HTMLDivElement>(null);
 
   const artistDisplayName = artist?.nomeartistico?.trim() || artist?.nome?.trim() || 'Artista';
+  const userEmail = session?.user?.email || '';
+
+  const getInitials = (name: string): string => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'AR';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const avatarInitials = getInitials(artistDisplayName !== 'Artista' ? artistDisplayName : (userEmail.split('@')[0] || 'AR'));
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -307,13 +317,13 @@ export function Shell() {
                 aria-label="Menu do usuário"
                 className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold tracking-wider active:scale-95 hover:opacity-90 transition-all cursor-pointer avatar-ring-gold"
               >
-                NA
+                {avatarInitials}
               </button>
               {showAvatarDropdown && (
                 <div className="absolute right-0 top-full mt-2 w-52 rounded-xl overflow-hidden z-50 shell-dropdown">
                   <div className="px-4 py-3 border-b shell-border">
-                    <p className="text-xs font-semibold text-text-main">Nany Arruda</p>
-                    <p className="text-xs truncate text-text-faint mt-0.5">contato@nanyarruda.com</p>
+                    <p className="text-xs font-semibold text-text-main">{artistDisplayName}</p>
+                    <p className="text-xs truncate text-text-faint mt-0.5">{userEmail}</p>
                   </div>
                   
                   {/* Mobile Language and Theme inside avatar dropdown */}

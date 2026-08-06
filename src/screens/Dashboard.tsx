@@ -15,10 +15,12 @@ export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const navigate = useNavigate();
-  const { artistId } = useAuth();
+  const { artistId, artist } = useAuth();
   const [obras, setObras] = useState<Artwork[]>([]);
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
+
+  const artistName = artist?.nomeartistico?.trim() || artist?.nome?.trim() || 'Artista';
 
   const getLocale = () => {
     if (lang === 'en') return enUS;
@@ -101,7 +103,7 @@ export default function Dashboard() {
             {dataAtual}
           </p>
           <h1 className="text-3xl md:text-4xl font-serif leading-tight text-text-main">
-            {t('dashboard.welcome')}
+            {t('dashboard.welcome', { name: artistName })}
           </h1>
           {/* Gold accent line under heading */}
           <div className="gold-line mt-3 w-24" />
