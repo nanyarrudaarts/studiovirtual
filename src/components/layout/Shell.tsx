@@ -77,9 +77,6 @@ export function Shell() {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Logout error:', err);
-    } finally {
-      // Força redirecionamento independentemente do onAuthStateChange
-      navigate('/login', { replace: true });
     }
   };
 

@@ -6,7 +6,7 @@ import {
   User,
   Building2,
   Globe,
-  Instagram,
+  AtSign,
   CheckCircle2,
   Loader2,
   X,
@@ -450,7 +450,7 @@ export default function CadastroUsuario() {
                         <FieldLabel>Instagram</FieldLabel>
                         <InputField
                           id="instagram"
-                          icon={Instagram}
+                          icon={AtSign}
                           type="text"
                           value={form.instagram}
                           onChange={update('instagram')}

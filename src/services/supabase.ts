@@ -406,6 +406,7 @@ export interface OnboardingData {
   temas_centrais?: string;
   pesquisa_artistica?: string;
   referencias_conceituais?: string;
+  ano_inicio_carreira?: string;
   // Step 3 – Trajetória
   formacao?: object[];
   expos_individuais?: object[];
@@ -431,10 +432,13 @@ export interface OnboardingData {
 
 /** Returns onboarding_completed flag (false = not started or pending). */
 export async function getOnboardingStatus(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
   const { data, error } = await supabase
     .from('artista')
     .select('onboarding_completed')
-    .eq('id', 1)
+    .eq('user_id', user.id)
     .maybeSingle();
   if (error) {
     console.error('Error fetching onboarding status:', error);
@@ -463,6 +467,7 @@ async function buildSocialLinksPayload(d: OnboardingData, existingSocialLinks: u
     temas_centrais: d.temas_centrais ?? '',
     pesquisa_artistica: d.pesquisa_artistica ?? '',
     referencias_conceituais: d.referencias_conceituais ?? '',
+    ano_inicio_carreira: d.ano_inicio_carreira ?? '',
     bolsas: d.bolsas ?? [],
     feiras: d.feiras ?? [],
     bienais: d.bienais ?? [],
@@ -475,18 +480,22 @@ async function buildSocialLinksPayload(d: OnboardingData, existingSocialLinks: u
 
 /** Persists partial onboarding data without marking as complete. */
 export async function saveOnboardingStep(payload: OnboardingData): Promise<void> {
-  // Read existing social_links to preserve any existing entries
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Não autenticado');
+
+  // Read existing data to preserve any existing entries
   const { data: existing } = await supabase
     .from('artista')
-    .select('social_links')
-    .eq('id', 1)
+    .select('id, social_links')
+    .eq('user_id', user.id)
     .maybeSingle();
 
   const existingLinks = Array.isArray(existing?.social_links) ? existing.social_links : [];
   const socialLinksPayload = await buildSocialLinksPayload(payload, existingLinks);
 
   const dbPayload = {
-    id: 1,
+    ...(existing?.id ? { id: existing.id } : {}),
+    user_id: user.id,
     nome: payload.nome,
     nomeartistico: payload.nomeartistico,
     email: payload.email,
@@ -520,25 +529,37 @@ export async function saveOnboardingStep(payload: OnboardingData): Promise<void>
     Object.entries(dbPayload).filter(([, v]) => v !== undefined)
   );
 
-  const { error } = await supabase
-    .from('artista')
-    .upsert(cleanPayload, { onConflict: 'id' });
-  if (error) throw error;
+  if (existing?.id) {
+    const { error } = await supabase
+      .from('artista')
+      .update(cleanPayload)
+      .eq('id', existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('artista')
+      .insert(cleanPayload);
+    if (error) throw error;
+  }
 }
 
 /** Marks onboarding as done and saves all collected data in one transaction. */
 export async function completeOnboarding(payload: OnboardingData): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Não autenticado');
+
   const { data: existing } = await supabase
     .from('artista')
-    .select('social_links')
-    .eq('id', 1)
+    .select('id, social_links')
+    .eq('user_id', user.id)
     .maybeSingle();
 
   const existingLinks = Array.isArray(existing?.social_links) ? existing.social_links : [];
   const socialLinksPayload = await buildSocialLinksPayload(payload, existingLinks);
 
   const dbPayload = {
-    id: 1,
+    ...(existing?.id ? { id: existing.id } : {}),
+    user_id: user.id,
     nome: payload.nome,
     nomeartistico: payload.nomeartistico,
     email: payload.email,
@@ -572,8 +593,16 @@ export async function completeOnboarding(payload: OnboardingData): Promise<void>
     Object.entries(dbPayload).filter(([, v]) => v !== undefined)
   );
 
-  const { error } = await supabase
-    .from('artista')
-    .upsert(cleanPayload, { onConflict: 'id' });
-  if (error) throw error;
+  if (existing?.id) {
+    const { error } = await supabase
+      .from('artista')
+      .update(cleanPayload)
+      .eq('id', existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('artista')
+      .insert(cleanPayload);
+    if (error) throw error;
+  }
 }
