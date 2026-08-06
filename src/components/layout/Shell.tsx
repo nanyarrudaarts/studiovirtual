@@ -72,24 +72,30 @@ export function Shell() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      try {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-            localStorage.removeItem(key);
-          }
-        }
-      } catch (e) {
-        console.error('Error clearing storage:', e);
-      }
-      window.location.href = '/login';
+  const handleLogout = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+
+    try {
+      supabase.auth.signOut().catch(() => {});
+    } catch {
+      // Silent catch
+    }
+
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (err) {
+      console.error('Error clearing storage:', err);
+    }
+
+    window.location.href = '/login';
   };
 
   const handleLangChange = (lang: string) => {
@@ -220,6 +226,7 @@ export function Shell() {
           </div>
           <div className="my-3 mx-2 border-b border-border-subtle"></div>
           <button 
+            type="button"
             onClick={handleLogout}
             className="flex items-center gap-3 h-[52px] md:h-[40px] px-3 w-full rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-150 cursor-pointer"
           >
@@ -341,8 +348,11 @@ export function Shell() {
                     </button>
                   </div>
                   <div className="border-t shell-border">
-                    <button onClick={handleLogout}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer">
+                    <button 
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    >
                       <LogOut size={16} /> {t('nav.sair')}
                     </button>
                   </div>
