@@ -49,4 +49,4 @@ src/QA_CHECKLIST.md
 src/AUDIT_REPORT.md
 BUG_REPORT.md
 lint_output.txt
-.env
+.vercel
