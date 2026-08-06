@@ -35,6 +35,14 @@ const LoadingScreen = () => (
   </div>
 );
 
+// ─── Fix 3: Timeout para getOnboardingStatus ──────────────────────────────────
+// Se a chamada ao banco demorar mais de ms, assume o fallback silenciosamente.
+// Usa resolve (não reject) para que o catch do caller não seja ativado por timeout.
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  const timer = new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms));
+  return Promise.race([promise, timer]);
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,47 +52,81 @@ export default function App() {
     let active = true;
     console.log('App mounted, starting auth listener');
 
-    // Fallback: nunca fica preso no loading por mais de 4s
-    const fallbackTimer = setTimeout(() => {
-      if (active) {
-        console.warn('Fallback timer fired: auth check took too long');
-        setLoading(false);
+    // ─── Fix 2: ref de timer como variável local no closure ───────────────────
+    // Garantimos que só existe UM timer ativo por vez, recriado a cada evento
+    // que ativa o loading. A variável é local ao useEffect para não vazar entre renders.
+    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
+
+    const clearFallback = () => {
+      if (fallbackTimerId !== null) {
+        clearTimeout(fallbackTimerId);
+        fallbackTimerId = null;
       }
-    }, 4000);
+    };
+
+    const startFallback = () => {
+      clearFallback(); // limpa anterior antes de criar novo (evita acúmulo)
+      fallbackTimerId = setTimeout(() => {
+        if (active) {
+          console.warn('Fallback timer fired: auth check took too long');
+          setLoading(false);
+        }
+      }, 5000);
+    };
+
+    // ─── Fix 1: firstLoad — evita re-spinner em re-triggers de INITIAL_SESSION ─
+    // É uma variável local no closure (não useRef/useState) porque só precisa
+    // ser acessada dentro deste useEffect, e não causa re-renders.
+    let firstLoad = true;
+
+    // Inicia fallback para o carregamento inicial (antes do primeiro evento)
+    startFallback();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       console.log('onAuthStateChange:', event, s?.user?.email ?? 'no-user');
       if (!active) return;
 
-      // Logout: limpa tudo imediatamente
+      // Logout: limpa tudo, reseta firstLoad para o próximo login
       if (event === 'SIGNED_OUT' || !s) {
+        firstLoad = true; // próximo SIGNED_IN mostrará loading normalmente
+        clearFallback();
         setSession(null);
         setOnboardingDone(null);
-        clearTimeout(fallbackTimer);
         setLoading(false);
         return;
       }
 
-      // Login / sessão existente
+      // Atualiza sessão sempre (inclusive re-triggers silenciosos)
       setSession(s);
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+
+      // ─── Fix 1 aplicado ───────────────────────────────────────────────────
+      // Só ativa o spinner e recria o fallback na PRIMEIRA vez (login inicial
+      // ou pós-logout). Re-triggers de INITIAL_SESSION (ex: volta de outra aba)
+      // continuam atualizando o estado silenciosamente, sem travar a UI.
+      if (firstLoad) {
         setLoading(true);
+        startFallback(); // ─── Fix 2 aplicado: recria timer para este ciclo
       }
+      firstLoad = false;
 
       try {
-        const done = await getOnboardingStatus();
+        // ─── Fix 3 aplicado ───────────────────────────────────────────────
+        // Timeout de 6s: se getOnboardingStatus demorar, assume true (done).
+        // Usa resolve no timer (não reject), então o catch não é ativado por timeout.
+        // Resultado: a usuária vai direto ao dashboard sem ver erro na UI.
+        const done = await withTimeout(getOnboardingStatus(), 6000, true);
         if (active) {
           setOnboardingDone(done);
         }
       } catch (err) {
+        // Só entra aqui se getOnboardingStatus jogar um erro real (não timeout)
         console.error('getOnboardingStatus falhou, assumindo concluído:', err);
-        // Falha no onboarding não deve bloquear o login — assume true
         if (active) {
           setOnboardingDone(true);
         }
       } finally {
         if (active) {
-          clearTimeout(fallbackTimer);
+          clearFallback();
           setLoading(false);
         }
       }
@@ -92,7 +134,7 @@ export default function App() {
 
     return () => {
       active = false;
-      clearTimeout(fallbackTimer);
+      clearFallback();
       subscription.unsubscribe();
     };
   }, []);

@@ -1,0 +1,1 @@
+Arquivos históricos/scripts de debug, mantidos por segurança mas fora do fluxo ativo do projeto. Os arquivos supabase_*.sql aqui NÃO refletem necessariamente o estado atual do banco de dados — consulte sempre o banco real via SQL Editor do Supabase antes de assumir que algum desses scripts está atualizado. Ver docs/DIAGNOSTICO.md para o estado confirmado mais recente.
