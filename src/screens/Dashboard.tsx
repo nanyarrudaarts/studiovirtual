@@ -9,11 +9,13 @@ import {
 import { ptBR, enUS, es, de } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const navigate = useNavigate();
+  const { artistId } = useAuth();
   const [obras, setObras] = useState<Artwork[]>([]);
   const [metricas, setMetricas] = useState({ totalObras: 0, healthScore: 92, alertasMateriais: 0 });
   const [loading, setLoading] = useState(true);
@@ -27,29 +29,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function loadDashboardData() {
+      if (!artistId) {
+        setObras([]);
+        setMetricas({ totalObras: 0, healthScore: 100, alertasMateriais: 0 });
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        // 1. Obtém user da sessão atual
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // 2. Resolve artist_id via artista.user_id (artworks usa artist_id, não user_id)
-        const { data: artistaData } = await supabase
-          .from('artista')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        const artistId = artistaData?.id;
-
-        // 3. Sem registro em artista ainda (ex: onboarding incompleto) — exibe vazio
-        if (!artistId) {
-          setObras([]);
-          setMetricas({ totalObras: 0, healthScore: 100, alertasMateriais: 0 });
-          return;
-        }
-
-        // 4. Queries filtradas explicitamente por artist_id — defesa além do RLS
+        // Queries filtradas explicitamente por artistId resolvido no AuthContext
         const { data: obrasData } = await supabase
           .from('artworks')
           .select('*')
@@ -98,7 +87,7 @@ export default function Dashboard() {
       }
     }
     loadDashboardData();
-  }, []);
+  }, [artistId]);
 
   const dataAtual = format(new Date(), "EEEE, d 'de' MMMM", { locale: getLocale() });
 

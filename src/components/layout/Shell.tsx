@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n/index';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../hooks/useTheme';
+import { useAuth } from '../../context/AuthContext';
 
 const navGroups = [
   {
@@ -56,13 +57,15 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentLang = i18n.language || 'pt';
+  const { artist } = useAuth();
 
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [artistName, setArtistName] = useState<string>('');
   const langRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
+
+  const artistDisplayName = artist?.nomeartistico?.trim() || artist?.nome?.trim() || 'Artista';
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -71,31 +74,6 @@ export function Shell() {
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  // Busca o nome artístico do perfil logado dinamicamente
-  useEffect(() => {
-    async function fetchArtistName() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data } = await supabase
-          .from('artista')
-          .select('nomeartistico, nome')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (data) {
-          setArtistName(
-            (data.nomeartistico as string | null)?.trim() ||
-            (data.nome as string | null)?.trim() ||
-            ''
-          );
-        }
-      } catch {
-        // Silencioso — fallback será usado no render
-      }
-    }
-    fetchArtistName();
   }, []);
 
   const handleLogout = (e?: React.MouseEvent) => {
@@ -197,7 +175,7 @@ export function Shell() {
             <h1 className="font-serif italic text-[17px] tracking-wide leading-none text-text-main">studio virtual</h1>
           </div>
           <div className="mt-1.5 font-sans text-[10px] tracking-[0.18em] uppercase text-gold">
-            {artistName || 'Artista'}
+            {artistDisplayName}
           </div>
         </div>
         <div className="mx-5 mb-2 gold-line" />

@@ -1,13 +1,10 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 import { Shell } from './components/layout/Shell';
-import { supabase } from './services/supabase';
-import { getOnboardingStatus } from './services/supabase';
 import ErrorBoundary from './components/common/ErrorBoundary';
-
-import type { Session } from '@supabase/supabase-js';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Lazy load screens
 const Dashboard = lazy(() => import('./screens/Dashboard'));
@@ -35,109 +32,8 @@ const LoadingScreen = () => (
   </div>
 );
 
-// ─── Fix 3: Timeout para getOnboardingStatus ──────────────────────────────────
-// Se a chamada ao banco demorar mais de ms, assume o fallback silenciosamente.
-// Usa resolve (não reject) para que o catch do caller não seja ativado por timeout.
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  const timer = new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms));
-  return Promise.race([promise, timer]);
-}
-
-export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    console.log('App mounted, starting auth listener');
-
-    // ─── Fix 2: ref de timer como variável local no closure ───────────────────
-    // Garantimos que só existe UM timer ativo por vez, recriado a cada evento
-    // que ativa o loading. A variável é local ao useEffect para não vazar entre renders.
-    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
-
-    const clearFallback = () => {
-      if (fallbackTimerId !== null) {
-        clearTimeout(fallbackTimerId);
-        fallbackTimerId = null;
-      }
-    };
-
-    const startFallback = () => {
-      clearFallback(); // limpa anterior antes de criar novo (evita acúmulo)
-      fallbackTimerId = setTimeout(() => {
-        if (active) {
-          console.warn('Fallback timer fired: auth check took too long');
-          setLoading(false);
-        }
-      }, 5000);
-    };
-
-    // ─── Fix 1: firstLoad — evita re-spinner em re-triggers de INITIAL_SESSION ─
-    // É uma variável local no closure (não useRef/useState) porque só precisa
-    // ser acessada dentro deste useEffect, e não causa re-renders.
-    let firstLoad = true;
-
-    // Inicia fallback para o carregamento inicial (antes do primeiro evento)
-    startFallback();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      console.log('onAuthStateChange:', event, s?.user?.email ?? 'no-user');
-      if (!active) return;
-
-      // Logout: limpa tudo, reseta firstLoad para o próximo login
-      if (event === 'SIGNED_OUT' || !s) {
-        firstLoad = true; // próximo SIGNED_IN mostrará loading normalmente
-        clearFallback();
-        setSession(null);
-        setOnboardingDone(null);
-        setLoading(false);
-        return;
-      }
-
-      // Atualiza sessão sempre (inclusive re-triggers silenciosos)
-      setSession(s);
-
-      // ─── Fix 1 aplicado ───────────────────────────────────────────────────
-      // Só ativa o spinner e recria o fallback na PRIMEIRA vez (login inicial
-      // ou pós-logout). Re-triggers de INITIAL_SESSION (ex: volta de outra aba)
-      // continuam atualizando o estado silenciosamente, sem travar a UI.
-      if (firstLoad) {
-        setLoading(true);
-        startFallback(); // ─── Fix 2 aplicado: recria timer para este ciclo
-      }
-      firstLoad = false;
-
-      try {
-        // ─── Fix 3 aplicado ───────────────────────────────────────────────
-        // Timeout de 6s: se getOnboardingStatus demorar, assume true (done).
-        // Usa resolve no timer (não reject), então o catch não é ativado por timeout.
-        // Resultado: a usuária vai direto ao dashboard sem ver erro na UI.
-        const done = await withTimeout(getOnboardingStatus(), 6000, true);
-        if (active) {
-          setOnboardingDone(done);
-        }
-      } catch (err) {
-        // Só entra aqui se getOnboardingStatus jogar um erro real (não timeout)
-        console.error('getOnboardingStatus falhou, assumindo concluído:', err);
-        if (active) {
-          setOnboardingDone(true);
-        }
-      } finally {
-        if (active) {
-          clearFallback();
-          setLoading(false);
-        }
-      }
-    });
-
-    return () => {
-      active = false;
-      clearFallback();
-      subscription.unsubscribe();
-    };
-  }, []);
+function AppRoutes() {
+  const { session, onboardingDone, loading, refreshArtistPerfil } = useAuth();
 
   if (loading) return <LoadingScreen />;
 
@@ -167,7 +63,7 @@ export default function App() {
               path="/onboarding"
               element={
                 <Onboarding
-                  onComplete={() => setOnboardingDone(true)}
+                  onComplete={() => refreshArtistPerfil()}
                 />
               }
             />
@@ -212,3 +108,12 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  );
+}
+
