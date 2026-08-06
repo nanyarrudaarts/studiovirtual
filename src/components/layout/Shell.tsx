@@ -60,6 +60,7 @@ export function Shell() {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [artistName, setArtistName] = useState<string>('');
   const langRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +71,31 @@ export function Shell() {
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Busca o nome artístico do perfil logado dinamicamente
+  useEffect(() => {
+    async function fetchArtistName() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('artista')
+          .select('nomeartistico, nome')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (data) {
+          setArtistName(
+            (data.nomeartistico as string | null)?.trim() ||
+            (data.nome as string | null)?.trim() ||
+            ''
+          );
+        }
+      } catch {
+        // Silencioso — fallback será usado no render
+      }
+    }
+    fetchArtistName();
   }, []);
 
   const handleLogout = (e?: React.MouseEvent) => {
@@ -171,7 +197,7 @@ export function Shell() {
             <h1 className="font-serif italic text-[17px] tracking-wide leading-none text-text-main">studio virtual</h1>
           </div>
           <div className="mt-1.5 font-sans text-[10px] tracking-[0.18em] uppercase text-gold">
-            Nany Arruda
+            {artistName || 'Artista'}
           </div>
         </div>
         <div className="mx-5 mb-2 gold-line" />

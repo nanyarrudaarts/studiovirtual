@@ -95,10 +95,28 @@ export async function saveArtwork(artwork: Partial<Artwork>, imageFiles: File[] 
   if (!payload.accession_number) {
     payload.accession_number = await generateAccessionNumber();
   }
-  if (!payload.artist_name) payload.artist_name = 'Nany Arruda';
-  if (!payload.dimensions_unit) payload.dimensions_unit = 'cm';
-  if (!payload.sale_status) payload.sale_status = 'available';
-  if (payload.copyright_holder === undefined) payload.copyright_holder = 'Nany Arruda';
+  if (!payload.artist_name || !payload.copyright_holder) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: artistaData } = await supabase
+        .from('artista')
+        .select('nomeartistico, nome')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const resolvedName = 
+        (artistaData?.nomeartistico as string | null)?.trim() ||
+        (artistaData?.nome as string | null)?.trim() ||
+        'Artista';
+      if (!payload.artist_name) payload.artist_name = resolvedName;
+      if (payload.copyright_holder === undefined) payload.copyright_holder = resolvedName;
+    } else {
+      if (!payload.artist_name) payload.artist_name = 'Artista';
+      if (payload.copyright_holder === undefined) payload.copyright_holder = 'Artista';
+    }
+  } else if (payload.copyright_holder === undefined) {
+    // artist_name já foi resolvido acima, mas copyright_holder ainda pode estar undefined
+    payload.copyright_holder = payload.artist_name;
+  }
   if (payload.certificate_of_authenticity === undefined) payload.certificate_of_authenticity = false;
   if (payload.exposed === undefined) payload.exposed = false;
   if (payload.sustainable_materials === undefined) payload.sustainable_materials = false;

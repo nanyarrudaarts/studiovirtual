@@ -29,9 +29,31 @@ export default function Dashboard() {
     async function loadDashboardData() {
       setLoading(true);
       try {
+        // 1. Obtém user da sessão atual
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 2. Resolve artist_id via artista.user_id (artworks usa artist_id, não user_id)
+        const { data: artistaData } = await supabase
+          .from('artista')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const artistId = artistaData?.id;
+
+        // 3. Sem registro em artista ainda (ex: onboarding incompleto) — exibe vazio
+        if (!artistId) {
+          setObras([]);
+          setMetricas({ totalObras: 0, healthScore: 100, alertasMateriais: 0 });
+          return;
+        }
+
+        // 4. Queries filtradas explicitamente por artist_id — defesa além do RLS
         const { data: obrasData } = await supabase
           .from('artworks')
           .select('*')
+          .eq('artist_id', artistId)
           .order('created_at', { ascending: false })
           .limit(6);
 
@@ -40,11 +62,13 @@ export default function Dashboard() {
         const { count: alertasMateriais } = await supabase
           .from('artworks')
           .select('*', { count: 'exact', head: true })
+          .eq('artist_id', artistId)
           .eq('sale_status', 'available');
 
         const { count: totalObras } = await supabase
           .from('artworks')
-          .select('*', { count: 'exact', head: true });
+          .select('*', { count: 'exact', head: true })
+          .eq('artist_id', artistId);
 
         const healthScore =
           obrasData && obrasData.length > 0
