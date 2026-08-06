@@ -77,6 +77,18 @@ export function Shell() {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Logout error:', err);
+    } finally {
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        console.error('Error clearing storage:', e);
+      }
+      window.location.href = '/login';
     }
   };
 
