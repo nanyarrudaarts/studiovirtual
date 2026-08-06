@@ -1473,10 +1473,12 @@ export default function Onboarding({ onComplete }: Props) {
         if (profile) {
           type MetaRecord = Record<string, unknown>;
           let meta: MetaRecord = {};
-          const ensureArray = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
+          function ensureArray<T>(v: unknown): T[] {
+            return Array.isArray(v) ? (v as T[]) : [];
+          }
           
           if (profile.social_links) {
-            const arr = ensureArray(profile.social_links) as MetaRecord[];
+            const arr = ensureArray<MetaRecord>(profile.social_links);
             const found = arr.find((l) => l?.id === 'custom_metadata');
             if (found) {
               meta = found;
@@ -1494,35 +1496,35 @@ export default function Onboarding({ onComplete }: Props) {
             whatsapp: profile.whatsapp || '',
             website: profile.website || '',
             foto_url: profile.foto_url || '',
-            pronome: meta.pronome || '',
-            cidade_nascimento: meta.cidade_nascimento || '',
-            pais_nascimento: meta.pais_nascimento || '',
-            pais_atual: meta.pais_atual || '',
+            pronome: (meta.pronome as string) || '',
+            cidade_nascimento: (meta.cidade_nascimento as string) || '',
+            pais_nascimento: (meta.pais_nascimento as string) || '',
+            pais_atual: (meta.pais_atual as string) || '',
             bioshort: profile.bioshort || profile.bioShort || '',
             biolong: profile.biolong || profile.bioLong || '',
             statement: profile.statement || '',
             tags: profile.tags || '',
-            instagrams: ensureArray(profile.instagrams),
-            processo_criativo: meta.processo_criativo || '',
-            tecnicas_recorrentes: meta.tecnicas_recorrentes || '',
-            temas_centrais: meta.temas_centrais || '',
-            pesquisa_artistica: meta.pesquisa_artistica || '',
-            referencias_conceituais: meta.referencias_conceituais || '',
-            ano_inicio_carreira: meta.ano_inicio_carreira || '',
-            formacao: ensureArray(profile.formacao),
-            expos_individuais: ensureArray(profile.expos_individuais),
-            expos_coletivas: ensureArray(profile.expos_coletivas),
-            premios: ensureArray(profile.premios),
-            residencias: ensureArray(profile.residencias),
-            publicacoes: ensureArray(profile.publicacoes),
-            bolsas: ensureArray(meta.bolsas),
-            feiras: ensureArray(meta.feiras),
-            clipping: ensureArray(meta.clipping),
-            colecoesPublicas: ensureArray(meta.colecoesPublicas),
-            colecoesPrivadas: ensureArray(meta.colecoesPrivadas),
+            instagrams: ensureArray<string>(profile.instagrams),
+            processo_criativo: (meta.processo_criativo as string) || '',
+            tecnicas_recorrentes: (meta.tecnicas_recorrentes as string) || '',
+            temas_centrais: (meta.temas_centrais as string) || '',
+            pesquisa_artistica: (meta.pesquisa_artistica as string) || '',
+            referencias_conceituais: (meta.referencias_conceituais as string) || '',
+            ano_inicio_carreira: (meta.ano_inicio_carreira as string) || '',
+            formacao: ensureArray<ListItem>(profile.formacao),
+            expos_individuais: ensureArray<ListItem>(profile.expos_individuais),
+            expos_coletivas: ensureArray<ListItem>(profile.expos_coletivas),
+            premios: ensureArray<ListItem>(profile.premios),
+            residencias: ensureArray<ListItem>(profile.residencias),
+            publicacoes: ensureArray<ListItem>(profile.publicacoes),
+            bolsas: ensureArray<ListItem>(meta.bolsas),
+            feiras: ensureArray<ListItem>(meta.feiras),
+            clipping: ensureArray<ListItem>(meta.clipping),
+            colecoesPublicas: ensureArray<ListItem>(meta.colecoesPublicas),
+            colecoesPrivadas: ensureArray<ListItem>(meta.colecoesPrivadas),
             selo_url: profile.selo_url || '',
             assinatura_url: profile.assinatura_url || '',
-            fotos_profissionais: ensureArray(profile.fotos_profissionais),
+            fotos_profissionais: ensureArray<string>(profile.fotos_profissionais),
           });
         }
       } catch (err) {
