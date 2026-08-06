@@ -125,3 +125,132 @@ Analisando a proposta do MVP do PRD (**catálogo/galeria estilo museu**):
     3. Coluna `artist_id` alterada para `NOT NULL` após a conclusão do backfill.
     4. Aplicadas novas regras estritas de RLS garantindo o isolamento total dos dados por artista/usuário.
     5. Confirmado manualmente no aplicativo que as coleções e séries continuam visíveis e editáveis normalmente pela artista logada.
+
+---
+
+## 8. Diagnóstico — Bug "Tela Verde / App Trava no Primeiro Acesso"
+
+> [!IMPORTANT]
+> **Status:** Diagnosticado em 06/08/2026. Ainda não corrigido — aguardando aprovação.
+
+### Pergunta 1 — A "Tela Verde"
+
+**Identificada:** A cor verde que a usuária vê não é uma tela separada, e sim o **painel decorativo lateral esquerdo** do componente `Onboarding.tsx`, que aparece em `desktop (lg:)` em toda a duração do wizard de 5 etapas e também na tela de conclusão.
+
+- **Arquivo:** [`src/screens/Onboarding.tsx`](file:///Users/nanyarruda/Studio/src/screens/Onboarding.tsx#L1652)
+- **Linha:** 1652
+- **Cor exata:** `bg-[#0f3421]` — verde escuro escuro (floresta/musgo), não é Tailwind `green-*`
+- **Quando aparece:** Somente em telas `≥ 1024px` (`hidden lg:flex`), **sempre que `onboarding_completed = false`** após o login — o App.tsx força `/onboarding` em qualquer rota (linha 132), e essa tela possui um painel esquerdo totalmente verde escuro.
+- **Em mobile:** A cor não aparece como fundo; a tela exibe `bg-[#F5F3EE]` (bege claro).
+- **Outros verdes encontrados:** `Login.tsx` linha 136 exibe uma `div bg-emerald-50` (verde-claro) **apenas** no estado de `success` (pós-cadastro, antes de confirmar e-mail). Não é um fundo de tela inteiro.
+
+---
+
+### Pergunta 2 — Fluxo em App.tsx: usuária autenticada sem onboarding completo
+
+**Fluxo atual em [`src/App.tsx`](file:///Users/nanyarruda/Studio/src/App.tsx):**
+
+```
+1. useEffect ([]) → supabase.auth.onAuthStateChange dispara
+2. Se sessão existente → setSession(s) → chama getOnboardingStatus()
+3. Se onboarding_completed = false → renderiza só /onboarding com redirect forçado (linha 132)
+4. onComplete() chamado em handleFinish → setOnboardingDone(true) em App.tsx
+```
+
+**Bug potencial encontrado:**
+
+```tsx
+// App.tsx linhas 70-72
+if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+  setLoading(true);  // ← reinicia loading a cada evento SIGNED_IN/INITIAL_SESSION
+}
+```
+
+> [!WARNING]
+> **Race condition / re-trigger:** O `onAuthStateChange` pode disparar `INITIAL_SESSION` **novamente** após o usuário voltar de outra aba/janela (especialmente em Safari mobile e algumas versões do Chrome). Quando isso ocorre, o código seta `loading = true` e aguarda `getOnboardingStatus()` — se essa chamada demorar ou falhar silenciosamente, a tela fica presa no `<LoadingScreen />` (fundo preto, spinner dourado). O fallback de 4 segundos (linha 48-53) resolve na primeira chamada, **mas não resolve re-triggers subsequentes**, pois o `fallbackTimer` é criado apenas na montagem do componente (`useEffect([], [])`).
+
+---
+
+### Pergunta 3 — useEffects problemáticos
+
+| Arquivo | Linha | Tipo de problema |
+|---|---|---|
+| `App.tsx` | 55 | `onAuthStateChange` pode re-disparar `INITIAL_SESSION` ao voltar de outra aba — não há proteção para re-triggers após a montagem |
+| `App.tsx` | 48 | O `fallbackTimer` de 4s é criado **uma só vez** na montagem — não protege re-triggers do onAuthStateChange |
+| `Onboarding.tsx` | 1460 | `useEffect([], [])` carrega o perfil uma única vez — correto, sem loop |
+| `Login.tsx` | — | Nenhum `useEffect` — correto |
+
+**Nenhum `visibilitychange` ou `focus` listener encontrado.** O problema é no próprio `onAuthStateChange`, que em certos browsers re-emite sessão ao retornar à aba.
+
+---
+
+### Pergunta 4 — Cenário: usuária volta de outra aba/janela
+
+**Sequência provável do travamento:**
+
+```
+1. Usuária está em /onboarding (onboardingDone = false)
+2. Sai para outra aba/app
+3. Ao voltar, browser re-emite INITIAL_SESSION via onAuthStateChange
+4. App.tsx linha 71: setLoading(true) ← tela preta/spinner
+5. getOnboardingStatus() é chamado novamente — se Supabase demorar ou retornar erro de rede:
+   a. Sucesso: loading some após ~1-3s → ok
+   b. Falha ou demora: setOnboardingDone(true) é setado pelo catch (linha 83),
+      mas o loading persiste até o finally — se o finally não executar (ex: abort de rede),
+      o fallbackTimer já expirou e não vai disparar novamente.
+6. Resultado: tela travada em loading indefinidamente.
+```
+
+> [!CAUTION]
+> O `fallbackTimer` de 4s (linha 48) **não resolve este cenário** porque foi criado na montagem do componente e já foi limpo com `clearTimeout` no primeiro evento bem-sucedido. Re-triggers do `onAuthStateChange` não criam um novo timer.
+
+---
+
+### Pergunta 5 — "Cadastrar novos usuários" no menu
+
+**Confirmado:** O item "Cadastrar Novos Usuários" no menu inferior do Shell é de fato o componente [`CadastroUsuario.tsx`](file:///Users/nanyarruda/Studio/src/screens/CadastroUsuario.tsx).
+
+- **Arquivo:** [`src/components/layout/Shell.tsx`](file:///Users/nanyarruda/Studio/src/components/layout/Shell.tsx#L43)
+- **Linha:** 43: `{ path: '/cadastro-usuario', labelKey: 'nav.cadastroUsuario', icon: UserPlus }`
+- **Rota:** [`src/App.tsx`](file:///Users/nanyarruda/Studio/src/App.tsx#L162) linha 162: `<Route path="cadastro-usuario" element={<CadastroUsuario />} />`
+- **O que é:** É uma tela de **waitlist/lista de espera interna** — um formulário que coleta nome, e-mail, telefone, nome artístico, área de atuação e mensagem, e salva numa tabela `usuarios_futuros` do Supabase. **Não é o fluxo de cadastro real da plataforma.** Existe para capturar interesse de outras artistas antes de abrir o acesso.
+
+---
+
+### Correções sugeridas (não aplicadas ainda)
+
+1. **Reiniciar o `fallbackTimer` a cada re-trigger do `onAuthStateChange`** — em vez de criá-lo uma só vez na montagem.
+2. **Não setar `loading = true` para eventos `INITIAL_SESSION` se a sessão já foi carregada antes** — adicionar uma flag `firstLoad` para ignorar re-triggers.
+3. **Adicionar timeout específico para `getOnboardingStatus()`** com `Promise.race` contra um timer de 5s.
+
+---
+
+## 9. Fluxo de Cadastro Planejado (ainda não implementado)
+
+> [!NOTE]
+> Esta seção é apenas para alinhamento e referência futura. **Nada aqui está implementado hoje.**
+
+O fluxo desejado de cadastro e primeiro acesso é o seguinte:
+
+### Etapas do fluxo:
+
+1. **Cadastro inicial** — A artista preenche: nome completo, e-mail e senha. Esse formulário já existe em `Login.tsx` (aba "Cadastrar").
+
+2. **Confirmação por e-mail** — Após o cadastro, a artista recebe um link de confirmação no e-mail. O acesso à plataforma só é liberado após clicar nesse link. Hoje o Supabase já envia esse e-mail se a confirmação estiver habilitada no projeto — o fluxo de UI para tratar o usuário "pendente de confirmação" precisa ser implementado.
+
+3. **Wizard de primeiro acesso (Onboarding)** — Após a confirmação de e-mail, na primeira vez que a artista acessa a plataforma, o wizard de onboarding é ativado automaticamente (baseado em `onboarding_completed = false`). Esse wizard **só aparece uma vez**: após ser concluído, o campo `onboarding_completed` é setado como `true` e o wizard não aparece em nenhum acesso subsequente. O wizard atual tem 5 etapas e será estendido com o mini-wizard pós-onboarding.
+
+4. **Autocomplete encadeado nos campos do wizard** — Alguns campos do wizard usam autocomplete que sugere opções conforme a artista digita (ex: cidade, técnica artística, material). Alguns campos têm encadeamento — a resposta de um campo influencia as opções disponíveis no próximo (ex: selecionar "Escultura" como técnica pode pré-sugerir materiais como "argila", "bronze", "resina"). Isso ainda não está implementado.
+
+5. **Acesso à plataforma completa** — Somente após concluir o wizard (`onboarding_completed = true`), a artista tem acesso ao Dashboard, Acervo, Upload, etc. Isso já está implementado em `App.tsx` (linha 119: `if (onboardingDone === false)` força `/onboarding`).
+
+### Estado atual vs. planejado:
+
+| Etapa | Estado atual |
+|---|---|
+| Cadastro (nome, e-mail, senha) | ✅ Implementado em `Login.tsx` |
+| Confirmação por e-mail | ⚠️ Supabase envia o e-mail, mas a UI não trata o estado "aguardando confirmação" adequadamente |
+| Wizard de primeiro acesso (5 etapas) | ✅ Implementado em `Onboarding.tsx` |
+| Wizard não reaparecer após completado | ✅ Implementado via `onboarding_completed` em `artista` |
+| Autocomplete encadeado nos campos | ❌ Não implementado |
+| Mini-wizard pós-onboarding (4 perguntas) | ❌ Não implementado — próxima construção planejada |
