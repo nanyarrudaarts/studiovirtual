@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Studio Virtual — Sistema de Gestão Curatorial & Acervo Artístico
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma completa para gestão, catalogação, inteligência curatorial e proveniência blockchain de obras e acervos de arte contemporânea.
 
-Currently, two official plugins are available:
+## 🚀 Tecnologias
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
+- **Navegação & Roteamento**: React Router DOM v6
+- **Backend & Database**: Supabase (PostgreSQL, Storage, Auth)
+- **AI Engine**: Google Gemini API, Jina AI Reader
+- **PDF & Documentos**: PDF.js, PDF-lib (Geração de COA & Dossiês)
+- **i18n**: react-i18next (PT, EN, ES, DE)
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Estrutura do Projeto
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── components/
+│   ├── common/        # Componentes globais reusáveis (TagInput, etc)
+│   ├── perfil/        # Componentes modulares da tela de Perfil (SmartImport, AddList, Tabs)
+│   ├── upload/        # Componentes do fluxo de cadastro de Obras (ChatPanel, PhotoSlots, Form)
+│   ├── onboarding/    # Passos do wizard de entrada (CropperModal, Steps)
+│   └── ui/            # UI Primitives e modais de trajetória
+├── lib/               # Utilitários puros (imageUtils, helpers)
+├── screens/           # Telas principais (Perfil, Upload, Onboarding, Obras, Dashboard)
+├── services/          # Integrações (Supabase, AI, Jina, PDF)
+├── i18n/              # Dicionários de internacionalização
+└── data/              # Presets de trajetórias, museus e glossários
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## ⚙️ Como Executar
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Instalar dependências
+npm install
+
+# Iniciar servidor de desenvolvimento
+npm run dev
+
+# Checar tipos TypeScript
+npx tsc --noEmit
+
+# Build de produção
+npm run build
 ```
