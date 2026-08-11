@@ -22,15 +22,17 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-
-async function uploadImage(file: File, folder: string): Promise<string> {
-  const ext = file.name.split('.').pop();
+export async function uploadToStorage(file: File | Blob, folder: string): Promise<string> {
+  const ext = file instanceof File ? file.name.split('.').pop() : 'jpg';
   const name = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage.from('obras-images').upload(name, file, { upsert: true });
   if (error) throw error;
   const { data } = supabase.storage.from('obras-images').getPublicUrl(name);
   return data.publicUrl;
+}
+
+async function uploadImage(file: File, folder: string): Promise<string> {
+  return uploadToStorage(file, folder);
 }
 
 
