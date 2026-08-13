@@ -389,6 +389,7 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
   };
 
   const handleImport = (data: ImportedData) => {
+    setIsEditing(true);
     const strKeys = ['nome', 'nomeArtistico', 'nacionalidade', 'cidade', 'email', 'bioShort', 'bioLong', 'website', 'telefone', 'whatsapp', 'statement'] as const;
     strKeys.forEach((k) => { if (data[k]) setForm((f) => ({ ...f, [k]: String(data[k]) })); });
     if (Array.isArray(data.instagrams)) {
@@ -429,9 +430,8 @@ Retorne APENAS o texto otimizado, sem introduções ou explicações.`;
         <p className="text-text-muted">{t('perfil.subtitle', 'Gerencie suas informações profissionais, artísticas e de carreira.')}</p>
       </div>
 
-      {isEditing && (
-        <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
-      )}
+      {/* Importador Inteligente por Documento (PDF), URL ou Texto — sempre acessível */}
+      <SmartImport currentData={currentFormAsRecord} onImport={handleImport} t={t} />
 
       {/* Modern Premium Tabs */}
       <div className="flex border-b border-border">
