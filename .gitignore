@@ -50,3 +50,5 @@ src/AUDIT_REPORT.md
 BUG_REPORT.md
 lint_output.txt
 .vercel
+.agents/mcp_config.json
+
