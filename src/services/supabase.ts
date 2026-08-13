@@ -626,3 +626,94 @@ export async function completeOnboarding(payload: OnboardingData): Promise<void>
     if (error) throw error;
   }
 }
+
+// ─── CERTIFICATE TEMPLATES ────────────────────────────────────────────────────
+
+export interface CertificateTemplate {
+  id: string;
+  user_id: string;
+  image_url: string;
+  palette: string[];
+  font_category: 'serif' | 'sans-serif' | 'script' | 'display';
+  orientation: 'portrait' | 'landscape';
+  aspect_ratio: number;
+  created_at: string;
+}
+
+/**
+ * Uploads the certificate image to storage and persists the extracted
+ * style template linked to the current user.
+ * Optionally also creates an Artwork record so the item appears in the portfolio.
+ */
+export async function saveCertificateTemplate(
+  imageFile: File | Blob,
+  style: Pick<CertificateTemplate, 'palette' | 'font_category' | 'orientation' | 'aspect_ratio'>,
+  artistName?: string
+): Promise<CertificateTemplate> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Não autenticado');
+
+  // 1. Upload image to storage (reuses existing bucket)
+  const imageUrl = await uploadToStorage(imageFile, 'onboarding/certificados');
+
+  // 2. Persist template record
+  const templatePayload = {
+    user_id: user.id,
+    image_url: imageUrl,
+    palette: style.palette,
+    font_category: style.font_category,
+    orientation: style.orientation,
+    aspect_ratio: style.aspect_ratio,
+  };
+
+  const { data, error } = await supabase
+    .from('certificate_templates')
+    .insert(templatePayload)
+    .select()
+    .single();
+
+  if (error) throw error;
+  const template = data as CertificateTemplate;
+
+  // 3. Also register as an Artwork so it appears in Portfolio/Obras automatically
+  const year = new Date().getFullYear();
+  const accession = `CERT-${year}-${Date.now().toString(36).toUpperCase()}`;
+  const artworkPayload = {
+    artwork_title: `Certificado — ${artistName ?? 'Artista'}`,
+    artist_name: artistName ?? 'Artista',
+    copyright_holder: artistName ?? 'Artista',
+    classification: 'singular' as const,
+    visibility_status: 'private' as const,
+    certificate_of_authenticity: false,
+    exposed: false,
+    sustainable_materials: false,
+    sale_status: 'not_for_sale' as const,
+    dimensions_unit: 'cm',
+    display_order: 0,
+    cover_image: imageUrl,
+    artwork_images: [imageUrl],
+    tags: ['certificado', 'template'],
+    accession_number: accession,
+  };
+
+  // Best-effort — don't block the template save if artwork insert fails
+  try {
+    await supabase.from('artworks').insert(artworkPayload);
+  } catch (artErr) {
+    console.warn('Não foi possível registrar o certificado como obra:', artErr);
+  }
+
+  return template;
+}
+
+/**
+ * Returns all certificate templates for the current user, ordered newest-first.
+ */
+export async function getCertificateTemplates(): Promise<CertificateTemplate[]> {
+  const { data, error } = await supabase
+    .from('certificate_templates')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as CertificateTemplate[];
+}

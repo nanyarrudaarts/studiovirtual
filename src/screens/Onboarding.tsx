@@ -10,6 +10,7 @@ import { StepArtistico } from '../components/onboarding/StepArtistico';
 import { StepTrajetoria } from '../components/onboarding/StepTrajetoria';
 import { StepMarca } from '../components/onboarding/StepMarca';
 import { StepFotos } from '../components/onboarding/StepFotos';
+import { StepCertificado } from '../components/onboarding/StepCertificado';
 import type { ListItem } from '../components/perfil/AddList';
 
 export interface WizardData {
@@ -108,7 +109,7 @@ const EMPTY_DATA: WizardData = {
   fotos_profissionais: [],
 };
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 const DT = {
   bg: '#F5F5F7',
@@ -126,17 +127,19 @@ interface Props {
 
 type SupportedLang = 'pt' | 'en' | 'es' | 'de';
 
-const langDicts: Record<SupportedLang, any> = {
-  pt: ptStrings,
-  en: enStrings,
-  es: esStrings,
-  de: deStrings,
+type I18nModule = { translation: Record<string, Record<string, string>> };
+
+const langDicts: Record<SupportedLang, I18nModule> = {
+  pt: ptStrings as I18nModule,
+  en: enStrings as I18nModule,
+  es: esStrings as I18nModule,
+  de: deStrings as I18nModule,
 };
 
 export default function Onboarding({ onComplete }: Props) {
   const navigate = useNavigate();
   const [lang] = useState<SupportedLang>('pt');
-  const T = ((langDicts[lang] ?? ptStrings).translation as Record<string, any>).onboarding as Record<string, string>;
+  const T = ((langDicts[lang] ?? ptStrings as I18nModule).translation).onboarding as Record<string, string>;
   const [step, setStep] = useState(0);
   const [data, setData] = useState<WizardData>(EMPTY_DATA);
   const [saving, setSaving] = useState(false);
@@ -319,6 +322,12 @@ export default function Onboarding({ onComplete }: Props) {
     }
   };
 
+  /** Called when the user confirms the certificate template (step 5). */
+  const handleCertSaved = () => handleFinish('dashboard');
+
+  /** Called when the user skips the certificate step (step 5). */
+  const handleCertSkip = () => handleFinish('dashboard');
+
   if (loadingProfile) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
@@ -337,6 +346,13 @@ export default function Onboarding({ onComplete }: Props) {
           {step === 2 && <StepTrajetoria data={data} onChange={update} T={T} />}
           {step === 3 && <StepMarca data={data} onChange={update} T={T} />}
           {step === 4 && <StepFotos data={data} onChange={update} T={T} />}
+          {step === 5 && (
+            <StepCertificado
+              onSaved={handleCertSaved}
+              onSkip={handleCertSkip}
+              artistName={data.nomeartistico || data.nome || undefined}
+            />
+          )}
 
           {errors.length > 0 && (
             <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-600 text-xs">
@@ -344,23 +360,26 @@ export default function Onboarding({ onComplete }: Props) {
             </div>
           )}
 
-          <div className="flex justify-between items-center mt-10 pt-6 border-t border-[#E5E5EA]">
-            {step > 0 ? (
-              <button onClick={handleBack} className="px-6 py-2.5 rounded-xl border text-sm font-semibold text-[#1D1D1F] hover:bg-[#F2F2F7]">
-                Voltar
-              </button>
-            ) : <div />}
+          {/* Step 5 (Certificado) manages its own navigation buttons */}
+          {step < TOTAL_STEPS - 1 && (
+            <div className="flex justify-between items-center mt-10 pt-6 border-t border-[#E5E5EA]">
+              {step > 0 ? (
+                <button onClick={handleBack} className="px-6 py-2.5 rounded-xl border text-sm font-semibold text-[#1D1D1F] hover:bg-[#F2F2F7]">
+                  Voltar
+                </button>
+              ) : <div />}
 
-            {step < TOTAL_STEPS - 1 ? (
-              <button onClick={handleNext} className="px-8 py-2.5 rounded-xl bg-[#000] text-white text-sm font-semibold hover:bg-[#1C1C1E]">
-                Continuar →
-              </button>
-            ) : (
-              <button onClick={() => handleFinish('dashboard')} disabled={saving} className="px-8 py-2.5 rounded-xl bg-[#C5A059] text-white text-sm font-semibold hover:opacity-90">
-                {saving ? 'Concluindo...' : 'Concluir Onboarding ✓'}
-              </button>
-            )}
-          </div>
+              {step < TOTAL_STEPS - 2 ? (
+                <button onClick={handleNext} className="px-8 py-2.5 rounded-xl bg-[#000] text-white text-sm font-semibold hover:bg-[#1C1C1E]">
+                  Continuar →
+                </button>
+              ) : (
+                <button onClick={handleNext} disabled={saving} className="px-8 py-2.5 rounded-xl bg-[#000] text-white text-sm font-semibold hover:bg-[#1C1C1E] disabled:opacity-60">
+                  {saving ? 'Salvando…' : 'Continuar →'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
