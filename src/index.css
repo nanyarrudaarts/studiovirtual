@@ -31,12 +31,13 @@
   --color-rose: #F43F5E;
   --color-amber: #F59E0B;
 
-  /* ── Tipografia ── */
+  /* ── Tipografia (Stitch Neo-Pop Curatorial) ── */
   --font-serif: "Archivo", sans-serif;
   --font-sans:  "Space Grotesk", sans-serif;
+  --font-mono:  "Courier Prime", monospace;
 
   /* ── Efeitos ── */
-  --radius-xl: 14px;
+  --radius-xl: 16px;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-float: 0 20px 60px rgba(0,0,0,0.10);
   --shadow-soft: 0 4px 24px rgba(0,0,0,0.06);
@@ -134,6 +135,24 @@
   .bg-gold          { background-color: var(--gold); }
   .border-gold      { border-color: var(--gold); }
   .border-gold-dim  { border-color: rgba(201,168,76,0.22); }
+
+  /* ── Stitch Neo-Pop Curatorial Typography ── */
+  .font-display-hero { font-family: "Archivo", sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+  .font-headline-lg  { font-family: "Archivo", sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+  .font-label-mono   { font-family: "Courier Prime", monospace; font-weight: 700; letter-spacing: 0.1em; }
+  .font-body-md      { font-family: "Space Grotesk", sans-serif; }
+
+  .glow-bg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 100vh;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at center, rgba(201, 168, 76, 0.05) 0%, transparent 65%);
+    z-index: -1;
+    pointer-events: none;
+  }
 
   /* ── Micro-interactions ── */
   .hover-lift {
