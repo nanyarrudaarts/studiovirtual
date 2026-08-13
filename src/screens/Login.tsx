@@ -36,21 +36,25 @@ export default function Login() {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              nome: nome.trim(),
+            },
+          },
         });
 
         if (signUpError) throw signUpError;
 
-        // 2. O perfil na tabela 'artista' é criado automaticamente via trigger no banco (handle_new_user)
-
-        // 3. Handle email confirmation if enabled, or direct sign in
-        if (data.user && !data.session) {
-          setSuccess('Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta.');
-          // Clear inputs
+        // 2. Handle immediate session (if Confirm Email is OFF in Supabase) or notification (if ON)
+        if (data.session) {
+          setSuccess('Conta criada com sucesso! Redirecionando...');
+        } else if (data.user && !data.session) {
+          setSuccess('Cadastro realizado! Por favor, verifique sua caixa de entrada e a pasta de SPAM / Lixo Eletrônico para confirmar a conta.');
           setEmail('');
           setPassword('');
           setConfirmPassword('');
           setNome('');
-          setIsSignUp(false); // Switch to login screen
+          setIsSignUp(false); // Switch to login tab
         }
       } else {
         // Sign In
