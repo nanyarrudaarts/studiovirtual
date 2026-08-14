@@ -23,6 +23,14 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Captured runtime error:', error, errorInfo);
+    const isChunkError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Importing a module script failed');
+
+    if (isChunkError && !sessionStorage.getItem('chunk_error_reloaded')) {
+      sessionStorage.setItem('chunk_error_reloaded', 'true');
+      window.location.reload();
+    }
   }
 
   private handleReload = () => {

@@ -6,20 +6,46 @@ import { Shell } from './components/layout/Shell';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Lazy load screens
-const Dashboard = lazy(() => import('./screens/Dashboard'));
-const Upload = lazy(() => import('./screens/Upload'));
-const Materiais = lazy(() => import('./screens/Materiais'));
-const Login = lazy(() => import('./screens/Login'));
-const Configuracoes = lazy(() => import('./screens/Configuracoes'));
-const Perfil = lazy(() => import('./screens/Perfil'));
-const Obras = lazy(() => import('./screens/Obras'));
-const Dossie = lazy(() => import('./screens/Dossie'));
-const SerieDetail = lazy(() => import('./screens/SerieDetail'));
-const Certificados = lazy(() => import('./screens/Certificados'));
-const Portfolio = lazy(() => import('./screens/Portfolio'));
-const Onboarding = lazy(() => import('./screens/Onboarding'));
-const CadastroUsuario = lazy(() => import('./screens/CadastroUsuario'));
+// Helper for resilient lazy loading (auto-reloads if a new deploy invalidated an old chunk hash)
+function safeLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      const component = await factory();
+      sessionStorage.removeItem('chunk_retry_refreshed');
+      return component;
+    } catch (error: unknown) {
+      const isChunkError =
+        error instanceof Error &&
+        (error.message.includes('Failed to fetch dynamically imported module') ||
+          error.message.includes('Importing a module script failed'));
+
+      if (isChunkError && !sessionStorage.getItem('chunk_retry_refreshed')) {
+        sessionStorage.setItem('chunk_retry_refreshed', 'true');
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+      sessionStorage.removeItem('chunk_retry_refreshed');
+      throw error;
+    }
+  });
+}
+
+// Lazy load screens with auto-retry
+const Dashboard = safeLazy(() => import('./screens/Dashboard'));
+const Upload = safeLazy(() => import('./screens/Upload'));
+const Materiais = safeLazy(() => import('./screens/Materiais'));
+const Login = safeLazy(() => import('./screens/Login'));
+const Configuracoes = safeLazy(() => import('./screens/Configuracoes'));
+const Perfil = safeLazy(() => import('./screens/Perfil'));
+const Obras = safeLazy(() => import('./screens/Obras'));
+const Dossie = safeLazy(() => import('./screens/Dossie'));
+const SerieDetail = safeLazy(() => import('./screens/SerieDetail'));
+const Certificados = safeLazy(() => import('./screens/Certificados'));
+const Portfolio = safeLazy(() => import('./screens/Portfolio'));
+const Onboarding = safeLazy(() => import('./screens/Onboarding'));
+const CadastroUsuario = safeLazy(() => import('./screens/CadastroUsuario'));
 
 // Placeholder Screens
 const Analise = () => <div className="space-y-4"><h1 className="text-3xl font-serif">Análise</h1><p>Relatório de saúde e análise curatorial (em breve)</p></div>;
