@@ -247,6 +247,35 @@ CREATE TRIGGER set_updated_at_artworks BEFORE UPDATE ON public.artworks FOR EACH
 DROP TRIGGER IF EXISTS set_updated_at_portfolios ON public.portfolios;
 CREATE TRIGGER set_updated_at_portfolios BEFORE UPDATE ON public.portfolios FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+-- TABELA: certificate_templates
+CREATE TABLE IF NOT EXISTS public.certificate_templates (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    image_url TEXT NOT NULL,
+    palette JSONB DEFAULT '[]'::jsonb NOT NULL,
+    font_category TEXT DEFAULT 'sans-serif' NOT NULL,
+    orientation TEXT DEFAULT 'landscape' NOT NULL,
+    aspect_ratio NUMERIC(6,4) DEFAULT 1.4140 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- TABELA: usuarios_futuros (Lista de Espera)
+CREATE TABLE IF NOT EXISTS public.usuarios_futuros (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    nome TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    telefone TEXT,
+    nome_artistico TEXT,
+    cidade TEXT,
+    pais TEXT DEFAULT 'Brasil',
+    instagram TEXT,
+    site TEXT,
+    area_atuacao TEXT,
+    mensagem TEXT,
+    status TEXT DEFAULT 'pendente',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ─── 5. ROW LEVEL SECURITY (RLS) POLICIES ─────────────────────────────────────
 ALTER TABLE public.artista ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.collections ENABLE ROW LEVEL SECURITY;
@@ -255,6 +284,7 @@ ALTER TABLE public.artworks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.artworks_series ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.artworks_collections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.certificate_templates ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage own artist profile" ON public.artista;
 CREATE POLICY "Users can manage own artist profile" ON public.artista FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -271,6 +301,9 @@ CREATE POLICY "Users can manage own artworks" ON public.artworks FOR ALL USING (
 DROP POLICY IF EXISTS "Users can manage own portfolios" ON public.portfolios;
 CREATE POLICY "Users can manage own portfolios" ON public.portfolios FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own certificate templates" ON public.certificate_templates;
+CREATE POLICY "Users can manage own certificate templates" ON public.certificate_templates FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
 -- ─── 6. STORAGE BUCKETS ──────────────────────────────────────────────────────
 INSERT INTO storage.buckets (id, name, public) VALUES ('obras-images', 'obras-images', true) ON CONFLICT (id) DO UPDATE SET public = true;
 INSERT INTO storage.buckets (id, name, public) VALUES ('perfil', 'perfil', true) ON CONFLICT (id) DO UPDATE SET public = true;
@@ -286,3 +319,4 @@ CREATE POLICY "Public Access to perfil" ON storage.objects FOR SELECT USING (buc
 
 DROP POLICY IF EXISTS "Authenticated upload to perfil" ON storage.objects;
 CREATE POLICY "Authenticated upload to perfil" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'perfil' AND auth.role() = 'authenticated');
+
