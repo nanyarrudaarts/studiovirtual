@@ -11,6 +11,7 @@ import { StepTrajetoria } from '../components/onboarding/StepTrajetoria';
 import { StepMarca } from '../components/onboarding/StepMarca';
 import { StepFotos } from '../components/onboarding/StepFotos';
 import { StepCertificado } from '../components/onboarding/StepCertificado';
+import { SmartImport } from '../components/perfil/SmartImport';
 import type { ListItem } from '../components/perfil/AddList';
 
 export interface WizardData {
@@ -236,6 +237,35 @@ export default function Onboarding({ onComplete }: Props) {
     setErrors([]);
   }, []);
 
+  const handleImportOnboarding = useCallback((imported: Record<string, unknown>) => {
+    setData((prev) => {
+      const next = { ...prev };
+      if (imported.nome) next.nome = String(imported.nome);
+      if (imported.nomeArtistico) next.nomeartistico = String(imported.nomeArtistico);
+      if (imported.email) next.email = String(imported.email);
+      if (imported.nacionalidade) next.nacionalidade = String(imported.nacionalidade);
+      if (imported.cidade) next.cidade = String(imported.cidade);
+      if (imported.bioShort) next.bioshort = String(imported.bioShort);
+      if (imported.bioLong) next.biolong = String(imported.bioLong);
+      if (imported.website) next.website = String(imported.website);
+
+      if (Array.isArray(imported.instagrams)) {
+        next.instagrams = Array.from(new Set([...prev.instagrams, ...(imported.instagrams as string[])]));
+      }
+
+      const toList = (arr: unknown[]) => arr.map((item) => ({ id: Math.random().toString(36).slice(2), ...(item as object) }));
+      if (Array.isArray(imported.formacao)) next.formacao = [...prev.formacao, ...toList(imported.formacao)];
+      if (Array.isArray(imported.premios)) next.premios = [...prev.premios, ...toList(imported.premios)];
+      if (Array.isArray(imported.residencias)) next.residencias = [...prev.residencias, ...toList(imported.residencias)];
+      if (Array.isArray(imported.exposIndividuais)) next.expos_individuais = [...prev.expos_individuais, ...toList(imported.exposIndividuais)];
+      if (Array.isArray(imported.exposColetivas)) next.expos_coletivas = [...prev.expos_coletivas, ...toList(imported.exposColetivas)];
+      if (Array.isArray(imported.publicacoes)) next.publicacoes = [...prev.publicacoes, ...toList(imported.publicacoes)];
+
+      return next;
+    });
+    setErrors([]);
+  }, []);
+
   const scrollToTop = () => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -340,7 +370,17 @@ export default function Onboarding({ onComplete }: Props) {
   return (
     <div className="min-h-screen flex p-3 sm:p-5 lg:p-6 gap-5 overflow-x-hidden" style={{ background: DT.bg, fontFamily: DT.fontSans }}>
       <main className="flex-1 flex flex-col min-w-0 max-w-4xl mx-auto">
-        <div ref={scrollRef} className="flex-1 bg-white rounded-2xl p-6 sm:p-10 shadow-sm overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 bg-white rounded-2xl p-6 sm:p-10 shadow-sm overflow-y-auto space-y-6">
+          {step < 5 && (
+            <div className="mb-6">
+              <SmartImport
+                currentData={data as unknown as Record<string, unknown>}
+                onImport={handleImportOnboarding}
+                t={(k: string) => T[k] || k}
+              />
+            </div>
+          )}
+
           {step === 0 && <StepPessoal data={data} onChange={update} T={T} uploadToStorage={uploadToStorage} />}
           {step === 1 && <StepArtistico data={data} onChange={update} T={T} />}
           {step === 2 && <StepTrajetoria data={data} onChange={update} T={T} />}
